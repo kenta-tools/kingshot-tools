@@ -210,7 +210,7 @@
     <button type="button" class="ks-toggle-btn" id="ksToggleBtn" onclick="ksToggleSidebar()" aria-label="メニュー開閉">←</button>
   </div>
   <nav>
-    <a href="../index.html?v=20261102022122" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261102022122" class="ks-link ks-active" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261102022122" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261102022122" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261102022122" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="../kvk-matchup/kvk-matchup-index.html?v=20261102022122" class="ks-link" title="KvK相手突合せ まとめ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ まとめ</span></a>
+    <a href="../index.html?v=20261102024117" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261102024117" class="ks-link ks-active" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261102024117" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261102024117" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261102024117" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="../kvk-matchup/kvk-matchup-index.html?v=20261102024117" class="ks-link" title="KvK相手突合せ まとめ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ まとめ</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -907,24 +907,36 @@ function runCalculation() {
     results.push({ round: inst.round, pattern: inst.pattern, T, lines });
   });
 
-  // 指定ラウンドの全パターンの発起行を、時間が早い順（launch昇順）に並べたテキストを生成するヘルパー
+  // 指定ラウンドの発起行を、パターンごとにブロック分けして生成するヘルパー。
+  // ブロック（パターン）自体は一番早い発起時刻の順、ブロック内の各行も時刻順。
   function buildRoundLines(round) {
-    const items = [];
+    const blocks = [];
     patterns.forEach(p => {
       const res = results.find(x => x.round === round && x.pattern.id === p.id);
-      if (!res) return;
-      res.lines.forEach(line => {
-        items.push({
+      if (!res || !res.lines.length) return;
+      const lines = res.lines
+        .map(line => ({
           launch: line.launch,
           text:
             `${formatTime(line.launch)} → ${p.name}${line.label}（${formatDuration(line.rallyDur)}集結）` +
             `※行軍${line.arrival - line.launch - line.rallyDur}秒` +
             `（${formatTime(line.arrival)}着、${formatTime(line.ret)}帰還）`,
-        });
-      });
+        }))
+        .sort((a, b) => a.launch - b.launch);
+      const kezuriLabels = kezuriOf(p).map(m => m.label).join("+");
+      const headerTail = reinforceOf(p).length ? "→メイン→増援" : "→メイン";
+      blocks.push({ firstLaunch: lines[0].launch, header: `${p.name}${kezuriLabels}${headerTail}`, lines });
     });
-    items.sort((a, b) => a.launch - b.launch);
-    return items.map(it => it.text);
+    // ブロック（パターン）自体は、一番早く発起する行の時刻順に並べる
+    blocks.sort((a, b) => a.firstLaunch - b.firstLaunch);
+    const out = [];
+    blocks.forEach(b => {
+      out.push(b.header);
+      b.lines.forEach(l => out.push(l.text));
+      out.push("");
+    });
+    while (out.length && out[out.length - 1] === "") out.pop();
+    return out;
   }
 
   // 周期（1周目→2周目の間隔）を計算
