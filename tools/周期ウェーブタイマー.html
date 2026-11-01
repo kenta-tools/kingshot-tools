@@ -149,6 +149,26 @@
     padding: 10px 16px; margin-bottom: 14px; font-size: 14px; font-weight: bold; color: #7a5b00;
   }
   .upcoming-launch .remain { font-variant-numeric: tabular-nums; }
+
+  .tab-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
+  .tab-item {
+    display: flex; align-items: center; gap: 6px; background: #fff; border: 1px solid #ddd;
+    border-radius: 999px 999px 0 0; padding: 7px 10px 7px 14px; font-size: 13px; cursor: pointer;
+    border-bottom: 3px solid transparent;
+  }
+  .tab-item.active { border-bottom-color: #4a6cf7; font-weight: bold; }
+  .tab-item .tab-title-input {
+    border: none; background: transparent; font-size: 13px; font-weight: inherit;
+    padding: 0; width: auto; min-width: 2em; max-width: 160px;
+  }
+  .tab-item .tab-title-input:focus { outline: 1px solid #4a6cf7; border-radius: 4px; }
+  .tab-item .tab-close { color: #999; font-size: 14px; line-height: 1; padding: 0 2px; }
+  .tab-item .tab-close:hover { color: #e2483d; }
+  .tab-add {
+    background: #eee; border: 1px solid #ddd; border-radius: 999px; width: 28px; height: 28px;
+    font-size: 16px; line-height: 1; cursor: pointer; color: #555;
+  }
+  .tab-add:hover { background: #e2e2e2; }
 </style>
 </head>
 <body>
@@ -242,7 +262,7 @@
     <button type="button" class="ks-toggle-btn" id="ksToggleBtn" onclick="ksToggleSidebar()" aria-label="メニュー開閉">←</button>
   </div>
   <nav>
-    <a href="../index.html?v=20261102015351" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261102015351" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261102015351" class="ks-link ks-active" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261102015351" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261102015351" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="../kvk-matchup/kvk-matchup-index.html?v=20261102015351" class="ks-link" title="KvK相手突合せ まとめ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ まとめ</span></a>
+    <a href="../index.html?v=20261102020033" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261102020033" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261102020033" class="ks-link ks-active" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261102020033" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261102020033" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="../kvk-matchup/kvk-matchup-index.html?v=20261102020033" class="ks-link" title="KvK相手突合せ まとめ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ まとめ</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -270,6 +290,8 @@
 
 <h1>周期ウェーブタイマー</h1>
 <div class="sub">スタートで1個目が始まり、周期ごとに次の予定を自動追加。各予定はMAX秒で消えます。</div>
+
+<div class="tab-bar" id="tabBar"></div>
 
 <div class="card">
   <h2>設定</h2>
@@ -323,6 +345,116 @@
 </div>
 
 <script>
+// --- タブ（複数の周期ウェーブタイマーを切り替えて使う） ---
+// 既存ユーザーの保存データを引き継ぐため、最初のタブは特別扱いで従来のキー名（接尾辞なし）を使う。
+const TABS_KEY = "waveTimerTabs";
+const CURRENT_TAB_KEY = "waveTimerCurrentTab";
+const DEFAULT_TAB_ID = "default";
+let tabs = [{ id: DEFAULT_TAB_ID, title: "タイマー1" }];
+let currentTabId = DEFAULT_TAB_ID;
+
+function settingsKeyFor(id) { return id === DEFAULT_TAB_ID ? "waveTimerSettings" : "waveTimerSettings_" + id; }
+function pasteKeyFor(id) { return id === DEFAULT_TAB_ID ? "waveTimerPastedTimeline" : "waveTimerPastedTimeline_" + id; }
+function sideHiddenKeyFor(id) { return id === DEFAULT_TAB_ID ? "waveTimerSideHidden" : "waveTimerSideHidden_" + id; }
+
+function loadTabs() {
+  try {
+    const raw = localStorage.getItem(TABS_KEY);
+    const saved = raw ? JSON.parse(raw) : null;
+    if (Array.isArray(saved) && saved.length) tabs = saved;
+  } catch (e) {}
+  try {
+    const savedCurrent = localStorage.getItem(CURRENT_TAB_KEY);
+    if (savedCurrent && tabs.some(t => t.id === savedCurrent)) currentTabId = savedCurrent;
+  } catch (e) {}
+}
+
+function saveTabs() {
+  try {
+    localStorage.setItem(TABS_KEY, JSON.stringify(tabs));
+    localStorage.setItem(CURRENT_TAB_KEY, currentTabId);
+  } catch (e) {}
+}
+
+function escapeAttr(str) {
+  const div = document.createElement("div");
+  div.textContent = str == null ? "" : str;
+  return div.innerHTML.replace(/"/g, "&quot;");
+}
+
+function renderTabBar() {
+  const bar = document.getElementById("tabBar");
+  bar.innerHTML = "";
+  tabs.forEach(tab => {
+    const el = document.createElement("div");
+    el.className = "tab-item" + (tab.id === currentTabId ? " active" : "");
+    el.innerHTML = `
+      <input type="text" class="tab-title-input" data-id="${tab.id}" value="${escapeAttr(tab.title)}" size="${Math.max(2, tab.title.length)}">
+      ${tabs.length > 1 ? `<span class="tab-close" data-id="${tab.id}" title="このタブを削除">×</span>` : ""}
+    `;
+    el.querySelector(".tab-title-input").addEventListener("click", (e) => {
+      if (tab.id !== currentTabId) switchToTab(tab.id);
+    });
+    el.querySelector(".tab-title-input").addEventListener("input", (e) => {
+      tab.title = e.target.value;
+      e.target.size = Math.max(2, e.target.value.length);
+      saveTabs();
+    });
+    const closeEl = el.querySelector(".tab-close");
+    if (closeEl) {
+      closeEl.addEventListener("click", (e) => {
+        e.stopPropagation();
+        deleteTab(tab.id);
+      });
+    }
+    bar.appendChild(el);
+  });
+  const addBtn = document.createElement("button");
+  addBtn.type = "button";
+  addBtn.className = "tab-add";
+  addBtn.textContent = "+";
+  addBtn.title = "タブを追加";
+  addBtn.addEventListener("click", addTab);
+  bar.appendChild(addBtn);
+}
+
+function addTab() {
+  const n = tabs.length + 1;
+  const id = "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  tabs.push({ id, title: "タイマー" + n });
+  saveTabs();
+  switchToTab(id);
+}
+
+function deleteTab(id) {
+  if (tabs.length <= 1) return;
+  if (!confirm("このタブを削除します。保存されている内容も消えます。よろしいですか？")) return;
+  tabs = tabs.filter(t => t.id !== id);
+  try {
+    localStorage.removeItem(settingsKeyFor(id));
+    localStorage.removeItem(pasteKeyFor(id));
+    localStorage.removeItem(sideHiddenKeyFor(id));
+  } catch (e) {}
+  saveTabs();
+  if (currentTabId === id) switchToTab(tabs[0].id);
+  else renderTabBar();
+}
+
+function switchToTab(id) {
+  if (id === currentTabId) return;
+  if (running || hasStarted) {
+    if (!confirm("動いているタイマーを止めてタブを切り替えます。よろしいですか？")) return;
+  }
+  resetTimerState();
+  currentTabId = id;
+  saveTabs();
+  renderTabBar();
+  loadSettings();
+  try { applySideHidden(localStorage.getItem(sideHiddenKeyFor(currentTabId)) === "1"); } catch (e) {}
+  loadPasteBox();
+  reparseTimeline();
+}
+
 let running = false;
 let items = []; // {num, start(ms, performance.now), remaining}
 let itemCounter = 0;
@@ -461,21 +593,23 @@ function setInputsDisabled(disabled) {
   extraDisplayInput.disabled = disabled;
 }
 
-// --- 設定値の自動保存（このブラウザのみ） ---
-const SETTINGS_STORAGE_KEY = "waveTimerSettings";
+// --- 設定値の自動保存（タブごと・このブラウザのみ） ---
 const settingInputs = [periodMinInput, periodSecInput, maxMinInput, maxSecInput, extraDisplayInput];
 
 function saveSettings() {
   try {
     const data = {};
     settingInputs.forEach(el => { data[el.id] = el.value; });
-    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(data));
+    localStorage.setItem(settingsKeyFor(currentTabId), JSON.stringify(data));
   } catch (e) {}
 }
 
+const DEFAULT_SETTINGS = { periodMin: "0", periodSec: "10", maxMin: "0", maxSec: "30", extraDisplaySec: "3" };
+
 function loadSettings() {
+  settingInputs.forEach(el => { el.value = DEFAULT_SETTINGS[el.id]; });
   try {
-    const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+    const raw = localStorage.getItem(settingsKeyFor(currentTabId));
     if (!raw) return;
     const data = JSON.parse(raw);
     settingInputs.forEach(el => {
@@ -485,7 +619,6 @@ function loadSettings() {
 }
 
 settingInputs.forEach(el => el.addEventListener("input", saveSettings));
-loadSettings();
 
 startBtn.addEventListener("click", () => {
   if (running) return;
@@ -516,7 +649,7 @@ stopBtn.addEventListener("click", () => {
   renderStack();
 });
 
-resetBtn.addEventListener("click", () => {
+function resetTimerState() {
   running = false;
   pausedAt = null;
   hasStarted = false;
@@ -530,10 +663,11 @@ resetBtn.addEventListener("click", () => {
   setInputsDisabled(false);
   renderTimelineStatus();
   renderStack();
-});
+}
 
-// --- 右側：炎龍タイムライン結果の貼り付け欄（このブラウザのlocalStorageに自動保存） ---
-const PASTE_STORAGE_KEY = "waveTimerPastedTimeline";
+resetBtn.addEventListener("click", resetTimerState);
+
+// --- 右側：炎龍タイムライン結果の貼り付け欄（タブごと・このブラウザのlocalStorageに自動保存） ---
 const pasteBox = document.getElementById("pasteBox");
 const saveStatus = document.getElementById("saveStatus");
 let saveStatusTimer = null;
@@ -552,8 +686,8 @@ function fitPasteBoxFont() {
 
 function loadPasteBox() {
   try {
-    const saved = localStorage.getItem(PASTE_STORAGE_KEY);
-    if (saved !== null) pasteBox.value = saved;
+    const saved = localStorage.getItem(pasteKeyFor(currentTabId));
+    pasteBox.value = saved !== null ? saved : "";
   } catch (e) {
     // localStorageが使えない環境では何もしない
   }
@@ -563,7 +697,6 @@ function loadPasteBox() {
 window.addEventListener("resize", fitPasteBoxFont);
 
 // --- 貼り付け欄の表示/非表示（隠すとタイマー側が横いっぱいに広がる） ---
-const SIDE_HIDDEN_KEY = "waveTimerSideHidden";
 const colSideEl = document.getElementById("colSide");
 const hideSideBtn = document.getElementById("hideSideBtn");
 
@@ -575,15 +708,13 @@ function applySideHidden(hidden) {
 hideSideBtn.addEventListener("click", () => {
   const hidden = colSideEl.style.display !== "none";
   applySideHidden(hidden);
-  try { localStorage.setItem(SIDE_HIDDEN_KEY, hidden ? "1" : "0"); } catch (e) {}
+  try { localStorage.setItem(sideHiddenKeyFor(currentTabId), hidden ? "1" : "0"); } catch (e) {}
   setTimeout(fitPasteBoxFont, 0);
 });
 
-try { applySideHidden(localStorage.getItem(SIDE_HIDDEN_KEY) === "1"); } catch (e) {}
-
 function savePasteBox() {
   try {
-    localStorage.setItem(PASTE_STORAGE_KEY, pasteBox.value);
+    localStorage.setItem(pasteKeyFor(currentTabId), pasteBox.value);
     saveStatus.textContent = "保存しました";
   } catch (e) {
     saveStatus.textContent = "この環境では保存できません";
@@ -597,7 +728,6 @@ pasteBox.addEventListener("input", () => {
   savePasteBox();
   reparseTimeline();
 });
-loadPasteBox();
 
 // --- 炎龍 集結タイムライン計算の結果を自動取り込み（周期・MAXの手入力を不要にする） ---
 const SIEGE_DATA_KEY = "siegeTimelineForWaveTimer";
@@ -784,6 +914,11 @@ function renderTimelineStatus() {
   }
 }
 
+loadTabs();
+renderTabBar();
+loadSettings();
+try { applySideHidden(localStorage.getItem(sideHiddenKeyFor(currentTabId)) === "1"); } catch (e) {}
+loadPasteBox();
 reparseTimeline();
 autoSyncSiegeData();
 </script>
