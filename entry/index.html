@@ -25,7 +25,7 @@
     margin-bottom: 14px;
   }
   .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-  input[type=text], input[type=number], select {
+  input[type=text], input[type=number], input[type=time], select {
     font: inherit; font-size: 16px; padding: 10px; width: 100%;
     border: 1px solid #ccd2db; border-radius: 8px; background: #fff;
   }
@@ -168,15 +168,15 @@
       <div class="chips" style="margin-top: 10px;">
         <label class="chip"><input type="checkbox" id="fMayChange"><span>変更の可能性あり</span></label>
       </div>
-      <div style="font-size: 12px; color: #666; margin-top: 4px; line-height: 1.6;">ここを選ばなかったからといって、変更できないわけではありません。あくまで現時点で変更する可能性があるかの確認です。</div>
+      <div style="font-size: 12px; color: #666; margin-top: 4px; line-height: 1.6;">ここを選ばなかったからといって、変更できないわけではありません。あくまで現時点で変更の可能性があるかの確認です。</div>
       <div class="sub-field two" id="partField">
         <div>
           <span class="cap">何時から？</span>
-          <input type="text" id="fJoinAt" maxlength="20" placeholder="例: 21時">
+          <input type="time" id="fJoinAt">
         </div>
         <div>
           <span class="cap">何時まで？</span>
-          <input type="text" id="fLeaveAt" maxlength="20" placeholder="例: 22時">
+          <input type="time" id="fLeaveAt">
         </div>
         <div style="grid-column: 1 / -1; font-size: 13px; color: #666; margin-top: 4px;">最初から・最後まではそれぞれ空欄でOK</div>
         <div class="warn" id="partHint" style="grid-column: 1 / -1; font-size: 13px; margin-top: 4px; display: none;"></div>
@@ -666,7 +666,7 @@
     }
     // 一部参加: 開始時刻があれば途中参加、終了時刻があれば途中抜け（データの形は管理画面・募集フォーマットと同じ）
     var part = choice === "part", rally = $("fRallyOn").checked;
-    var joinAt = part ? str($("fJoinAt").value) : "", leaveAt = part ? str($("fLeaveAt").value) : "";
+    var joinAt = part ? fromTimeInput($("fJoinAt").value) : "", leaveAt = part ? fromTimeInput($("fLeaveAt").value) : "";
     return {
       alliance: alliance,
       entry: joinAt ? "late" : "start",
@@ -689,6 +689,19 @@
     };
   }
 
+  // 時刻の入力欄（"21:30"）⇔ 保存する形（"21時30分"・ちょうどなら "21時"）
+  function fromTimeInput(v) {
+    var t = /^(\d{1,2}):(\d{2})/.exec(v || "");
+    if (!t) return "";
+    return Number(t[1]) + "時" + (t[2] === "00" ? "" : Number(t[2]) + "分");
+  }
+  function toTimeInput(text) {
+    var t = /(\d{1,2})\s*[時:：]\s*(?:(\d{1,2})\s*分?)?/.exec(String(text || "").normalize("NFKC"));
+    if (!t || Number(t[1]) > 24) return "";
+    function p2(n) { return (n < 10 ? "0" : "") + n; }
+    return p2(Number(t[1]) % 24) + ":" + p2(Number(t[2] || 0));
+  }
+
   function fillForm(m) {
     $("fAlliance").value = m.alliance || "";
     setRadio("fEntry", m.entry === "absent" ? "absent" : m.entry === "late" || m.leaveEarly || m.joinAt || m.leaveAt ? "part" : "full");
@@ -703,8 +716,8 @@
     $("fVivian4").checked = !!m.vivian4;
     $("fMayChange").checked = !!m.mayChange;
     document.querySelectorAll(".fTroop").forEach(function(cb) { cb.checked = (m.troops || "").indexOf(cb.value) >= 0; });
-    $("fJoinAt").value = m.joinAt || "";
-    $("fLeaveAt").value = m.leaveAt || "";
+    $("fJoinAt").value = toTimeInput(m.joinAt);
+    $("fLeaveAt").value = toTimeInput(m.leaveAt);
     $("fNote").value = m.note || "";
     setNum("fMarchCount", m.marchCount);
     setNum("fMarchPet", m.marchPet);
