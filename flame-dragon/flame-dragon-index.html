@@ -16,6 +16,7 @@
   }
   h1 { font-size: 22px; margin-bottom: 4px; }
   .sub { color: #666; font-size: 13px; margin-bottom: 28px; }
+  h2.season { font-size: 16px; margin: 28px 0 12px; color: #444; }
 
   .grid {
     display: grid;
@@ -127,7 +128,7 @@
     <button type="button" class="ks-toggle-btn" id="ksToggleBtn" onclick="ksToggleSidebar()" aria-label="メニュー開閉">←</button>
   </div>
   <nav>
-    <a href="../index.html" class="ks-link" title="ホーム"><span class="ks-icon">🏠</span><span class="ks-label">ホーム</span></a><a href="../tools/tools-index.html" class="ks-link" title="ツール一覧"><span class="ks-icon">🛠️</span><span class="ks-label">ツール一覧</span></a><a href="../tools/炎龍の覇者_攻城タイムライン計算.html" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="../tools/王城到着同期カウントアップ.html" class="ks-link" title="KvK同着スタート カウントアップ表"><span class="ks-icon">⏱️</span><span class="ks-label">KvK同着スタート カウントアップ表</span></a><a href="../tools/KvK同着スタート カウントダウン表.html" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="../tools/KvK占領判定.html" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="../tools/周期ウェーブタイマー.html" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><a href="../tools/音声アナウンス付きストップウォッチ.html" class="ks-link" title="音声ストップウォッチ（工事中）"><span class="ks-icon">🔊</span><span class="ks-label">音声ストップウォッチ（工事中）</span></a><a href="flame-dragon-index.html" class="ks-link ks-active" title="炎龍 ランキングまとめ"><span class="ks-icon">🐲</span><span class="ks-label">炎龍 ランキングまとめ</span></a><a href="../holy-sword-league/holy-sword-league-index.html" class="ks-link" title="聖剣リーグ ランキングまとめ"><span class="ks-icon">⚔️</span><span class="ks-label">聖剣リーグ ランキングまとめ</span></a>
+    <a href="../index.html" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><a href="../tools/炎龍の覇者_攻城タイムライン計算.html" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="../tools/王城到着同期カウントアップ.html" class="ks-link" title="KvK同着スタート カウントアップ表"><span class="ks-icon">⏱️</span><span class="ks-label">KvK同着スタート カウントアップ表</span></a><a href="../tools/KvK同着スタート カウントダウン表.html" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="../tools/KvK占領判定.html" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="../tools/周期ウェーブタイマー.html" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><a href="../tools/音声アナウンス付きストップウォッチ.html" class="ks-link" title="音声ストップウォッチ（工事中）"><span class="ks-icon">🔊</span><span class="ks-label">音声ストップウォッチ（工事中）</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -156,18 +157,23 @@
 <h1>🐲 炎龍の覇者 ランキングまとめ</h1>
 <div class="sub">炎龍の覇者イベントで作成した総合ランキングHTML一覧です。新しい集計分を作ったらこのページにカードを追加してください。</div>
 
+<h2 class="season">Season 1</h2>
+<div class="grid">
+  <a class="tool-card" href="炎龍の覇者_総合ランキング_778-849鯖_20260829.html">
+    <div class="icon">📊</div>
+    <div class="title">778-849鯖 総合ランキング</div>
+    <div class="desc">ランキング画像から手動抽出・集計した総合ランキング</div>
+    <div class="date">2026-08-29</div>
+  </a>
+</div>
+
+<h2 class="season">Season 2</h2>
 <div class="grid">
   <a class="tool-card" href="炎龍の覇者_総合ランキング_759-835鯖_API版_20261022.html">
     <div class="icon">📊</div>
     <div class="title">759-835鯖 総合ランキング（API版）</div>
     <div class="desc">MightPulse APIから直接取得・集計した総合ランキング</div>
     <div class="date">2026-10-22</div>
-  </a>
-  <a class="tool-card" href="炎龍の覇者_総合ランキング_778-849鯖_20260829.html">
-    <div class="icon">📊</div>
-    <div class="title">778-849鯖 総合ランキング</div>
-    <div class="desc">ランキング画像から手動抽出・集計した総合ランキング</div>
-    <div class="date">2026-08-29</div>
   </a>
 </div>
 

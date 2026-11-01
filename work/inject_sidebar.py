@@ -22,21 +22,28 @@ from pathlib import Path
 FOLDER = Path(__file__).resolve().parent.parent
 
 # (リポジトリルートからの相対パス, アイコン, ラベル)
-# カテゴリフォルダ（tools / flame-dragon / holy-sword-league）にはそれぞれ
-# トップページ（◯◯-index.html）を置き、個別の実績レポート（ランキングHTML等）は
-# そのトップページ側でカード一覧として管理する（グローバルサイドバーには載せない）。
-TOOLS = [
-    ("index.html", "🏠", "ホーム"),
-    ("tools/tools-index.html", "🛠️", "ツール一覧"),
+# サイドバー（全ページ共通メニュー）に常設するのは「TOP」と個別ツールだけ。
+# tools-index.html / flame-dragon-index.html / holy-sword-league-index.html の
+# 3つのカテゴリ切り替えは、サイドバーには出さずTOP（index.html）のカード選択のみで行う。
+NAV_ITEMS = [
+    ("index.html", "🏠", "TOP"),
     ("tools/炎龍の覇者_攻城タイムライン計算.html", "🐉", "炎龍 集結タイムライン計算"),
     ("tools/王城到着同期カウントアップ.html", "⏱️", "KvK同着スタート カウントアップ表"),
     ("tools/KvK同着スタート カウントダウン表.html", "⏲️", "KvK同着スタート カウントダウン表"),
     ("tools/KvK占領判定.html", "🏳️", "KvK占領戦 勝利判定ツール"),
     ("tools/周期ウェーブタイマー.html", "🌊", "周期ウェーブタイマー"),
     ("tools/音声アナウンス付きストップウォッチ.html", "🔊", "音声ストップウォッチ（工事中）"),
-    ("flame-dragon/flame-dragon-index.html", "🐲", "炎龍 ランキングまとめ"),
-    ("holy-sword-league/holy-sword-league-index.html", "⚔️", "聖剣リーグ ランキングまとめ"),
 ]
+
+# サイドバー自体は表示するが、ナビの一覧には載せないページ（カテゴリのトップページ）。
+# TOPを経由してアクセスする想定なので、ここに来てもTOPへ戻るリンクなどNAV_ITEMSはそのまま出す。
+EXTRA_SIDEBAR_PAGES = [
+    "tools/tools-index.html",
+    "flame-dragon/flame-dragon-index.html",
+    "holy-sword-league/holy-sword-league-index.html",
+]
+
+TOOLS = NAV_ITEMS
 
 MARK_START = "<!-- ks-sidebar:start -->"
 MARK_END = "<!-- ks-sidebar:end -->"
@@ -205,7 +212,8 @@ def inject(path: Path, rel_path: str):
 
 def main():
     done = []
-    for rel_path, _, _ in TOOLS:
+    all_paths = [rel_path for rel_path, _, _ in NAV_ITEMS] + EXTRA_SIDEBAR_PAGES
+    for rel_path in all_paths:
         p = FOLDER / rel_path
         if p.exists():
             if inject(p, rel_path):
