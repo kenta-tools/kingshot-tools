@@ -196,7 +196,7 @@
     <button type="button" class="ks-toggle-btn" id="ksToggleBtn" onclick="ksToggleSidebar()" aria-label="メニュー開閉">←</button>
   </div>
   <nav>
-    <a href="../index.html?v=20261101213626" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261101213626" class="ks-link ks-active" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="KvK同着スタート カウントダウン表.html?v=20261101213626" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261101213626" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="周期ウェーブタイマー.html?v=20261101213626" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a>
+    <a href="../index.html?v=20261101213943" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261101213943" class="ks-link ks-active" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="KvK同着スタート カウントダウン表.html?v=20261101213943" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261101213943" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="周期ウェーブタイマー.html?v=20261101213943" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -262,6 +262,7 @@
     </thead>
     <tbody id="memberBody"></tbody>
   </table>
+  <datalist id="regUserList"></datalist>
   <button id="addMemberBtn" class="secondary small">+ メンバー追加</button>
 </div>
 
@@ -328,6 +329,18 @@ function marchWithPet(march, petLevel) {
   return march / (1 + bonus / 100);
 }
 
+// --- ユーザー登録データ（entry/index.htmlと同じGAS中継役）から名前の候補だけ取得 ---
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxu5HW9uLU9pCsUs1r_45xpuofWZmQAyZFDwSLK1C_7GvA7SDXZ4ayBEJTS0sR_8oToAw/exec";
+function fetchRegUserNames() {
+  fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "pubGet" }) })
+    .then(r => r.json())
+    .then(res => {
+      if (!res.ok) return;
+      document.getElementById("regUserList").innerHTML = (res.users || []).map(u => `<option value="${escapeAttr(u.name)}">`).join("");
+    })
+    .catch(() => {});
+}
+
 // --- 入力値の自動保存（このブラウザのみ） ---
 const SIEGE_STORAGE_KEY = "siegeCalcState";
 const settingFieldIds = ["kezuriRallyMin", "mainRallyMin", "phaseGap", "buffer"];
@@ -380,7 +393,7 @@ function renderMembers() {
           <option value="削り" ${m.role === "削り" ? "selected" : ""}>削り</option>
         </select>
       </td>
-      <td class="label-col"><input type="text" data-id="${m.id}" class="label-input" value="${escapeAttr(m.label)}"></td>
+      <td class="label-col"><input type="text" data-id="${m.id}" class="label-input" list="regUserList" value="${escapeAttr(m.label)}"></td>
       <td class="march-col"><input type="number" data-id="${m.id}" class="march-input" value="${m.march}" min="0"></td>
       <td class="pet-col">
         <select data-id="${m.id}" class="pet-select">${buildPetOptions(m.petLevel)}</select>
@@ -609,6 +622,7 @@ if (savedSiege && Array.isArray(savedSiege.members) && savedSiege.members.length
   addPattern("②", ["D"]);
   addPattern("③", ["E", "F"]);
 }
+fetchRegUserNames();
 
 settingFieldIds.forEach(id => {
   document.getElementById(id).addEventListener("input", saveSiegeState);

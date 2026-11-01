@@ -64,6 +64,8 @@
   .chip input:checked + span { background: #1a2332; border-color: #1a2332; color: #fff; }
   .chip input:focus-visible + span { outline: 2px solid #2c5cc5; }
   .sub-field { margin-top: 10px; }
+  .howto-btn { padding: 3px 10px; font-size: 12px; margin-left: 8px; vertical-align: 1px; }
+  .howto-text { background: #eef4ff; border-radius: 8px; padding: 8px 10px; font-size: 13px; line-height: 1.6; margin-bottom: 6px; }
 
   .event-title { font-size: 18px; font-weight: bold; color: #2c5cc5; }
   .who { font-size: 15px; margin: 4px 0 14px; }
@@ -100,7 +102,7 @@
 
 <div class="row" style="justify-content: space-between;">
   <h1>📝 イベント参加登録</h1>
-  <a href="../index.html?v=20261101213626" class="top-link">← TOP</a>
+  <a href="../index.html?v=20261101213943" class="top-link">← TOP</a>
 </div>
 <div class="howto">
   ① 名前を入れて「次へ」<br>
@@ -209,11 +211,12 @@
     </div>
 
     <div class="field">
-      <span class="cap">出征部隊数<span class="req">必須</span></span>
+      <span class="cap">出征部隊数<span class="req">必須</span><button type="button" class="sub-btn howto-btn" data-howto="marchHowto">確認方法</button></span>
+      <div class="howto-text" id="marchHowto" style="display: none;">ペットやダイヤバフなどがない状態で、野獣に<b>1軍で攻撃</b>したときの部隊数を入れてください。</div>
       <input type="number" id="fMarchCount" min="0" inputmode="numeric" style="max-width: 160px;">
     </div>
     <div class="field">
-      <span class="cap">出征容量ペット（巨大蛮牛）<span class="req">必須</span></span>
+      <span class="cap">出征容量ペット：巨大蛮牛「レイジングビースト」<span class="req">必須</span></span>
       <select id="fMarchPet" data-pet="march"></select>
     </div>
 
@@ -225,15 +228,16 @@
       </div>
       <div id="rallyFields" style="margin-top: 12px;">
         <div class="field">
-          <span class="cap">集結部隊数</span>
+          <span class="cap">集結部隊数<button type="button" class="sub-btn howto-btn" data-howto="rallyHowto">確認方法</button></span>
+          <div class="howto-text" id="rallyHowto" style="display: none;">ペットやダイヤバフなどがない状態で、野獣に<b>1軍で集結攻撃</b>したときの部隊数を入れてください。</div>
           <input type="number" id="fRallyCount" min="0" inputmode="numeric" style="max-width: 160px;">
         </div>
         <div class="field">
-          <span class="cap">集結容量ペット（巨大ヘラジカ）</span>
+          <span class="cap">集結容量ペット：巨大ヘラジカ「ヘラジカアタック」</span>
           <select id="fRallyPet" data-pet="rally"></select>
         </div>
         <div class="field" style="margin-bottom: 0;">
-          <span class="cap">行軍速度ペット（グリズリー）</span>
+          <span class="cap">行軍速度ペット：グリズリー「恐怖の咆哮」</span>
           <select id="fRallySpeedPet" data-pet="speed"></select>
         </div>
       </div>
@@ -774,6 +778,15 @@
     $("nameInput").focus();
   });
   $("retryBtn").addEventListener("click", load);
+
+  // 「確認方法」ボタンで説明を開閉
+  document.querySelectorAll("[data-howto]").forEach(function(btn) {
+    btn.addEventListener("click", function() {
+      var box = $(btn.dataset.howto), open = box.style.display === "none";
+      box.style.display = open ? "block" : "none";
+      btn.textContent = open ? "閉じる" : "確認方法";
+    });
+  });
 
   document.querySelectorAll("select[data-pet]").forEach(function(sel) {
     var pet = PETS[sel.dataset.pet], html = '<option value="">選んでください</option><option value="0">持っていない</option>';
