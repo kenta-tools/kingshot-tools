@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-01T11:20:05.106Z",
+  "updated": "2026-11-01T11:20:09.383Z",
   "users": [
     {
       "id": "umvxdw4mmgjfck",
@@ -2569,22 +2569,22 @@
     },
     {
       "alliance": "TST",
-      "entry": "start",
-      "grade": "G7",
+      "entry": "absent",
+      "grade": "その他",
       "monthly": false,
       "leaveEarly": false,
       "vc": false,
       "vivian4": false,
-      "troops": "歩弓",
-      "tier": 11,
+      "troops": "",
+      "tier": null,
       "joinAt": "",
       "leaveAt": "",
       "note": "",
-      "marchCount": 3,
+      "marchCount": null,
       "marchPet": null,
-      "rallyCount": 1,
-      "rallyPet": 10,
-      "rallySpeedPet": 8,
+      "rallyCount": null,
+      "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxqnc36oe17u",
       "eventId": "etestlive20261101",
       "userId": "umvxqnc36h7ho2"
