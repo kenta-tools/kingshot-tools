@@ -72,6 +72,13 @@
   .pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: bold; }
   .pill.saved { background: #e3f4e8; color: #1e7d3a; }
   .pill.dirty { background: #fff1d6; color: #a86a00; }
+  .pill.running { background: #e8eefc; color: #2c5cc5; }
+  .pill.done { background: #eee; color: #666; }
+  .done-card { border-left: 5px solid #9aa3ad; }
+  .done-card summary { cursor: pointer; font-size: 15px; font-weight: bold; }
+  .done-row { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; }
+  .done-row .label { flex: 1; min-width: 200px; }
+  .done-row.current { background: #f6f8fb; }
 
   /* イベント選択 */
   .event-card { border-left: 5px solid #1a2332; }
@@ -214,9 +221,10 @@
       </div>
       <span class="sep"></span>
       <div class="group">
-        <span class="hint">個人登録:</span>
+        <span class="hint">状態:</span>
         <span class="pill" id="openState"></span>
         <button type="button" class="sub-btn small" id="toggleOpenBtn"></button>
+        <button type="button" class="sub-btn small" id="doneBtn"></button>
         <button type="button" class="sub-btn small" id="copyEntryUrlBtn">個人登録ページのURLをコピー</button>
       </div>
       <span class="sep"></span>
@@ -228,10 +236,20 @@
       </div>
     </div>
     <div class="hint" style="margin-top: 8px;">
-      「受付中」にしたイベントは、<b>個人登録ページ</b>（パスワードなし）から各自が自分の参加情報を登録・変更・取消できます。URLをDiscordなどで案内してください。締め切ったら「受付を締め切る」を押して保存してください（受付中／締切の切り替えも「💾 保存する」で反映されます）。
+      イベントの状態は <b>受付中 → イベント進行中 → 完了</b> と進めます（切り替えたら「💾 保存する」）。「受付中」の間だけ、<b>個人登録ページ</b>（パスワードなし）から各自が参加情報を登録・変更・取消できます。URLをDiscordなどで案内してください。
+      受付を締め切ると「イベント進行中」、終わったら「完了にする」で下の「完了したイベント」に移ります。
       個人登録された内容はすぐGitHubに保存されるので、この画面には「その他の操作・設定」→「他の人が保存した内容を読み込む」で反映されます。
     </div>
     <div class="msg" id="eventMsg"></div>
+  </div>
+
+  <!-- 完了したイベント -->
+  <div class="card done-card" id="doneCard" style="display: none;">
+    <details id="doneDetails">
+      <summary>✅ 完了したイベント <span id="doneCount" class="hint"></span></summary>
+      <div class="hint" style="margin: 6px 0;">終わったイベントです。「表示」で参加者を確認できます。「進行中に戻す」と上のイベント一覧に戻ります。</div>
+      <div id="doneList"></div>
+    </details>
   </div>
 
   <div id="noEventView" class="card no-event">まず上の「新しいイベント」でイベントの種類と開催日を選んで作成してください。</div>
@@ -701,7 +719,8 @@
     }).filter(function(u) { return u.name; });
     var events = (data.events || []).map(function(e) {
       return { id: e.id || newId("e"), type: EVENT_TYPES.indexOf(e.type) >= 0 ? e.type : EVENT_TYPES[0], date: str(e.date),
-        open: e.open === true }; // open: 個人登録ページ（entry/）で受付中
+        open: e.open === true, // open: 個人登録ページ（entry/）で受付中
+        done: e.done === true }; // done: 完了したイベント（イベント一覧から外し「完了したイベント」に出す）
     });
     var userIds = {}, eventIds = {};
     users.forEach(function(u) { userIds[u.id] = true; });
@@ -878,6 +897,7 @@
         || (!bV[v.id] && out.events.find(function(x) { return x.type === v.type && x.date === v.date; }));
       if (o) {
         if (bV[v.id] && bV[v.id].open !== v.open) o.open = v.open; // 自分が受付中／締切を切り替えた
+        if (bV[v.id] && bV[v.id].done !== v.done) o.done = v.done; // 自分が完了／進行中を切り替えた
         eventMap[v.id] = o.id;
         return;
       }
@@ -1505,9 +1525,22 @@
     });
   }
 
+  function eventStatus(ev) {
+    return !ev ? "" : ev.done ? "done" : ev.open ? "open" : "running";
+  }
+  var STATUS_LABEL = { open: "受付中", running: "イベント進行中", done: "完了" };
+
+  function entryCount(ev) {
+    return state.entries.filter(function(x) { return x.eventId === ev.id && x.entry !== "absent"; }).length;
+  }
+
   function renderEvents() {
-    var events = sortedEvents();
-    if (!eventById(currentEventId)) currentEventId = events.length ? events[0].id : null;
+    var all = sortedEvents();
+    var active = all.filter(function(e) { return !e.done; });
+    var doneEvents = all.filter(function(e) { return e.done; });
+    if (!eventById(currentEventId)) currentEventId = active.length ? active[0].id : all.length ? all[0].id : null;
+    // 一覧には完了していないイベント（完了したイベントを表示中ならそれも）
+    var events = active.concat(doneEvents.filter(function(e) { return e.id === currentEventId; }));
     try {
       if (currentEventId) localStorage.setItem(EVENT_KEY, currentEventId);
       else localStorage.removeItem(EVENT_KEY);
@@ -1515,18 +1548,28 @@
 
     $("eventSelect").innerHTML = events.length
       ? events.map(function(ev) {
-          var n = state.entries.filter(function(x) { return x.eventId === ev.id && x.entry !== "absent"; }).length;
           return '<option value="' + ev.id + '"' + (ev.id === currentEventId ? " selected" : "") + '>' +
-            escapeHtml(eventLabel(ev)) + '（' + n + '人）' + (ev.open ? '【受付中】' : '') + '</option>';
+            escapeHtml(eventLabel(ev)) + '（' + entryCount(ev) + '人）【' + STATUS_LABEL[eventStatus(ev)] + '】</option>';
         }).join("")
       : '<option value="">（イベントがありません）</option>';
     $("eventSelect").disabled = !events.length;
     $("deleteEventBtn").disabled = !events.length;
-    var cur = eventById(currentEventId);
-    $("toggleOpenBtn").disabled = !cur;
-    $("openState").textContent = cur && cur.open ? "受付中" : "締切";
-    $("openState").className = "pill " + (cur && cur.open ? "saved" : "dirty");
-    $("toggleOpenBtn").textContent = cur && cur.open ? "受付を締め切る" : "受付を始める";
+    var cur = eventById(currentEventId), st = eventStatus(cur);
+    $("openState").textContent = STATUS_LABEL[st] || "";
+    $("openState").className = "pill " + ({ open: "saved", running: "running", done: "done" }[st] || "");
+    $("toggleOpenBtn").style.display = cur && st !== "done" ? "inline-block" : "none";
+    $("toggleOpenBtn").textContent = st === "open" ? "受付を締め切る（進行中にする）" : "受付を再開する";
+    $("doneBtn").style.display = cur && st !== "open" ? "inline-block" : "none";
+    $("doneBtn").textContent = st === "done" ? "進行中に戻す" : "完了にする";
+
+    $("doneCard").style.display = doneEvents.length ? "block" : "none";
+    $("doneCount").textContent = "（" + doneEvents.length + "件）";
+    $("doneList").innerHTML = doneEvents.map(function(ev) {
+      return '<div class="done-row' + (ev.id === currentEventId ? " current" : "") + '"><span class="label">' +
+        escapeHtml(eventLabel(ev)) + '（' + entryCount(ev) + '人）</span>' +
+        '<button type="button" class="small sub-btn" data-show="' + ev.id + '">' + (ev.id === currentEventId ? "表示中" : "表示") + '</button>' +
+        '<button type="button" class="small sub-btn" data-reopen="' + ev.id + '">進行中に戻す</button></div>';
+    }).join("");
 
     var has = !!currentEventId;
     $("eventView").style.display = has ? "block" : "none";
@@ -1743,13 +1786,34 @@
     commit();
   });
 
+  function setStatus(ev, st) {
+    ev.open = st === "open";
+    ev.done = st === "done";
+    setMsg($("eventMsg"), "「" + eventLabel(ev) + "」を「" + STATUS_LABEL[st] + "」にしました。「💾 保存する」を押すと反映されます", true);
+    commit();
+  }
+
   $("toggleOpenBtn").addEventListener("click", function() {
     var ev = eventById(currentEventId);
-    if (!ev) return;
-    ev.open = !ev.open;
-    setMsg($("eventMsg"), "「" + eventLabel(ev) + "」の個人登録を" + (ev.open ? "受付中" : "締切") +
-      "にしました。「💾 保存する」を押すと個人登録ページに反映されます", true);
-    commit();
+    if (ev) setStatus(ev, ev.open ? "running" : "open");
+  });
+
+  $("doneBtn").addEventListener("click", function() {
+    var ev = eventById(currentEventId);
+    if (ev) setStatus(ev, ev.done ? "running" : "done");
+  });
+
+  $("doneList").addEventListener("click", function(e) {
+    var btn = e.target.closest("button");
+    if (!btn) return;
+    if (btn.dataset.show) {
+      currentEventId = btn.dataset.show;
+      resetForm(false);
+      render();
+    } else if (btn.dataset.reopen) {
+      var ev = eventById(btn.dataset.reopen);
+      if (ev) { currentEventId = ev.id; setStatus(ev, "running"); }
+    }
   });
 
   $("copyEntryUrlBtn").addEventListener("click", function() {
