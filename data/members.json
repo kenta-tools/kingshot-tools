@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-01T11:20:09.383Z",
+  "updated": "2026-11-01T11:23:25.638Z",
   "users": [
     {
       "id": "umvxdw4mmgjfck",
@@ -571,7 +571,7 @@
       "id": "emvxdrseln9wlb",
       "type": "炎龍",
       "date": "2026-10-25",
-      "open": false
+      "open": true
     },
     {
       "id": "emvxlacjz9goas",
@@ -598,6 +598,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mm8gkvb",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mmgjfck"
@@ -619,6 +620,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mmymgnz",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mms4un5"
@@ -640,6 +642,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mm5ywhm",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mm4j8z6"
@@ -661,6 +664,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mmoxqzb",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mmcspoo"
@@ -682,6 +686,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mmd4lmg",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mmsdadj"
@@ -703,6 +708,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mmigd6o",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mm0r8p3"
@@ -724,6 +730,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mmsn1f1",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mm38mtn"
@@ -745,6 +752,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mm7csca",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mmj0nd1"
@@ -766,6 +774,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mmgdgoe",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mmg592j"
@@ -787,6 +796,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mm7rec9",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mmicd67"
@@ -808,6 +818,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mm3sq06",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mmm99gb"
@@ -829,6 +840,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mm44ue6",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mm0f4ts"
@@ -850,6 +862,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mm73e9l",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mmg6b2r"
@@ -871,6 +884,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mm6g8v2",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mmrnqj9"
@@ -892,6 +906,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mmag6ck",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mmde1ca"
@@ -913,6 +928,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mmqym6q",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mmjnmyy"
@@ -934,6 +950,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mmnvvkz",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mmax3tx"
@@ -955,6 +972,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mmic6fq",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mmh9ubt"
@@ -976,6 +994,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mmj5m4j",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mmqa64x"
@@ -997,6 +1016,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mm7iudd",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mm94cxo"
@@ -1018,6 +1038,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mmkw215",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mmf1a15"
@@ -1039,6 +1060,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mmm3nm3",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mmduixt"
@@ -1060,6 +1082,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mm9ac5b",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mmodtfz"
@@ -1081,6 +1104,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mmoaor1",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mmwlm4f"
@@ -1102,6 +1126,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mm5k170",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mmbxi7z"
@@ -1123,6 +1148,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mmmc0eq",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mmo3izf"
@@ -1144,6 +1170,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mmfenmg",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mm6pkl4"
@@ -1165,6 +1192,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mmgk0ae",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mmbp101"
@@ -1186,6 +1214,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mmq924x",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mm4w0a7"
@@ -1207,6 +1236,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mmbe3es",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mmegh68"
@@ -1228,6 +1258,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mmqy1o0",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mmd51pc"
@@ -1249,6 +1280,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mmxgj34",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mmxqkud"
@@ -1270,6 +1302,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mma97s4",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mmscpps"
@@ -1291,6 +1324,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mmyu4wk",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mmkf1sx"
@@ -1312,6 +1346,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mmc0kpp",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mm160n1"
@@ -1333,6 +1368,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mmwwmti",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mm8votv"
@@ -1354,6 +1390,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mmnm0jt",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mm37whs"
@@ -1375,6 +1412,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mmf6twy",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mmhj3e0"
@@ -1396,6 +1434,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mmpeyjy",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mmdcm2v"
@@ -1417,6 +1456,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mmk7ks7",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mm6m2ak"
@@ -1438,6 +1478,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mmpgw8h",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mmki0n6"
@@ -1459,6 +1500,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mm3h9gx",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mm15byc"
@@ -1480,6 +1522,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mmd52tw",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mmvq57t"
@@ -1501,6 +1544,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mnkkej6",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mmxslrp"
@@ -1522,6 +1566,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mnptif9",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mnuxghf"
@@ -1543,6 +1588,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mnuldem",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mngccpk"
@@ -1564,6 +1610,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mnqiud9",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mn1ubrw"
@@ -1585,6 +1632,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mn10a81",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mniajn8"
@@ -1606,6 +1654,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mnfvsmp",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mnfatph"
@@ -1627,6 +1676,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mnd4fzi",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mn8ta5l"
@@ -1648,6 +1698,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mn4k5k5",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mn6b077"
@@ -1669,6 +1720,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mn5trl9",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mnc6oxd"
@@ -1690,6 +1742,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mnudm47",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mnr6tl5"
@@ -1711,6 +1764,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mn61055",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mnptoeh"
@@ -1732,6 +1786,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mnt8r1p",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mna2jnp"
@@ -1753,6 +1808,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxdw4mnqhgr6",
       "eventId": "emvxdrseln9wlb",
       "userId": "umvxdw4mn4ecqs"
@@ -1774,6 +1830,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcagluzz6h",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcaglqmmsj"
@@ -1795,6 +1852,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcaglk009a",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcagli5w9i"
@@ -1816,6 +1874,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcaglqx6df",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcaglhapan"
@@ -1837,6 +1896,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcagl1ytki",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcaglkjxr4"
@@ -1858,6 +1918,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcaglv1or4",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcaglwum5q"
@@ -1879,6 +1940,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcagl7kho9",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcagldr958"
@@ -1900,6 +1962,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcaglesqq5",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcaglaz22m"
@@ -1921,6 +1984,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcagls31nf",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcagl9wsew"
@@ -1942,6 +2006,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcagl72sbs",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcagl7tvh3"
@@ -1963,6 +2028,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcaglv80z4",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcagl9zmau"
@@ -1984,6 +2050,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcagl4r6y8",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcaglg1593"
@@ -2005,6 +2072,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcaglwe0vj",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcagl33k6a"
@@ -2026,6 +2094,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcaglhyx8m",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcagly3g7a"
@@ -2047,6 +2116,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcagliq03a",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcagl3n600"
@@ -2068,6 +2138,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcagl0otwb",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcaglz63w8"
@@ -2089,6 +2160,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcaglgtrfy",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcaglfas4n"
@@ -2110,6 +2182,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcagl4bt9h",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcaglvvm58"
@@ -2131,6 +2204,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcaglrfpjj",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcaglhxiio"
@@ -2152,6 +2226,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcaglbd3fh",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcagl6qs3s"
@@ -2173,6 +2248,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcagl8l0zr",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcagl1nrws"
@@ -2194,6 +2270,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcagl85sys",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcagl82un2"
@@ -2215,6 +2292,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcaglr4c0f",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcaglbjncf"
@@ -2236,6 +2314,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcaglcgbpb",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcaglj4n3l"
@@ -2257,6 +2336,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcaglise8p",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcagla58wn"
@@ -2278,6 +2358,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcaglwk5rq",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcaglg0jz3"
@@ -2299,6 +2380,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcagltcs22",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcaglp5a62"
@@ -2320,6 +2402,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcaglj8vjz",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcagl3e198"
@@ -2341,6 +2424,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcaglkygh1",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcagl6tv1v"
@@ -2362,6 +2446,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcagle66ti",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcaglu411j"
@@ -2383,6 +2468,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcaglzpsnt",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcaglpvant"
@@ -2404,6 +2490,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcaglf4gk5",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcagln0ppk"
@@ -2425,6 +2512,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcaglju0h3",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcaglf1upl"
@@ -2446,6 +2534,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcagl1iwq8",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcagle54t5"
@@ -2467,6 +2556,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcagl8ovzf",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcaglwcfgw"
@@ -2488,6 +2578,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcaglu4ls0",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcagloc66k"
@@ -2509,6 +2600,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcaglp32k0",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcagldz64y"
@@ -2530,6 +2622,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcaglnn4qt",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcaglkgr1i"
@@ -2551,6 +2644,7 @@
       "marchPet": null,
       "rallyCount": null,
       "rallyPet": null,
+      "rallySpeedPet": null,
       "id": "rmvxlcaglukwa7",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcagl25h3v"
