@@ -169,6 +169,8 @@
     font-size: 16px; line-height: 1; cursor: pointer; color: #555;
   }
   .tab-add:hover { background: #e2e2e2; }
+
+  .side-toggle-row { text-align: right; margin-bottom: 10px; }
 </style>
 </head>
 <body>
@@ -262,7 +264,7 @@
     <button type="button" class="ks-toggle-btn" id="ksToggleBtn" onclick="ksToggleSidebar()" aria-label="メニュー開閉">←</button>
   </div>
   <nav>
-    <a href="../index.html?v=20261102020033" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261102020033" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261102020033" class="ks-link ks-active" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261102020033" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261102020033" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="../kvk-matchup/kvk-matchup-index.html?v=20261102020033" class="ks-link" title="KvK相手突合せ まとめ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ まとめ</span></a>
+    <a href="../index.html?v=20261102021052" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261102021052" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261102021052" class="ks-link ks-active" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261102021052" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261102021052" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="../kvk-matchup/kvk-matchup-index.html?v=20261102021052" class="ks-link" title="KvK相手突合せ まとめ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ まとめ</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -322,6 +324,10 @@
   </div>
 </div>
 
+<div class="side-toggle-row">
+  <button type="button" id="hideSideBtn" class="secondary small">貼り付け欄を隠す</button>
+</div>
+
 <div class="layout">
 <div class="col-main">
 
@@ -333,10 +339,7 @@
 
 <div class="col-side" id="colSide">
 <div class="card">
-  <h2 style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-    <span>炎龍 集結タイムライン計算の結果を貼り付け</span>
-    <button type="button" id="hideSideBtn" class="secondary small" style="font-size:12px; padding:4px 10px;">隠す</button>
-  </h2>
+  <h2>炎龍 集結タイムライン計算の結果を貼り付け</h2>
   <textarea id="pasteBox" class="paste-box" placeholder="「炎龍 集結タイムライン計算」で出力したテキストをここに貼り付けてください。自動的に保存されます（このブラウザ内のみ）。"></textarea>
   <div class="save-status" id="saveStatus">&nbsp;</div>
 </div>
@@ -529,12 +532,14 @@ function loopRender() {
 
 function renderUpcomingLaunch() {
   const box = document.getElementById("upcomingLaunchBox");
-  if (!upcomingLaunch) {
+  if (!upcomingLaunch || !upcomingLaunch.length) {
     box.style.display = "none";
     return;
   }
   box.style.display = "block";
-  box.innerHTML = `⏱ まもなく発起（<span class="remain">${Math.ceil(upcomingLaunch.remain)}秒後</span>）：${upcomingLaunch.names.join("、")}`;
+  box.innerHTML = upcomingLaunch
+    .map(g => `⏱ <span class="remain">${g.remain}秒後</span>：${g.names.join("、")}`)
+    .join("<br>");
 }
 
 function renderStack() {
@@ -702,7 +707,7 @@ const hideSideBtn = document.getElementById("hideSideBtn");
 
 function applySideHidden(hidden) {
   colSideEl.style.display = hidden ? "none" : "";
-  hideSideBtn.textContent = hidden ? "表示" : "隠す";
+  hideSideBtn.textContent = hidden ? "貼り付け欄を表示" : "貼り付け欄を隠す";
 }
 
 hideSideBtn.addEventListener("click", () => {
@@ -777,7 +782,7 @@ let timelineBlocks = []; // [{header, startSec, endSec}]
 let timelineLines = []; // [{symbol, label, launchSec}] パターンでまとめず、1行＝1人の発起時刻のまま持つ
 let activePatternHeaders = [];
 let waitingPatterns = []; // [{header, numText}] 次の周を待っているパターン（大きな時計カードで表示）
-let upcomingLaunch = null; // {remain, names} 1分以内に発起する人がいるときだけセットする
+let upcomingLaunch = null; // [{remain, names}] 1分以内に発起する人がいるときだけ、早い順にセットする
 let parsedCycleLen = null; // テキスト内の「周期：」の行から読み取った、本当の1周の長さ（秒）
 const UPCOMING_LAUNCH_WINDOW_SEC = 60;
 
@@ -892,24 +897,23 @@ function renderTimelineStatus() {
     }
   });
 
-  // 次に発起する人（1分以内なら表示）：今の周でまだ発起していない人の中で一番近い人を探し、
-  // いなければ次の周の最初の発起（＝周期でラップした分）まで見る
+  // 1分以内に発起する人を全員リストアップする（今の周でまだ発起していない人。
+  // いなければ次の周の最初の発起＝周期でラップした分も見る）。同じタイミングの人はまとめる。
   if (timelineLines.length) {
-    let best = null;
+    const groups = new Map(); // 秒数（丸め）-> 名前の配列
     timelineLines.forEach(line => {
       const remain = line.launchSec >= cyclePos
         ? line.launchSec - cyclePos
         : (line.launchSec + cycleLen) - cyclePos;
-      if (best === null || remain < best) best = remain;
+      if (remain > UPCOMING_LAUNCH_WINDOW_SEC) return;
+      const key = Math.round(remain);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(`${line.symbol}${line.label}`);
     });
-    if (best !== null && best <= UPCOMING_LAUNCH_WINDOW_SEC) {
-      const names = timelineLines
-        .filter(line => {
-          const remain = line.launchSec >= cyclePos ? line.launchSec - cyclePos : (line.launchSec + cycleLen) - cyclePos;
-          return Math.abs(remain - best) < 0.001;
-        })
-        .map(line => `${line.symbol}${line.label}`);
-      upcomingLaunch = { remain: best, names };
+    if (groups.size) {
+      upcomingLaunch = Array.from(groups.entries())
+        .sort((a, b) => a[0] - b[0])
+        .map(([remain, names]) => ({ remain, names }));
     }
   }
 }
