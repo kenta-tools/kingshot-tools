@@ -203,7 +203,9 @@ function selfSave_(token, p) {
       // ユーザーを決める: 候補から選んだ人 → 名前（旧名含む）が一致する人 → 新規
       var user = p.userId ? d.users.filter(function(u) { return u.id === p.userId; })[0] : null;
       if (user && key_(user.name) !== key_(name)) {
-        // 本人が「この名前は自分」と選んだので、今の名前に更新して前の名前は旧名に残す
+        var taken = findUser_(d.users, name);
+        if (taken && taken.id !== user.id) return { ok: false, status: 409, error: "「" + name + "」はすでに別の人の名前として登録されています" };
+        // 本人が「この名前は自分」と選んだ／名前を変更したので、今の名前に更新して前の名前は旧名に残す
         var old = user.name;
         user.aliases = (user.aliases || []).filter(function(a) { return key_(a) !== key_(name); });
         if (!user.aliases.some(function(a) { return key_(a) === key_(old); })) user.aliases.push(old);
