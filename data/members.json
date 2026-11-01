@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-01T12:00:31.571Z",
+  "updated": "2026-11-01T12:23:07.044Z",
   "users": [
     {
       "id": "umvxdw4mmgjfck",
@@ -563,6 +563,12 @@
       "id": "umvxlcagl25h3v",
       "name": "bowen",
       "alliance": "EGG",
+      "aliases": []
+    },
+    {
+      "id": "umvxswe8y953v4",
+      "name": "zzテスト削除予定",
+      "alliance": "TST",
       "aliases": []
     }
   ],
@@ -2654,6 +2660,29 @@
       "id": "rmvxlcaglukwa7",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcagl25h3v"
+    },
+    {
+      "alliance": "TST",
+      "entry": "start",
+      "grade": "G7",
+      "monthly": false,
+      "leaveEarly": false,
+      "vc": false,
+      "vivian4": false,
+      "troops": "歩弓",
+      "tier": 11,
+      "joinAt": "",
+      "leaveAt": "",
+      "note": "",
+      "marchCount": 3,
+      "marchPet": null,
+      "rallyCount": 1,
+      "rallyPet": 10,
+      "rallySpeedPet": 8,
+      "updatedAt": "2026-11-01T12:23:07.043Z",
+      "id": "rmvxswe904xhnh",
+      "eventId": "etestlive20261101",
+      "userId": "umvxswe8y953v4"
     }
   ],
   "notSame": [],
