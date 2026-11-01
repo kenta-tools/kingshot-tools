@@ -212,7 +212,9 @@ def inject(path: Path, rel_path: str):
 
 def main():
     done = []
-    all_paths = [rel_path for rel_path, _, _ in NAV_ITEMS] + EXTRA_SIDEBAR_PAGES
+    # index.html（TOPページ）自体にはサイドバーを出さない（3カード選択がナビの役割を兼ねるため）。
+    # NAV_ITEMS内の"index.html"エントリは、他ページのサイドバーからのリンク先としてのみ使う。
+    all_paths = [rel_path for rel_path, _, _ in NAV_ITEMS if rel_path != "index.html"] + EXTRA_SIDEBAR_PAGES
     for rel_path in all_paths:
         p = FOLDER / rel_path
         if p.exists():
