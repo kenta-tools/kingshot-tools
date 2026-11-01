@@ -132,7 +132,7 @@
     <button type="button" class="ks-toggle-btn" id="ksToggleBtn" onclick="ksToggleSidebar()" aria-label="メニュー開閉">←</button>
   </div>
   <nav>
-    <a href="../index.html?v=20261101210406" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261101210406" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="KvK同着スタート カウントダウン表.html?v=20261101210406" class="ks-link ks-active" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261101210406" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="周期ウェーブタイマー.html?v=20261101210406" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a>
+    <a href="../index.html?v=20261101211020" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261101211020" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="KvK同着スタート カウントダウン表.html?v=20261101211020" class="ks-link ks-active" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261101211020" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="周期ウェーブタイマー.html?v=20261101211020" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -183,15 +183,11 @@
 
 <div class="panel">
   <h2>名簿</h2>
-  <div class="cfg-row">
-    <label>新しいグループ名: <input type="text" id="newGroupInput" style="width:140px;"></label>
-    <button type="button" class="btn secondary small" id="addGroupBtn">+ グループ追加</button>
-  </div>
   <div class="table-scroll">
   <table id="roster-table">
     <thead>
       <tr>
-        <th style="width:14%">名前</th><th>到着秒数<br>（ペットなし）</th><th>到着+</th>
+        <th style="width:14%">名前</th><th>役割</th><th>到着秒数<br>（ペットなし）</th><th>到着+</th>
         <th>速度ペットLv</th><th>到着秒数<br>（ペットあり）</th><th>採用</th>
         <th>グループ</th><th>相手の名前</th><th>相手の秒数</th><th></th>
       </tr>
@@ -200,6 +196,7 @@
   </table>
   </div>
   <datalist id="regUserList"></datalist>
+  <datalist id="groupDatalist"></datalist>
   <div class="row-actions">
     <button type="button" class="btn secondary small" onclick="addRow()">＋行を追加</button>
   </div>
@@ -325,12 +322,13 @@ function fetchRegData(){
 }
 
 // --- 名簿データ（配列ベース）。自分用／共有用で同じ構造を使う ---
-let rosterRows = []; // {id, name, march, adj, petLevel, usePet, group, opponentName, opponentSec}
+let rosterRows = []; // {id, name, role, march, adj, petLevel, usePet, group, opponentName, opponentSec}
 let rowSeq = 0;
-let knownGroups = [];
 let mode = "personal"; // "personal" | "shared"
 let currentEventId = "";
 let sharedDirty = false;
+
+const ROLES = ["王城メイン", "王城ゴースト", "砲台"];
 
 function newRow(data){
   rowSeq += 1;
@@ -338,6 +336,7 @@ function newRow(data){
   return {
     id: "r" + rowSeq,
     name: d.name || "",
+    role: ROLES.includes(d.role) ? d.role : "",
     march: d.march != null ? d.march : 0,
     adj: d.adj != null ? d.adj : 0,
     petLevel: d.petLevel || 0,
@@ -359,18 +358,17 @@ function removeRow(id){
   persistState();
 }
 
-function addGroup(name){
-  const g = name.trim();
-  if(!g || knownGroups.includes(g)) return;
-  knownGroups.push(g);
-  renderRoster();
-  persistState();
+// グループ入力は「新規登録」ではなく、名簿内で今まで入力された値をdatalistの候補にするだけ
+function refreshGroupDatalist(){
+  const seen = [];
+  rosterRows.forEach(r => { if(r.group && !NO_GROUP.has(r.group) && !seen.includes(r.group)) seen.push(r.group); });
+  document.getElementById("groupDatalist").innerHTML = seen.map(g => `<option value="${escapeAttr(g)}">`).join("");
 }
 
-function groupOptions(selected){
+function roleOptions(selected){
   let html = `<option value=""${!selected ? " selected" : ""}>（未設定）</option>`;
-  knownGroups.forEach(g => {
-    html += `<option value="${escapeAttr(g)}"${g === selected ? " selected" : ""}>${escapeAttr(g)}</option>`;
+  ROLES.forEach(r => {
+    html += `<option value="${escapeAttr(r)}"${r === selected ? " selected" : ""}>${escapeAttr(r)}</option>`;
   });
   return html;
 }
@@ -387,18 +385,20 @@ function renderRoster(){
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td class="roster-name"><input type="text" data-id="${row.id}" class="f-name" list="regUserList" value="${escapeAttr(row.name)}"></td>
+      <td><select data-id="${row.id}" class="f-role">${roleOptions(row.role)}</select></td>
       <td><input type="number" data-id="${row.id}" class="f-march" value="${row.march}"></td>
       <td><input type="number" data-id="${row.id}" class="f-adj" value="${row.adj}"></td>
       <td><select data-id="${row.id}" class="f-pet">${buildPetOptions(row.petLevel)}</select></td>
       <td><input type="text" class="f-march-pet" data-id="${row.id}" value="${formatMarchPetDisplay(row)}" readonly tabindex="-1" style="background:#f3f3f3;color:#555;"></td>
       <td class="pet-use"><input type="checkbox" data-id="${row.id}" class="f-use" ${row.usePet ? "checked" : ""}></td>
-      <td><select data-id="${row.id}" class="f-group">${groupOptions(row.group)}</select></td>
+      <td><input type="text" data-id="${row.id}" class="f-group" list="groupDatalist" value="${escapeAttr(row.group)}"></td>
       <td><input type="text" data-id="${row.id}" class="f-oname" value="${escapeAttr(row.opponentName)}"></td>
       <td><input type="number" data-id="${row.id}" class="f-osec" value="${row.opponentSec}"></td>
       <td><button type="button" class="btn secondary small" onclick="removeRow('${row.id}')">削除</button></td>
     `;
     tbody.appendChild(tr);
   });
+  refreshGroupDatalist();
 
   function byId(id){ return rosterRows.find(r => r.id === id); }
   function updateMarchPetCell(id){
@@ -451,9 +451,24 @@ function renderRoster(){
       persistState();
     });
   });
-  tbody.querySelectorAll(".f-group").forEach(sel => {
+  tbody.querySelectorAll(".f-role").forEach(sel => {
     sel.addEventListener("change", () => {
-      byId(sel.dataset.id).group = sel.value;
+      const row = byId(sel.dataset.id);
+      row.role = sel.value;
+      // 王城メインは1人だけ。既に別の人が持っていたら自動で外す
+      if(row.role === "王城メイン"){
+        rosterRows.forEach(r => {
+          if(r.id !== row.id && r.role === "王城メイン") r.role = "";
+        });
+        renderRoster();
+      }
+      persistState();
+    });
+  });
+  tbody.querySelectorAll(".f-group").forEach(inp => {
+    inp.addEventListener("input", () => {
+      byId(inp.dataset.id).group = inp.value;
+      refreshGroupDatalist();
       persistState();
     });
   });
@@ -476,7 +491,7 @@ const ROSTER_STORAGE_KEY = "kvkCountdownRosterStateV2";
 
 function savePersonalState(){
   try {
-    localStorage.setItem(ROSTER_STORAGE_KEY, JSON.stringify({ rows: rosterRows, knownGroups, rowSeq }));
+    localStorage.setItem(ROSTER_STORAGE_KEY, JSON.stringify({ rows: rosterRows, rowSeq }));
   } catch(e){}
 }
 
@@ -493,10 +508,8 @@ function loadPersonalIntoState(){
   const saved = loadPersonalState();
   if(saved && Array.isArray(saved.rows) && saved.rows.length){
     rosterRows = saved.rows.map(r => newRow(r));
-    knownGroups = saved.knownGroups || [];
   } else {
     rosterRows = SAMPLE.map(r => newRow(r));
-    knownGroups = Array.from(new Set(SAMPLE.map(r => r.group).filter(Boolean)));
   }
   renderRoster();
   compute();
@@ -506,8 +519,6 @@ function loadPersonalIntoState(){
 function loadSharedIntoState(){
   const rec = regData.kvkRosters.find(r => r.eventId === currentEventId);
   rosterRows = (rec && Array.isArray(rec.rows) ? rec.rows : []).map(r => newRow(r));
-  const fromRows = rosterRows.map(r => r.group).filter(Boolean);
-  knownGroups = Array.from(new Set(knownGroups.concat(fromRows)));
   sharedDirty = false;
   renderRoster();
   compute();
@@ -569,15 +580,6 @@ document.getElementById("importBtn").addEventListener("click", () => {
   renderRoster();
   persistState();
   compute();
-});
-
-document.getElementById("addGroupBtn").addEventListener("click", () => {
-  const inp = document.getElementById("newGroupInput");
-  addGroup(inp.value);
-  inp.value = "";
-});
-document.getElementById("newGroupInput").addEventListener("keydown", e => {
-  if(e.key === "Enter") document.getElementById("addGroupBtn").click();
 });
 
 function getRoster(){
