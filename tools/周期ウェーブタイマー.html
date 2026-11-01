@@ -230,7 +230,7 @@
     <button type="button" class="ks-toggle-btn" id="ksToggleBtn" onclick="ksToggleSidebar()" aria-label="メニュー開閉">←</button>
   </div>
   <nav>
-    <a href="../index.html?v=20261101142305" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261101142305" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="王城到着同期カウントアップ.html?v=20261101142305" class="ks-link" title="KvK同着スタート カウントアップ表"><span class="ks-icon">⏱️</span><span class="ks-label">KvK同着スタート カウントアップ表</span></a><a href="KvK同着スタート カウントダウン表.html?v=20261101142305" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261101142305" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="周期ウェーブタイマー.html?v=20261101142305" class="ks-link ks-active" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><a href="音声アナウンス付きストップウォッチ.html?v=20261101142305" class="ks-link" title="音声ストップウォッチ（工事中）"><span class="ks-icon">🔊</span><span class="ks-label">音声ストップウォッチ（工事中）</span></a>
+    <a href="../index.html?v=20261101172438" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261101172438" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="王城到着同期カウントアップ.html?v=20261101172438" class="ks-link" title="KvK同着スタート カウントアップ表"><span class="ks-icon">⏱️</span><span class="ks-label">KvK同着スタート カウントアップ表</span></a><a href="KvK同着スタート カウントダウン表.html?v=20261101172438" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261101172438" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="周期ウェーブタイマー.html?v=20261101172438" class="ks-link ks-active" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><a href="音声アナウンス付きストップウォッチ.html?v=20261101172438" class="ks-link" title="音声ストップウォッチ（工事中）"><span class="ks-icon">🔊</span><span class="ks-label">音声ストップウォッチ（工事中）</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -553,6 +553,47 @@ pasteBox.addEventListener("input", () => {
 });
 loadPasteBox();
 
+// --- 炎龍 集結タイムライン計算の結果を自動取り込み（周期・MAXの手入力を不要にする） ---
+const SIEGE_DATA_KEY = "siegeTimelineForWaveTimer";
+let lastAppliedSiegeSavedAt = null;
+
+function applySiegeData(data) {
+  if (typeof data.periodSec === "number" && data.periodSec > 0) {
+    periodMinInput.value = Math.floor(data.periodSec / 60);
+    periodSecInput.value = Math.round(data.periodSec % 60);
+  }
+  if (typeof data.maxSec === "number" && data.maxSec > 0) {
+    maxMinInput.value = Math.floor(data.maxSec / 60);
+    maxSecInput.value = Math.round(data.maxSec % 60);
+  }
+  if (typeof data.rawText === "string" && data.rawText) {
+    pasteBox.value = data.rawText;
+  }
+  saveSettings();
+  savePasteBox();
+  fitPasteBoxFont();
+  reparseTimeline();
+  saveStatus.textContent = "攻城タイムライン計算の結果を自動取得しました";
+  clearTimeout(saveStatusTimer);
+  saveStatusTimer = setTimeout(() => { saveStatus.textContent = " "; }, 2500);
+}
+
+function autoSyncSiegeData() {
+  if (running) return; // 計測中は設定を書き換えない
+  try {
+    const raw = localStorage.getItem(SIEGE_DATA_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (!data || data.savedAt === lastAppliedSiegeSavedAt) return;
+    lastAppliedSiegeSavedAt = data.savedAt;
+    applySiegeData(data);
+  } catch (e) {}
+}
+
+window.addEventListener("storage", (e) => {
+  if (e.key === SIEGE_DATA_KEY) autoSyncSiegeData();
+});
+
 // --- タイムライン進行状況：貼り付けたテキスト（1週分）を無限ループとして扱う。
 //     ①②③...の最後のパターンが終わったら、また最初のパターンから繰り返す。
 //     進行中は未終了のパターンだけ表示。全部終わった瞬間（ループの境目）だけ全パターンを表示。 ---
@@ -567,30 +608,48 @@ function parseCycleLength(text) {
   return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
 }
 
+// 「0分0秒 → ①A（5分集結）※行軍40秒（5分40秒着、6分20秒帰還）」のように、
+// 発起時刻が早い順に並んだ1行1アクション形式（炎龍 集結タイムライン計算の出力）をパースする。
+// 同じパターン記号（①②③…）を含む行をまとめて1ブロックとし、発起〜帰還の最も早い/遅い時刻を範囲とする。
 function parseTimeline(text) {
-  const lines = text.split(/\r?\n/);
-  const blocks = [];
-  let current = null;
-  const headerRe = /^[①②③④⑤⑥⑦⑧⑨⑩]/;
-  const timeRe = /^(\d{1,3})分(\d{1,2})秒|^(\d{1,3}):(\d{2})/;
-  for (const raw of lines) {
+  const SYMBOL_RE = /[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳]/;
+  const leadTimeRe = /^(\d{1,3})分(\d{1,2})秒|^(\d{1,3}):(\d{2})/;
+  const retTimeRe = /(\d{1,3})分(\d{1,2})秒帰還|(\d{1,3}):(\d{2})帰還/;
+  const blockMap = new Map();
+  const order = [];
+  for (const raw of text.split(/\r?\n/)) {
     const line = raw.trim();
     if (!line) continue;
-    if (headerRe.test(line)) {
-      current = { header: line, startSec: null, endSec: null };
-      blocks.push(current);
-      continue;
+    const leadM = line.match(leadTimeRe);
+    const arrowIdx = line.indexOf("→");
+    if (!leadM || arrowIdx === -1) continue;
+    const symM = line.slice(arrowIdx + 1).match(SYMBOL_RE);
+    if (!symM) continue;
+    const symbol = symM[0];
+    const launchSec = leadM[1] !== undefined
+      ? parseInt(leadM[1], 10) * 60 + parseInt(leadM[2], 10)
+      : parseInt(leadM[3], 10) * 60 + parseInt(leadM[4], 10);
+    const retM = line.match(retTimeRe);
+    const retSec = retM
+      ? (retM[1] !== undefined ? parseInt(retM[1], 10) * 60 + parseInt(retM[2], 10) : parseInt(retM[3], 10) * 60 + parseInt(retM[4], 10))
+      : launchSec;
+    const labelM = line.slice(arrowIdx + 1 + symM.index + symbol.length).match(/^([^（(]*)/);
+    const label = labelM ? labelM[1].trim() : "";
+
+    if (!blockMap.has(symbol)) {
+      blockMap.set(symbol, { symbol, labels: new Set(), startSec: launchSec, endSec: retSec });
+      order.push(symbol);
     }
-    const m = line.match(timeRe);
-    if (m && current) {
-      const sec = m[1] !== undefined
-        ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10)
-        : parseInt(m[3], 10) * 60 + parseInt(m[4], 10);
-      if (current.startSec === null) current.startSec = sec;
-      if (current.endSec === null || sec > current.endSec) current.endSec = sec;
-    }
+    const b = blockMap.get(symbol);
+    if (label) b.labels.add(label);
+    if (launchSec < b.startSec) b.startSec = launchSec;
+    if (retSec > b.endSec) b.endSec = retSec;
   }
-  return blocks.filter(b => b.endSec !== null);
+  return order.map(s => {
+    const b = blockMap.get(s);
+    const labelsText = Array.from(b.labels).join("+");
+    return { header: labelsText ? `${b.symbol}${labelsText}` : b.symbol, startSec: b.startSec, endSec: b.endSec };
+  });
 }
 
 function reparseTimeline() {
@@ -629,6 +688,7 @@ function renderTimelineStatus() {
 }
 
 reparseTimeline();
+autoSyncSiegeData();
 </script>
 
 </body>

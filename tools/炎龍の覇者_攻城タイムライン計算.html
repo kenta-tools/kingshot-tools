@@ -191,7 +191,7 @@
     <button type="button" class="ks-toggle-btn" id="ksToggleBtn" onclick="ksToggleSidebar()" aria-label="メニュー開閉">←</button>
   </div>
   <nav>
-    <a href="../index.html?v=20261101142305" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261101142305" class="ks-link ks-active" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="王城到着同期カウントアップ.html?v=20261101142305" class="ks-link" title="KvK同着スタート カウントアップ表"><span class="ks-icon">⏱️</span><span class="ks-label">KvK同着スタート カウントアップ表</span></a><a href="KvK同着スタート カウントダウン表.html?v=20261101142305" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261101142305" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="周期ウェーブタイマー.html?v=20261101142305" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><a href="音声アナウンス付きストップウォッチ.html?v=20261101142305" class="ks-link" title="音声ストップウォッチ（工事中）"><span class="ks-icon">🔊</span><span class="ks-label">音声ストップウォッチ（工事中）</span></a>
+    <a href="../index.html?v=20261101172438" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261101172438" class="ks-link ks-active" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="王城到着同期カウントアップ.html?v=20261101172438" class="ks-link" title="KvK同着スタート カウントアップ表"><span class="ks-icon">⏱️</span><span class="ks-label">KvK同着スタート カウントアップ表</span></a><a href="KvK同着スタート カウントダウン表.html?v=20261101172438" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261101172438" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="周期ウェーブタイマー.html?v=20261101172438" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><a href="音声アナウンス付きストップウォッチ.html?v=20261101172438" class="ks-link" title="音声ストップウォッチ（工事中）"><span class="ks-icon">🔊</span><span class="ks-label">音声ストップウォッチ（工事中）</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -605,23 +605,24 @@ function runCalculation() {
     results.push({ round: inst.round, pattern: inst.pattern, T, lines });
   });
 
-  // パターンの発起・着弾・帰還テキストをまとめて生成するヘルパー
-  function buildPatternLines(round, p) {
-    const res = results.find(x => x.round === round && x.pattern.id === p.id);
-    if (!res) return [];
-    const lines = [];
-    const kezuriLabels = kezuriOf(p).map(m => m.label).join("+");
-    const headerTail = reinforceOf(p).length ? "→メイン→増援" : "→メイン";
-    lines.push(`${p.name}${kezuriLabels}${headerTail}`);
-    res.lines.forEach(line => {
-      lines.push(
-        `${formatTime(line.launch)} → ${line.label}（${formatDuration(line.rallyDur)}集結）` +
-        `※行軍${line.arrival - line.launch - line.rallyDur}秒` +
-        `（${formatTime(line.arrival)}着、${formatTime(line.ret)}帰還）`
-      );
+  // 指定ラウンドの全パターンの発起行を、時間が早い順（launch昇順）に並べたテキストを生成するヘルパー
+  function buildRoundLines(round) {
+    const items = [];
+    patterns.forEach(p => {
+      const res = results.find(x => x.round === round && x.pattern.id === p.id);
+      if (!res) return;
+      res.lines.forEach(line => {
+        items.push({
+          launch: line.launch,
+          text:
+            `${formatTime(line.launch)} → ${p.name}${line.label}（${formatDuration(line.rallyDur)}集結）` +
+            `※行軍${line.arrival - line.launch - line.rallyDur}秒` +
+            `（${formatTime(line.arrival)}着、${formatTime(line.ret)}帰還）`,
+        });
+      });
     });
-    lines.push("");
-    return lines;
+    items.sort((a, b) => a.launch - b.launch);
+    return items.map(it => it.text);
   }
 
   // 周期（1周目→2周目の間隔）を計算
@@ -631,11 +632,8 @@ function runCalculation() {
   const cycleText = (t1 !== undefined && t2 !== undefined) ? formatTime(t2 - t1) : null;
 
   // メイン出力：1周目だけ（周期ウェーブタイマー等に貼り付けて無限ループさせる用）
-  const outLines = [];
-  patterns.forEach(p => {
-    outLines.push(...buildPatternLines(1, p));
-  });
-  if (cycleText) outLines.push(`周期：${cycleText}`);
+  const outLines = buildRoundLines(1);
+  if (cycleText) outLines.push("", `周期：${cycleText}`);
   outputEl.textContent = outLines.join("\n");
   outputCard.style.display = "block";
 
@@ -643,13 +641,25 @@ function runCalculation() {
   const refLines = [];
   for (let r = 1; r <= rounds; r++) {
     refLines.push(`【${r}周目】`);
-    patterns.forEach(p => {
-      refLines.push(...buildPatternLines(r, p));
-    });
+    refLines.push(...buildRoundLines(r));
+    refLines.push("");
   }
   if (cycleText) refLines.push(`周期：${cycleText}`);
   refOutputEl.textContent = refLines.join("\n");
   refOutputCard.style.display = "block";
+
+  // --- 周期ウェーブタイマーへ自動連携：周期・MAX・結果テキストを保存 ---
+  try {
+    const round1Rets = results.filter(r => r.round === 1).flatMap(r => r.lines.map(l => l.ret));
+    const maxSec = round1Rets.length ? Math.max(...round1Rets) : null;
+    const periodSec = (t1 !== undefined && t2 !== undefined) ? (t2 - t1) : maxSec;
+    localStorage.setItem("siegeTimelineForWaveTimer", JSON.stringify({
+      savedAt: Date.now(),
+      periodSec,
+      maxSec,
+      rawText: outLines.join("\n"),
+    }));
+  } catch (e) {}
 }
 
 document.getElementById("calcBtn").addEventListener("click", runCalculation);
