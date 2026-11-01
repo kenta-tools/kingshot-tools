@@ -141,7 +141,7 @@
       <button type="button" class="sub-btn small" id="logoutBtn">ログアウト</button>
     </div>
   </div>
-  <div class="sub">ユーザーは蓄積され、イベントごとに参加情報を登録します。登録した内容は「members.json を書き出し」で保存し、リポジトリの <code>data/members.json</code> を置き換えて公開してください。</div>
+  <div class="sub">ユーザーは蓄積され、イベントごとに参加情報を登録します。登録・変更した内容は、最後に上の「<b>GitHubに公開</b>」を押すとサイトのデータ（<code>data/members.json</code>）に保存されます。複数の管理者が別々に登録しても、公開時に自動でマージされます。</div>
 
   <!-- 保存状態 -->
   <div class="card status-bar">
@@ -150,9 +150,26 @@
       <span id="stateText" class="hint"></span>
     </div>
     <div class="row">
-      <button type="button" id="exportJsonBtn">members.json を書き出し</button>
+      <button type="button" id="publishBtn">GitHubに公開</button>
+      <button type="button" class="sub-btn" id="pullBtn">最新を読み込む</button>
+      <button type="button" class="sub-btn" id="exportJsonBtn">members.json を書き出し</button>
       <button type="button" class="danger" id="discardBtn">変更を破棄</button>
     </div>
+    <div class="msg" id="ghMsg" style="width: 100%;"></div>
+    <details id="ghDetails" style="width: 100%;">
+      <summary class="hint" style="cursor: pointer;">⚙ GitHub保存の設定（管理者ごとに最初の1回だけ） <span id="ghTokenState"></span></summary>
+      <div class="hint" style="margin-top: 6px;">
+        「GitHubに公開」を押すと、GitHub上の最新の members.json に自分の変更をマージして保存します（他の人が先に保存していても消えません）。サイトへの反映は1〜2分後です。<br>
+        使うには、GitHubアカウント <b>kenta-tools</b> で作ったアクセストークンが必要です（トークンはこのブラウザにだけ保存され、サイトには載りません）。<br>
+        <b>トークンの作り方</b>：GitHubに kenta-tools でログイン → 右上アイコン → Settings → Developer settings → Personal access tokens → <b>Fine-grained tokens</b> → Generate new token →
+        Repository access で「Only select repositories」→ <b>kingshot-tools</b> を選択 → Permissions の <b>Contents</b> を「Read and write」→ Generate token → 表示された文字列をコピーして下に貼り付け
+      </div>
+      <div class="row" style="margin-top: 8px;">
+        <input type="password" id="ghTokenInput" placeholder="github_pat_..." style="flex: 1; min-width: 220px;" autocomplete="off">
+        <button type="button" class="small" id="ghTokenSaveBtn">保存</button>
+        <button type="button" class="small danger" id="ghTokenClearBtn">このブラウザから削除</button>
+      </div>
+    </details>
   </div>
 
   <!-- イベント選択 -->
@@ -601,30 +618,251 @@
     return JSON.stringify(state);
   }
 
-  function loadData() {
-    fetch(DATA_URL, { cache: "no-store" })
-      .then(function(r) { return r.ok ? r.json() : {}; })
-      .catch(function() { return {}; })
-      .then(function(data) {
-        var published = normalizeState(data);
-        publishedJson = JSON.stringify(published);
-        var draft = null;
-        try {
-          localStorage.removeItem("ksMembersDraft"); // 旧形式（イベント分け前）の下書き
-          draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
-        } catch (e) {}
-        state = draft ? normalizeState(draft) : published;
-        try { currentEventId = localStorage.getItem(EVENT_KEY); } catch (e) {}
-        render();
-      });
+  // ---------- GitHubへの保存 ----------
+  // GitHub Pages は読み取り専用なので、members.json の更新は GitHub API（Contents API）で直接コミットする。
+  // トークンは管理者ごとにこのブラウザの localStorage にだけ保存する。
+  var GH = { owner: "kenta-tools", repo: "kingshot-tools", path: "data/members.json", branch: "main" };
+  var TOKEN_KEY = "ksGhToken";
+
+  function ghToken() {
+    try { return localStorage.getItem(TOKEN_KEY) || ""; } catch (e) { return ""; }
   }
 
+  function ghUrl() {
+    return "https://api.github.com/repos/" + GH.owner + "/" + GH.repo + "/contents/" + GH.path;
+  }
+
+  function ghHeaders(token) {
+    return { "Authorization": "Bearer " + token, "Accept": "application/vnd.github+json" };
+  }
+
+  function ghError(status) {
+    if (status === 401) return "トークンが無効です（入力ミス・期限切れ）。設定から入れ直してください";
+    if (status === 403) return "トークンに書き込み権限がありません（Contents を Read and write にしてください）";
+    if (status === 404) return "リポジトリが見つかりません（トークンの対象に kingshot-tools を選んでください）";
+    if (status === 409 || status === 422) return "他の人の保存と重なりました。もう一度「GitHubに公開」を押してください";
+    return "GitHubへの接続でエラーが発生しました（" + status + "）";
+  }
+
+  function b64ToUtf8(b64) {
+    var bin = atob(b64.replace(/\s/g, ""));
+    var bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  }
+
+  function utf8ToB64(text) {
+    var bytes = new TextEncoder().encode(text), bin = "";
+    for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin);
+  }
+
+  function fetchFromPages() {
+    return fetch(DATA_URL, { cache: "no-store" })
+      .then(function(r) { return r.ok ? r.json() : {}; })
+      .catch(function() { return {}; })
+      .then(function(data) { return { data: data, sha: null }; });
+  }
+
+  // 公開データを取得。トークンがあれば GitHub API（最新・sha付き）、なければ GitHub Pages（反映に1〜2分遅れあり）
+  function fetchRemote() {
+    var token = ghToken();
+    if (!token) return fetchFromPages();
+    return fetch(ghUrl() + "?ref=" + GH.branch, { headers: ghHeaders(token), cache: "no-store" }).then(function(r) {
+      if (r.status === 404) return { data: {}, sha: null };
+      if (!r.ok) throw new Error(ghError(r.status));
+      return r.json().then(function(j) { return { data: JSON.parse(b64ToUtf8(j.content) || "{}"), sha: j.sha }; });
+    });
+  }
+
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+
+  function byId(list) {
+    var m = {};
+    list.forEach(function(x) { m[x.id] = x; });
+    return m;
+  }
+
+  // base（自分が読み込んだ時点の公開版）からの自分の変更（local）を、最新の公開版（remote）に重ねる。
+  // 他の人が保存した追加・変更は残し、自分が追加・変更・削除したものだけを反映する。
+  function mergeIntoRemote(base, local, remote) {
+    var out = clone(remote);
+    var bU = byId(base.users), lU = byId(local.users);
+    var bV = byId(base.events), lV = byId(local.events);
+    var bE = byId(base.entries), lE = byId(local.entries);
+    var userMap = {}, eventMap = {};
+
+    // 自分が削除したもの
+    base.users.forEach(function(u) {
+      if (lU[u.id]) return;
+      out.users = out.users.filter(function(x) { return x.id !== u.id; });
+      out.entries = out.entries.filter(function(e) { return e.userId !== u.id; });
+    });
+    base.events.forEach(function(v) {
+      if (lV[v.id]) return;
+      out.events = out.events.filter(function(x) { return x.id !== v.id; });
+      out.entries = out.entries.filter(function(e) { return e.eventId !== v.id; });
+    });
+    base.entries.forEach(function(e) {
+      if (!lE[e.id]) out.entries = out.entries.filter(function(x) { return x.id !== e.id; });
+    });
+
+    // ユーザー: 自分が追加・変更したものを反映（他の人が同じ名前で追加済みならそのユーザーにまとめる）
+    local.users.forEach(function(u) {
+      var b = bU[u.id];
+      var changed = !b || JSON.stringify(b) !== JSON.stringify(u);
+      var o = out.users.find(function(x) { return x.id === u.id; });
+      if (o) {
+        if (changed) { o.name = u.name; o.alliance = u.alliance; u.aliases.forEach(function(a) { addAlias(o, a); }); }
+        userMap[u.id] = o.id;
+        return;
+      }
+      if (b && !changed) return; // 他の人が削除・統合したユーザーで、自分は触っていない
+      var key = nameKey(u.name);
+      var same = out.users.find(function(x) {
+        return nameKey(x.name) === key || (x.aliases || []).some(function(a) { return nameKey(a) === key; });
+      });
+      if (same) {
+        if (u.alliance) same.alliance = u.alliance;
+        u.aliases.forEach(function(a) { addAlias(same, a); });
+        userMap[u.id] = same.id;
+      } else {
+        out.users.push(clone(u));
+        userMap[u.id] = u.id;
+      }
+    });
+
+    // イベント: 同じ種類・同じ開催日は同じイベントとしてまとめる
+    local.events.forEach(function(v) {
+      var o = out.events.find(function(x) { return x.id === v.id; })
+        || (!bV[v.id] && out.events.find(function(x) { return x.type === v.type && x.date === v.date; }));
+      if (o) { eventMap[v.id] = o.id; return; }
+      if (bV[v.id]) return; // 他の人が削除したイベント
+      out.events.push(clone(v));
+      eventMap[v.id] = v.id;
+    });
+
+    // 参加情報: 自分が追加・変更したものを反映（同じイベント・同じ人は自分の内容で上書き）
+    local.entries.forEach(function(e) {
+      var b = bE[e.id];
+      if (b && JSON.stringify(b) === JSON.stringify(e)) return;
+      var uid = userMap[e.userId], vid = eventMap[e.eventId];
+      if (!uid || !vid) return;
+      var c = clone(e);
+      c.userId = uid;
+      c.eventId = vid;
+      out.entries = out.entries.filter(function(x) { return x.id !== c.id && !(x.eventId === vid && x.userId === uid); });
+      out.entries.push(c);
+    });
+
+    // 「別人」の記録は追加分だけ反映
+    local.notSame.forEach(function(p) {
+      if (base.notSame.indexOf(p) >= 0) return;
+      var ids = p.split("|");
+      var a = userMap[ids[0]], b = userMap[ids[1]];
+      if (a && b && a !== b && out.notSame.indexOf(pairKey(a, b)) < 0) out.notSame.push(pairKey(a, b));
+    });
+
+    return normalizeState(out);
+  }
+
+  // 画面を開いたとき・「最新を読み込む」: 最新の公開版を取得し、自分の未公開の変更を重ねる
+  function loadData() {
+    var draft = null;
+    try {
+      localStorage.removeItem("ksMembersDraft"); // 旧形式（イベント分け前）の下書き
+      draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
+    } catch (e) {}
+    try { currentEventId = localStorage.getItem(EVENT_KEY); } catch (e) {}
+
+    return fetchRemote().catch(function(e) {
+      setMsg($("ghMsg"), "GitHubから読み込めなかったので公開ページの内容を表示しています: " + e.message, false);
+      return fetchFromPages();
+    }).then(function(res) {
+      var remote = normalizeState(res.data);
+      publishedJson = JSON.stringify(remote);
+      if (draft && draft.base && draft.state) {
+        state = mergeIntoRemote(normalizeState(JSON.parse(draft.base)), normalizeState(draft.state), remote);
+      } else {
+        state = remote;
+      }
+      saveDraft();
+      render();
+    });
+  }
+
+  // 下書きは「読み込んだ時点の公開版（base）」と一緒に保存し、公開時のマージに使う
   function saveDraft() {
     try {
       if (serialize() === publishedJson) localStorage.removeItem(DRAFT_KEY);
-      else localStorage.setItem(DRAFT_KEY, serialize());
+      else localStorage.setItem(DRAFT_KEY, JSON.stringify({ base: publishedJson, state: state }));
     } catch (e) {}
   }
+
+  function publish(isRetry) {
+    var token = ghToken();
+    if (!token) {
+      $("ghDetails").open = true;
+      setMsg($("ghMsg"), "先に「GitHub保存の設定」でトークンを保存してください", false);
+      return Promise.resolve();
+    }
+    $("publishBtn").disabled = true;
+    setMsg($("ghMsg"), "GitHubに保存中…", true);
+    return fetchRemote().then(function(res) {
+      var remote = normalizeState(res.data);
+      var merged = mergeIntoRemote(normalizeState(JSON.parse(publishedJson)), state, remote);
+      var body = { updated: new Date().toISOString(), users: merged.users, events: merged.events,
+        entries: merged.entries, notSame: merged.notSame };
+      var payload = { message: "Update members.json from admin page", branch: GH.branch,
+        content: utf8ToB64(JSON.stringify(body, null, 2) + "\n") };
+      if (res.sha) payload.sha = res.sha;
+      return fetch(ghUrl(), { method: "PUT", headers: ghHeaders(token), body: JSON.stringify(payload) }).then(function(r) {
+        if ((r.status === 409 || r.status === 422) && !isRetry) return publish(true); // 直前に他の人が保存した → 取り直してもう一度
+        if (!r.ok) throw new Error(ghError(r.status));
+        publishedJson = JSON.stringify(merged);
+        state = merged;
+        if (editingId && !state.entries.some(function(x) { return x.id === editingId; })) resetForm(false);
+        saveDraft();
+        render();
+        setMsg($("ghMsg"), "GitHubに保存しました（他の人の登録とマージ済み）。サイトへの反映は1〜2分後です。", true);
+      });
+    }).catch(function(e) {
+      setMsg($("ghMsg"), "保存できませんでした: " + e.message, false);
+    }).then(function() {
+      $("publishBtn").disabled = false;
+    });
+  }
+
+  function renderTokenState() {
+    $("ghTokenState").textContent = ghToken() ? "（トークン設定済み）" : "（未設定）";
+  }
+
+  $("publishBtn").addEventListener("click", function() { publish(false); });
+  $("pullBtn").addEventListener("click", function() {
+    setMsg($("ghMsg"), "読み込み中…", true);
+    loadData().then(function() {
+      if (!/読み込めなかった/.test($("ghMsg").textContent)) {
+        setMsg($("ghMsg"), "最新の公開版を読み込みました（自分の未公開の変更は残しています）", true);
+      }
+    });
+  });
+  $("ghTokenSaveBtn").addEventListener("click", function() {
+    var t = $("ghTokenInput").value.trim();
+    if (!t) return;
+    try { localStorage.setItem(TOKEN_KEY, t); } catch (e) {}
+    $("ghTokenInput").value = "";
+    renderTokenState();
+    setMsg($("ghMsg"), "トークンを保存しました。最新を読み込みます…", true);
+    loadData().then(function() {
+      if (!/読み込めなかった/.test($("ghMsg").textContent)) setMsg($("ghMsg"), "トークンを保存し、GitHubから最新を読み込みました", true);
+    });
+  });
+  $("ghTokenClearBtn").addEventListener("click", function() {
+    try { localStorage.removeItem(TOKEN_KEY); } catch (e) {}
+    renderTokenState();
+    setMsg($("ghMsg"), "このブラウザからトークンを削除しました", true);
+  });
+  renderTokenState();
 
   function commit() {
     saveDraft();
@@ -691,7 +929,8 @@
     if (x === y) return 0;
     var d = editDistance(x, y);
     var max = Math.max(x.length, y.length), min = Math.min(x.length, y.length);
-    if (d <= (max <= 4 ? 1 : 2)) return d;
+    // 2文字以下の名前は1文字違いでも別人のことが多いので、表記ゆれ（上の x === y）だけを似た名前とする
+    if (max > 2 && d <= (max <= 4 ? 1 : 2)) return d;
     if (min >= 2 && (x.indexOf(y) >= 0 || y.indexOf(x) >= 0)) return 3;
     return -1;
   }
@@ -1034,7 +1273,7 @@
     pill.className = "pill " + (dirty ? "dirty" : "saved");
     pill.textContent = dirty ? "未公開の変更あり" : "公開版と同じ";
     $("stateText").textContent = dirty
-      ? "このブラウザに下書き保存中。書き出して data/members.json を置き換えると公開されます。"
+      ? "このブラウザに下書き保存中です。「GitHubに公開」を押すとサイトのデータに保存されます。"
       : "";
     $("discardBtn").disabled = !dirty;
   }
@@ -1741,6 +1980,9 @@
     try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
     resetForm(false);
     loadData();
+  });
+  window.addEventListener("beforeunload", function(e) {
+    if (publishedJson && serialize() !== publishedJson) { e.preventDefault(); e.returnValue = ""; }
   });
 
   // ---------- 起動 ----------
