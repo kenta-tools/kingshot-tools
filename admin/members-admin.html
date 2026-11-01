@@ -350,7 +350,7 @@
         </div>
         <div class="field">
           <label class="cap">出征容量ペットLv</label>
-          <input type="number" id="fMarchPet" min="0">
+          <select id="fMarchPet" data-pet="marchPet"></select>
         </div>
         <div class="field">
           <label class="cap">集結部隊数（指示があった人）</label>
@@ -358,11 +358,11 @@
         </div>
         <div class="field">
           <label class="cap">集結容量ペットLv（指示があった人）</label>
-          <input type="number" id="fRallyPet" min="0">
+          <select id="fRallyPet" data-pet="rallyPet"></select>
         </div>
         <div class="field">
           <label class="cap">行軍速度ペットLv（指示があった人）</label>
-          <input type="number" id="fRallySpeedPet" min="0">
+          <select id="fRallySpeedPet" data-pet="rallySpeedPet"></select>
         </div>
         <div class="field wide">
           <label class="cap">備考</label>
@@ -482,6 +482,8 @@
   var ENTRY_SHORT = { start: "最初から", late: "途中参加", absent: "不参加" };
   var ENTRY_ORDER = ["start", "late", "absent"];
   var TROOP_ORDER = "歩騎弓";
+  // ペットLvの最大（0＝持っていない）。これを超える値は読み込み・入力時に空欄にする
+  var PET_MAX = { marchPet: 10, rallyPet: 10, rallySpeedPet: 8 };
   // 数値の登録項目（出征＝全員、集結＝指示があった人だけ）
   var NUM_FIELDS = [
     ["marchCount", "出征部隊数"], ["marchPet", "出征容量ペットLv"],
@@ -649,6 +651,10 @@
     var s = str(v).replace(/[,，]/g, "").replace(/^(Lv|LV|lv)\.?/, "");
     return s && !isNaN(Number(s)) && Number(s) >= 0 ? Math.floor(Number(s)) : null;
   }
+  function petLv(v, key) {
+    var n = num(v);
+    return n != null && n <= PET_MAX[key] ? n : null;
+  }
   function pad2(n) { return (n < 10 ? "0" : "") + n; }
   function today() {
     var d = new Date();
@@ -675,10 +681,10 @@
       leaveAt: str(m.leaveAt),
       note: str(m.note),
       marchCount: num(m.marchCount),
-      marchPet: num(m.marchPet),
+      marchPet: petLv(m.marchPet, "marchPet"),
       rallyCount: num(m.rallyCount),
-      rallyPet: num(m.rallyPet),
-      rallySpeedPet: num(m.rallySpeedPet),
+      rallyPet: petLv(m.rallyPet, "rallyPet"),
+      rallySpeedPet: petLv(m.rallySpeedPet, "rallySpeedPet"),
       sameAs: str(m.sameAs) // AI変換で登録者が「同一人物」と確認した登録済みユーザー名（取り込み時のみ使う）
     };
   }
@@ -1748,6 +1754,12 @@
 
   $("copyEntryUrlBtn").addEventListener("click", function() {
     copyText(new URL("../entry/", location.href).href, this);
+  });
+
+  document.querySelectorAll("select[data-pet]").forEach(function(sel) {
+    var html = '<option value="">（未入力）</option><option value="0">持っていない</option>';
+    for (var lv = PET_MAX[sel.dataset.pet]; lv >= 1; lv--) html += '<option value="' + lv + '">Lv' + lv + '</option>';
+    sel.innerHTML = html;
   });
 
   // ---------- 1人ずつ登録・変更・キャンセル ----------

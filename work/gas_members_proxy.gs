@@ -198,10 +198,10 @@ function cleanEntry_(m) {
     leaveAt: clip_(m.leaveAt, 20),
     note: clip_(m.note, 100),
     marchCount: count_(m.marchCount),
-    marchPet: count_(m.marchPet),
+    marchPet: count_(m.marchPet, 10),
     rallyCount: count_(m.rallyCount),
-    rallyPet: count_(m.rallyPet),
-    rallySpeedPet: count_(m.rallySpeedPet)
+    rallyPet: count_(m.rallyPet, 10),
+    rallySpeedPet: count_(m.rallySpeedPet, 8)
   };
   if (r.leaveAt) r.leaveEarly = true;
   return r;
@@ -214,10 +214,10 @@ function findUser_(users, name) {
     || null;
 }
 
-// 部隊数・ペットLv（0〜99999の整数、空なら null）
-function count_(v) {
+// 部隊数・ペットLv（0〜max の整数。max 省略時は 99999。空や範囲外なら null）
+function count_(v, max) {
   var n = Number(String(v == null ? "" : v).replace(/[,，]/g, ""));
-  return String(v == null ? "" : v).trim() !== "" && n >= 0 && n <= 99999 && Math.floor(n) === n ? n : null;
+  return String(v == null ? "" : v).trim() !== "" && n >= 0 && n <= (max || 99999) && Math.floor(n) === n ? n : null;
 }
 
 function key_(s) { return String(s).trim().toLowerCase(); }
