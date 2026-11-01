@@ -22,14 +22,19 @@ from pathlib import Path
 FOLDER = Path(__file__).resolve().parent.parent
 
 # (リポジトリルートからの相対パス, アイコン, ラベル)
+# カテゴリフォルダ（tools / flame-dragon / holy-sword-league）にはそれぞれ
+# トップページ（◯◯-index.html）を置き、個別の実績レポート（ランキングHTML等）は
+# そのトップページ側でカード一覧として管理する（グローバルサイドバーには載せない）。
 TOOLS = [
-    ("index.html", "🏠", "メニュー"),
-    ("flame-dragon/炎龍の覇者_攻城タイムライン計算.html", "🐉", "炎龍 集結タイムライン計算"),
+    ("tools/tools-index.html", "🏠", "ツール一覧"),
+    ("tools/炎龍の覇者_攻城タイムライン計算.html", "🐉", "炎龍 集結タイムライン計算"),
     ("tools/王城到着同期カウントアップ.html", "⏱️", "KvK同着スタート カウントアップ表"),
     ("tools/KvK同着スタート カウントダウン表.html", "⏲️", "KvK同着スタート カウントダウン表"),
     ("tools/KvK占領判定.html", "🏳️", "KvK占領戦 勝利判定ツール"),
     ("tools/周期ウェーブタイマー.html", "🌊", "周期ウェーブタイマー"),
     ("tools/音声アナウンス付きストップウォッチ.html", "🔊", "音声ストップウォッチ（工事中）"),
+    ("flame-dragon/flame-dragon-index.html", "🐲", "炎龍 ランキングまとめ"),
+    ("holy-sword-league/holy-sword-league-index.html", "⚔️", "聖剣リーグ ランキングまとめ"),
 ]
 
 MARK_START = "<!-- ks-sidebar:start -->"

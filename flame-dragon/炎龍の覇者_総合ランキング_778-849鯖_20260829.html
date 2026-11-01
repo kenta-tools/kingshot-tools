@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>778-849鯖 総合ランキング</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#eef1f2;
+    --surface:#ffffff;
+    --surface-2:#f3f5f7;
+    --surface-3:#e9ecef;
+    --ink:#1a2030;
+    --ink-dim:#5b6478;
+    --ink-faint:#8a93a6;
+    --border:#dde1e6;
+    --accent:#c1591f;
+    --accent-strong:#a84413;
+    --gold:#93752b;
+    --gold-bg:#f1e6cc;
+    --na:#b7bcc4;
+    --shadow: 0 1px 2px rgba(20,24,32,0.06), 0 6px 20px rgba(20,24,32,0.05);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0f131b; --surface:#171d29; --surface-2:#1e2635; --surface-3:#242d3f;
+      --ink:#eef1f7; --ink-dim:#93a0b8; --ink-faint:#5c6884; --border:#2a3348;
+      --accent:#ef8a4c; --accent-strong:#ff9d5c; --gold:#d9b464; --gold-bg:#332a17; --na:#4a536b;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 10px 30px rgba(0,0,0,0.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0f131b; --surface:#171d29; --surface-2:#1e2635; --surface-3:#242d3f;
+    --ink:#eef1f7; --ink-dim:#93a0b8; --ink-faint:#5c6884; --border:#2a3348;
+    --accent:#ef8a4c; --accent-strong:#ff9d5c; --gold:#d9b464; --gold-bg:#332a17; --na:#4a536b;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 10px 30px rgba(0,0,0,0.35);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Work Sans","Yu Gothic UI","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .page{ max-width:820px; margin:0 auto; padding:28px 16px 80px; }
+
+  .eyebrow-row{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+  .pill{
+    display:inline-flex; align-items:center; gap:6px;
+    font-family:"Rajdhani","Yu Gothic UI",sans-serif; font-weight:600; font-size:0.75rem;
+    letter-spacing:0.06em; text-transform:uppercase; padding:5px 11px; border-radius:999px;
+    background:var(--surface-2); color:var(--ink-dim); border:1px solid var(--border);
+  }
+  .pill.accent{ color:var(--accent); border-color:color-mix(in srgb, var(--accent) 40%, var(--border)); }
+
+  h1{
+    font-family:"Rajdhani","Yu Gothic UI","Hiragino Kaku Gothic ProN",sans-serif;
+    font-weight:700; font-size:clamp(1.6rem, 6vw, 2.3rem); letter-spacing:0.01em; line-height:1.15;
+    margin:0 0 10px; text-wrap:balance;
+  }
+  .lede{ color:var(--ink-dim); font-size:0.92rem; line-height:1.7; margin:0 0 22px; }
+  .lede b{ color:var(--ink); font-weight:600; }
+
+  .stats{
+    display:grid; grid-template-columns:repeat(2,1fr); gap:1px; background:var(--border);
+    border:1px solid var(--border); border-radius:12px; overflow:hidden; margin-bottom:26px; box-shadow:var(--shadow);
+  }
+  .stat{ background:var(--surface); padding:12px 14px; }
+  .stat .n{ font-family:"JetBrains Mono", ui-monospace, monospace; font-size:1.3rem; font-weight:700; font-variant-numeric:tabular-nums; }
+  .stat .l{ margin-top:2px; font-size:0.7rem; color:var(--ink-faint); }
+
+  .jump{ display:flex; gap:8px; margin-bottom:26px; }
+  .jump a{
+    font-family:"Rajdhani","Yu Gothic UI",sans-serif; font-weight:600; font-size:0.8rem;
+    color:var(--ink-dim); text-decoration:none; padding:6px 12px; border-radius:8px;
+    background:var(--surface); border:1px solid var(--border);
+  }
+
+  section{ margin-bottom:40px; }
+  .sec-head{ display:flex; align-items:baseline; gap:10px; margin-bottom:4px; }
+  .sec-num{ font-family:"JetBrains Mono", ui-monospace, monospace; color:var(--accent); font-weight:700; font-size:0.95rem; }
+  h2{ font-family:"Rajdhani","Yu Gothic UI","Hiragino Kaku Gothic ProN",sans-serif; font-weight:700; font-size:1.2rem; margin:0; }
+  .sec-sub{ color:var(--ink-faint); font-size:0.78rem; margin:5px 0 16px; line-height:1.6; }
+
+  /* ---------- leaderboard list (mobile-first, no horizontal scroll needed) ---------- */
+  .board{
+    background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    box-shadow:var(--shadow); overflow:hidden;
+  }
+  .p-row{
+    display:flex; align-items:flex-start; gap:10px;
+    padding:10px 12px; border-bottom:1px solid var(--border);
+    flex-wrap:wrap;
+  }
+  .p-row:last-child{ border-bottom:none; }
+  .p-row:hover{ background:var(--surface-2); }
+  .p-row.top{ box-shadow: inset 3px 0 0 var(--accent); background:var(--surface-2); }
+  .p-rank{
+    font-family:"JetBrains Mono", ui-monospace, monospace; font-weight:700; font-size:1rem;
+    color:var(--ink-dim); min-width:1.7em; text-align:right; padding-top:2px; flex-shrink:0;
+  }
+  .p-row.top .p-rank{ color:var(--accent-strong); }
+  .p-main{ flex:1 1 180px; min-width:0; display:flex; flex-direction:column; gap:3px; }
+  .p-topline{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .p-name{ font-weight:600; font-size:0.92rem; color:var(--ink); overflow-wrap:anywhere; }
+  .p-name sup{ color:var(--ink-faint); font-size:0.72em; }
+  .p-subline{ font-size:0.72rem; color:var(--ink-faint); font-family:"Rajdhani","Yu Gothic UI",sans-serif; display:flex; gap:8px; flex-wrap:wrap; }
+  .tag{
+    display:inline-block; font-family:"Rajdhani","Yu Gothic UI",sans-serif; font-weight:600;
+    font-size:0.74rem; background:var(--gold-bg); color:var(--gold); padding:1px 8px; border-radius:6px;
+  }
+  .tag.none{ background:var(--surface-3); color:var(--ink-faint); }
+  .p-stats{
+    flex:0 0 auto; margin-left:auto; display:flex; gap:16px;
+    font-size:0.74rem; color:var(--ink-faint); text-align:right;
+  }
+  .p-stats .stat-block b{
+    display:block; font-family:"JetBrains Mono", ui-monospace, monospace; font-weight:700;
+    font-size:0.88rem; color:var(--ink-dim); font-variant-numeric:tabular-nums;
+  }
+  .p-stats .na b{ color:var(--na); }
+  .orig{ color:var(--ink-faint); font-weight:400; }
+
+  @media (max-width:480px){
+    .p-row{ padding:10px 10px; }
+    .p-stats{ flex-basis:100%; margin-left:0; justify-content:space-between; padding-left:2.1em; margin-top:2px; }
+  }
+
+  /* ---------- responsive switch: table on wide screens, card list on narrow ---------- */
+  .mobile-only{ display:block; }
+  .desktop-only{ display:none; }
+  @media (min-width:760px){
+    .mobile-only{ display:none; }
+    .desktop-only{ display:block; }
+  }
+  .table-wrap{ overflow-x:auto; border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow); background:var(--surface); }
+  table{ width:100%; border-collapse:collapse; }
+  thead th{
+    background:var(--surface-2); color:var(--ink-dim);
+    font-family:"Rajdhani","Yu Gothic UI",sans-serif; font-weight:600; font-size:0.72rem; letter-spacing:0.03em;
+    text-align:left; text-transform:uppercase; padding:10px 12px; border-bottom:1px solid var(--border); white-space:nowrap;
+  }
+  thead th .sub{ display:block; font-weight:400; text-transform:none; font-size:0.7rem; margin-top:2px; color:var(--ink-faint); }
+  th.num, td.num{ text-align:right; font-variant-numeric:tabular-nums; }
+  tbody td{ padding:8px 12px; font-size:0.84rem; border-bottom:1px solid var(--border); white-space:nowrap; }
+  tbody tr:last-child td{ border-bottom:none; }
+  tbody tr:hover td{ background:var(--surface-2); }
+  td.rankcell{ font-family:"JetBrains Mono", ui-monospace, monospace; font-weight:700; }
+  tr.trow-top td.rankcell{ color:var(--accent-strong); }
+  tr.trow-top{ box-shadow: inset 3px 0 0 var(--accent); }
+
+  .note{ color:var(--ink-faint); font-size:0.76rem; line-height:1.7; margin-top:12px; }
+  .legend{ font-family:"Rajdhani","Yu Gothic UI",sans-serif; font-size:0.76rem; color:var(--ink-faint); margin:0 0 14px; line-height:1.6; }
+
+  /* ---------- alliance cards ---------- */
+  .alliance-grid{ display:grid; grid-template-columns:1fr; gap:12px; }
+  @media (min-width:640px){ .alliance-grid{ grid-template-columns:1fr 1fr; } }
+  .a-card{ background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow); overflow:hidden; }
+  .a-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; background:var(--surface-2); border-bottom:1px solid var(--border); }
+  .a-head-left{ display:flex; align-items:center; gap:8px; }
+  .a-rank{
+    font-family:"JetBrains Mono", ui-monospace, monospace; font-weight:700; font-size:0.76rem; color:var(--accent);
+    background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:2px 6px; min-width:1.6em; text-align:center;
+  }
+  .a-meta{ font-size:0.7rem; color:var(--ink-faint); font-family:"Rajdhani",sans-serif; }
+  .a-body{ padding:4px 12px 8px; }
+  .m-row{ display:flex; align-items:flex-start; justify-content:space-between; gap:8px; padding:7px 0; border-bottom:1px solid var(--border); font-size:0.82rem; flex-wrap:wrap; }
+  .m-row:last-child{ border-bottom:none; }
+  .m-name{ color:var(--ink); flex:1 1 60%; min-width:0; overflow-wrap:anywhere; }
+  .m-rank{ font-family:"JetBrains Mono", ui-monospace, monospace; font-weight:700; color:var(--ink-dim); font-size:0.78rem; flex-shrink:0; margin-right:4px; }
+  .m-stats{ flex-shrink:0; text-align:right; font-size:0.72rem; color:var(--ink-faint); line-height:1.5; margin-left:auto; }
+  .na{ color:var(--na); }
+
+  footer{ margin-top:48px; padding-top:16px; border-top:1px solid var(--border); color:var(--ink-faint); font-size:0.74rem; line-height:1.8; }
+  a{ color:var(--accent); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="eyebrow-row">
+    <span class="pill accent">Kingshot</span>
+    <span class="pill">鯖 778–849</span>
+    <span class="pill">炎龍の覇者 予想用</span>
+  </div>
+
+  <h1>778–849鯖 総合ランキング</h1>
+  <p class="lede">
+    「秘境の試練」と「マスター全体総力」を名寄せし、鯖778〜849のプレイヤーだけを抽出。両方の順位を合わせた<b>総合順位</b>で並べています。
+  </p>
+
+  <div class="stats">
+    <div class="stat"><div class="n">42</div><div class="l">抽出プレイヤー数</div></div>
+    <div class="stat"><div class="n">28</div><div class="l">同盟数</div></div>
+  </div>
+
+  <div class="jump">
+    <a href="#list">① 一覧</a>
+    <a href="#alliances">② 同盟別</a>
+  </div>
+
+  <section id="list">
+    <div class="sec-head"><span class="sec-num">01</span><h2>一覧（総合ランキング順）</h2></div>
+    <p class="sec-sub">試練・マスターの数字は「この中で順位（元の1〜100位）」。総合順位はこの2つを合わせて評価した順位です。</p>
+
+    <div class="desktop-only table-wrap">
+    <table>
+    <thead>
+    <tr>
+      <th class="num">総合<br>順位</th>
+      <th class="num">鯖(#)</th>
+      <th>同盟</th>
+      <th class="num">同盟<br>順位</th>
+      <th>名前</th>
+      <th class="num">試練順位<span class="sub">この中で（元）</span></th>
+      <th class="num">試練<br>ステージ数</th>
+      <th class="num">マスター順位<span class="sub">この中で（元）</span></th>
+      <th class="num">マスター<br>総合力</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="trow-top"><td class="num rankcell">1</td><td class="num">795</td><td><span class="tag">HHR</span></td><td class="num">1</td><td>루카_Luka</td><td class="num">1<span class="orig">（5）</span></td><td class="num">3,455</td><td class="num">3<span class="orig">（10）</span></td><td class="num">36,014,200</td></tr>
+    <tr class="trow-top"><td class="num rankcell">2</td><td class="num">837</td><td><span class="tag">WeT</span></td><td class="num">2</td><td>5xNo</td><td class="num">2<span class="orig">（6）</span></td><td class="num">3,445</td><td class="num">2<span class="orig">（9）</span></td><td class="num">36,901,240</td></tr>
+    <tr class="trow-top"><td class="num rankcell">3</td><td class="num">827</td><td><span class="tag">LGD</span></td><td class="num">3</td><td>Maximus Decimus</td><td class="num">4<span class="orig">（19）</span></td><td class="num">3,330</td><td class="num">1<span class="orig">（4）</span></td><td class="num">39,168,520</td></tr>
+    <tr><td class="num rankcell">4</td><td class="num">803</td><td><span class="tag">SIN</span></td><td class="num">4</td><td>WEll99×××</td><td class="num">3<span class="orig">（13）</span></td><td class="num">3,366</td><td class="num">4<span class="orig">（15）</span></td><td class="num">34,676,760</td></tr>
+    <tr><td class="num rankcell">5</td><td class="num">799</td><td><span class="tag">NOT</span></td><td class="num">5</td><td>Les Gaulois</td><td class="num">5<span class="orig">（20）</span></td><td class="num">3,325</td><td class="num">5<span class="orig">（19）</span></td><td class="num">33,735,200</td></tr>
+    <tr><td class="num rankcell">6</td><td class="num">837</td><td><span class="tag">WeT</span></td><td class="num">2</td><td>Admiral Tinky</td><td class="num">7<span class="orig">（30）</span></td><td class="num">3,250</td><td class="num">7<span class="orig">（25）</span></td><td class="num">31,764,840</td></tr>
+    <tr><td class="num rankcell">7</td><td class="num">810</td><td><span class="tag">LFG</span></td><td class="num">6</td><td>Plazmic</td><td class="num">6<span class="orig">（22）</span></td><td class="num">3,314</td><td class="num">10<span class="orig">（36）</span></td><td class="num">29,707,840</td></tr>
+    <tr><td class="num rankcell">8</td><td class="num">805</td><td><span class="tag">ADK</span></td><td class="num">7</td><td>ThisGuy</td><td class="num">11<span class="orig">（43）</span></td><td class="num">3,147</td><td class="num">6<span class="orig">（22）</span></td><td class="num">32,709,920</td></tr>
+    <tr><td class="num rankcell">9</td><td class="num">823</td><td><span class="tag">ROK</span></td><td class="num">8</td><td>북천문</td><td class="num">9<span class="orig">（40）</span></td><td class="num">3,154</td><td class="num">12<span class="orig">（39）</span></td><td class="num">29,272,720</td></tr>
+    <tr><td class="num rankcell">10</td><td class="num">832</td><td><span class="tag">MRG</span></td><td class="num">9</td><td>North</td><td class="num">20<span class="orig">（56）</span></td><td class="num">3,093</td><td class="num">8<span class="orig">（29）</span></td><td class="num">31,012,960</td></tr>
+    <tr><td class="num rankcell">11</td><td class="num">809</td><td><span class="tag">809</span></td><td class="num">10</td><td>Ichigo</td><td class="num">14<span class="orig">（48）</span></td><td class="num">3,117</td><td class="num">16<span class="orig">（55）</span></td><td class="num">27,447,080</td></tr>
+    <tr><td class="num rankcell">12</td><td class="num">832</td><td><span class="tag">MRG</span></td><td class="num">9</td><td>SCOLIOSIS</td><td class="num">16<span class="orig">（51）</span></td><td class="num">3,097</td><td class="num">14<span class="orig">（48）</span></td><td class="num">28,339,120</td></tr>
+    <tr><td class="num rankcell">13</td><td class="num">780</td><td><span class="tag">BAR</span></td><td class="num">11</td><td>GBG</td><td class="num">21<span class="orig">（57）</span></td><td class="num">3,087</td><td class="num">9<span class="orig">（32）</span></td><td class="num">30,819,880</td></tr>
+    <tr><td class="num rankcell">14</td><td class="num">829</td><td><span class="tag">829</span></td><td class="num">12</td><td>Narbel</td><td class="num">8<span class="orig">（39）</span></td><td class="num">3,155</td><td class="num">26<span class="orig">（79）</span></td><td class="num">25,990,680</td></tr>
+    <tr><td class="num rankcell">15</td><td class="num">829</td><td><span class="tag">829</span></td><td class="num">12</td><td>Te,Duck_chang</td><td class="num">10<span class="orig">（41）</span></td><td class="num">3,154</td><td class="num">24<span class="orig">（75）</span></td><td class="num">26,168,680</td></tr>
+    <tr><td class="num rankcell">16</td><td class="num">826</td><td><span class="tag">RoK</span></td><td class="num">13</td><td>Meshaal</td><td class="num">17<span class="orig">（52）</span></td><td class="num">3,097</td><td class="num">21<span class="orig">（62）</span></td><td class="num">27,042,360</td></tr>
+    <tr><td class="num rankcell">17</td><td class="num">809</td><td><span class="tag">809</span></td><td class="num">10</td><td>DJF<sup>sky</sup></td><td class="num">18<span class="orig">（53）</span></td><td class="num">3,096</td><td class="num">20<span class="orig">（61）</span></td><td class="num">27,051,320</td></tr>
+    <tr><td class="num rankcell">18</td><td class="num">793</td><td><span class="tag">MYT</span></td><td class="num">14</td><td>Flogrown</td><td class="num">26<span class="orig">（68）</span></td><td class="num">3,044</td><td class="num">13<span class="orig">（40）</span></td><td class="num">29,259,080</td></tr>
+    <tr><td class="num rankcell">19</td><td class="num">789</td><td><span class="tag">MAD</span></td><td class="num">15</td><td>Ëððýýššėůš</td><td class="num">28<span class="orig">（72）</span></td><td class="num">3,040</td><td class="num">11<span class="orig">（37）</span></td><td class="num">29,639,240</td></tr>
+    <tr><td class="num rankcell">20</td><td class="num">846</td><td><span class="tag">CGF</span></td><td class="num">16</td><td>Corgi</td><td class="num">23<span class="orig">（61）</span></td><td class="num">3,081</td><td class="num">19<span class="orig">（60）</span></td><td class="num">27,088,440</td></tr>
+    <tr><td class="num rankcell">21</td><td class="num">829</td><td><span class="tag">OWL</span></td><td class="num">17</td><td>captain홍</td><td class="num">25<span class="orig">（63）</span></td><td class="num">3,069</td><td class="num">17<span class="orig">（56）</span></td><td class="num">27,422,800</td></tr>
+    <tr><td class="num rankcell">22</td><td class="num">792</td><td><span class="tag">LUX</span></td><td class="num">18</td><td>Asra</td><td class="num">19<span class="orig">（54）</span></td><td class="num">3,096</td><td class="num">25<span class="orig">（76）</span></td><td class="num">26,105,200</td></tr>
+    <tr><td class="num rankcell">23</td><td class="num">836</td><td><span class="tag">KFS</span></td><td class="num">19</td><td>Persil</td><td class="num">22<span class="orig">（58）</span></td><td class="num">3,087</td><td class="num">22<span class="orig">（65）</span></td><td class="num">26,763,980</td></tr>
+    <tr><td class="num rankcell">24</td><td class="num">799</td><td><span class="tag">NOT</span></td><td class="num">5</td><td>LLB</td><td class="num">12<span class="orig">（45）</span></td><td class="num">3,128</td><td class="num na">—</td><td class="num na">N/A</td></tr>
+    <tr><td class="num rankcell">25</td><td class="num">846</td><td><span class="tag">RYO</span></td><td class="num">20</td><td>NomNomNom</td><td class="num">13<span class="orig">（47）</span></td><td class="num">3,127</td><td class="num">34<span class="orig">（99）</span></td><td class="num">25,313,000</td></tr>
+    <tr><td class="num rankcell">26</td><td class="num">810</td><td><span class="tag">LFG</span></td><td class="num">6</td><td>Senior Clamp</td><td class="num">15<span class="orig">（50）</span></td><td class="num">3,111</td><td class="num na">—</td><td class="num na">N/A</td></tr>
+    <tr><td class="num rankcell">27</td><td class="num">795</td><td><span class="tag">HHR</span></td><td class="num">1</td><td>KaRoSSo</td><td class="num">34<span class="orig">（98）</span></td><td class="num">2,976</td><td class="num">18<span class="orig">（59）</span></td><td class="num">27,155,560</td></tr>
+    <tr><td class="num rankcell">28</td><td class="num">795</td><td><span class="tag">HHR</span></td><td class="num">1</td><td>Khaleesi</td><td class="num na">—</td><td class="num na">N/A</td><td class="num">15<span class="orig">（50）</span></td><td class="num">28,101,740</td></tr>
+    <tr><td class="num rankcell">29</td><td class="num">801</td><td><span class="tag">SHD</span></td><td class="num">21</td><td>†Estel†</td><td class="num">32<span class="orig">（90）</span></td><td class="num">3,000</td><td class="num">23<span class="orig">（71）</span></td><td class="num">26,521,200</td></tr>
+    <tr><td class="num rankcell">30</td><td class="num">815</td><td><span class="tag">ATM</span></td><td class="num">22</td><td>Auroring星辰</td><td class="num">24<span class="orig">（62）</span></td><td class="num">3,075</td><td class="num na">—</td><td class="num na">N/A</td></tr>
+    <tr><td class="num rankcell">31</td><td class="num">831</td><td><span class="tag none">なし</span></td><td class="num">23</td><td>Wasabi</td><td class="num">31<span class="orig">（82）</span></td><td class="num">3,008</td><td class="num">29<span class="orig">（86）</span></td><td class="num">25,684,280</td></tr>
+    <tr><td class="num rankcell">32</td><td class="num">831</td><td><span class="tag">ARC</span></td><td class="num">24</td><td>乂KnightOWL乂</td><td class="num">29<span class="orig">（78）</span></td><td class="num">3,022</td><td class="num">32<span class="orig">（89）</span></td><td class="num">25,493,080</td></tr>
+    <tr><td class="num rankcell">33</td><td class="num">848</td><td><span class="tag">007</span></td><td class="num">25</td><td>♀진미채 Mr K♂</td><td class="num">27<span class="orig">（71）</span></td><td class="num">3,040</td><td class="num na">—</td><td class="num na">N/A</td></tr>
+    <tr><td class="num rankcell">34</td><td class="num">846</td><td><span class="tag">RYO</span></td><td class="num">20</td><td>山山27</td><td class="num na">—</td><td class="num na">N/A</td><td class="num">27<span class="orig">（82）</span></td><td class="num">25,884,120</td></tr>
+    <tr><td class="num rankcell">35</td><td class="num">780</td><td><span class="tag">BWM</span></td><td class="num">26</td><td>STORM<sup>ksa</sup></td><td class="num">30<span class="orig">（80）</span></td><td class="num">3,017</td><td class="num na">—</td><td class="num na">N/A</td></tr>
+    <tr><td class="num rankcell">36</td><td class="num">823</td><td><span class="tag">ROK</span></td><td class="num">8</td><td>것 북Turtle</td><td class="num na">—</td><td class="num na">N/A</td><td class="num">28<span class="orig">（84）</span></td><td class="num">25,778,800</td></tr>
+    <tr><td class="num rankcell">37</td><td class="num">841</td><td><span class="tag">KOR</span></td><td class="num">27</td><td>*엘리。∵。에</td><td class="num na">—</td><td class="num na">N/A</td><td class="num">30<span class="orig">（87）</span></td><td class="num">25,667,760</td></tr>
+    <tr><td class="num rankcell">38</td><td class="num">829</td><td><span class="tag">OWL</span></td><td class="num">17</td><td>彡EUN彡</td><td class="num">33<span class="orig">（91）</span></td><td class="num">3,000</td><td class="num na">—</td><td class="num na">N/A</td></tr>
+    <tr><td class="num rankcell">39</td><td class="num">830</td><td><span class="tag">FKA</span></td><td class="num">28</td><td>Harley Quinn</td><td class="num na">—</td><td class="num na">N/A</td><td class="num">31<span class="orig">（88）</span></td><td class="num">25,519,360</td></tr>
+    <tr><td class="num rankcell">40</td><td class="num">848</td><td><span class="tag">007</span></td><td class="num">25</td><td>●◇DD◇●</td><td class="num">35<span class="orig">（99）</span></td><td class="num">2,972</td><td class="num na">—</td><td class="num na">N/A</td></tr>
+    <tr><td class="num rankcell">41</td><td class="num">832</td><td><span class="tag">MRG</span></td><td class="num">9</td><td>DerangedShitshow</td><td class="num na">—</td><td class="num na">N/A</td><td class="num">33<span class="orig">（98）</span></td><td class="num">25,314,400</td></tr>
+    <tr><td class="num rankcell">42</td><td class="num">792</td><td><span class="tag">LUX</span></td><td class="num">18</td><td>爪月丁尺モメ<sup>KsA</sup></td><td class="num">36<span class="orig">（100）</span></td><td class="num">2,966</td><td class="num na">—</td><td class="num na">N/A</td></tr>
+    </tbody>
+    </table>
+    </div>
+
+    <div class="board mobile-only">
+      <div class="p-row top"><span class="p-rank">1</span><div class="p-main"><div class="p-topline"><span class="tag">HHR</span><span class="p-name">루카_Luka</span></div><div class="p-subline"><span>鯖795</span><span>同盟順位1</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>1<span class="orig">（5）</span></b></div><div class="stat-block">マスター<br><b>3<span class="orig">（10）</span></b></div></div></div>
+      <div class="p-row top"><span class="p-rank">2</span><div class="p-main"><div class="p-topline"><span class="tag">WeT</span><span class="p-name">5xNo</span></div><div class="p-subline"><span>鯖837</span><span>同盟順位2</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>2<span class="orig">（6）</span></b></div><div class="stat-block">マスター<br><b>2<span class="orig">（9）</span></b></div></div></div>
+      <div class="p-row top"><span class="p-rank">3</span><div class="p-main"><div class="p-topline"><span class="tag">LGD</span><span class="p-name">Maximus Decimus</span></div><div class="p-subline"><span>鯖827</span><span>同盟順位3</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>4<span class="orig">（19）</span></b></div><div class="stat-block">マスター<br><b>1<span class="orig">（4）</span></b></div></div></div>
+      <div class="p-row"><span class="p-rank">4</span><div class="p-main"><div class="p-topline"><span class="tag">SIN</span><span class="p-name">WEll99×××</span></div><div class="p-subline"><span>鯖803</span><span>同盟順位4</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>3<span class="orig">（13）</span></b></div><div class="stat-block">マスター<br><b>4<span class="orig">（15）</span></b></div></div></div>
+      <div class="p-row"><span class="p-rank">5</span><div class="p-main"><div class="p-topline"><span class="tag">NOT</span><span class="p-name">Les Gaulois</span></div><div class="p-subline"><span>鯖799</span><span>同盟順位5</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>5<span class="orig">（20）</span></b></div><div class="stat-block">マスター<br><b>5<span class="orig">（19）</span></b></div></div></div>
+      <div class="p-row"><span class="p-rank">6</span><div class="p-main"><div class="p-topline"><span class="tag">WeT</span><span class="p-name">Admiral Tinky</span></div><div class="p-subline"><span>鯖837</span><span>同盟順位2</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>7<span class="orig">（30）</span></b></div><div class="stat-block">マスター<br><b>7<span class="orig">（25）</span></b></div></div></div>
+      <div class="p-row"><span class="p-rank">7</span><div class="p-main"><div class="p-topline"><span class="tag">LFG</span><span class="p-name">Plazmic</span></div><div class="p-subline"><span>鯖810</span><span>同盟順位6</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>6<span class="orig">（22）</span></b></div><div class="stat-block">マスター<br><b>10<span class="orig">（36）</span></b></div></div></div>
+      <div class="p-row"><span class="p-rank">8</span><div class="p-main"><div class="p-topline"><span class="tag">ADK</span><span class="p-name">ThisGuy</span></div><div class="p-subline"><span>鯖805</span><span>同盟順位7</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>11<span class="orig">（43）</span></b></div><div class="stat-block">マスター<br><b>6<span class="orig">（22）</span></b></div></div></div>
+      <div class="p-row"><span class="p-rank">9</span><div class="p-main"><div class="p-topline"><span class="tag">ROK</span><span class="p-name">북천문</span></div><div class="p-subline"><span>鯖823</span><span>同盟順位8</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>9<span class="orig">（40）</span></b></div><div class="stat-block">マスター<br><b>12<span class="orig">（39）</span></b></div></div></div>
+      <div class="p-row"><span class="p-rank">10</span><div class="p-main"><div class="p-topline"><span class="tag">MRG</span><span class="p-name">North</span></div><div class="p-subline"><span>鯖832</span><span>同盟順位9</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>20<span class="orig">（56）</span></b></div><div class="stat-block">マスター<br><b>8<span class="orig">（29）</span></b></div></div></div>
+      <div class="p-row"><span class="p-rank">11</span><div class="p-main"><div class="p-topline"><span class="tag">809</span><span class="p-name">Ichigo</span></div><div class="p-subline"><span>鯖809</span><span>同盟順位10</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>14<span class="orig">（48）</span></b></div><div class="stat-block">マスター<br><b>16<span class="orig">（55）</span></b></div></div></div>
+      <div class="p-row"><span class="p-rank">12</span><div class="p-main"><div class="p-topline"><span class="tag">MRG</span><span class="p-name">SCOLIOSIS</span></div><div class="p-subline"><span>鯖832</span><span>同盟順位9</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>16<span class="orig">（51）</span></b></div><div class="stat-block">マスター<br><b>14<span class="orig">（48）</span></b></div></div></div>
+      <div class="p-row"><span class="p-rank">13</span><div class="p-main"><div class="p-topline"><span class="tag">BAR</span><span class="p-name">GBG</span></div><div class="p-subline"><span>鯖780</span><span>同盟順位11</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>21<span class="orig">（57）</span></b></div><div class="stat-block">マスター<br><b>9<span class="orig">（32）</span></b></div></div></div>
+      <div class="p-row"><span class="p-rank">14</span><div class="p-main"><div class="p-topline"><span class="tag">829</span><span class="p-name">Narbel</span></div><div class="p-subline"><span>鯖829</span><span>同盟順位12</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>8<span class="orig">（39）</span></b></div><div class="stat-block">マスター<br><b>26<span class="orig">（79）</span></b></div></div></div>
+      <div class="p-row"><span class="p-rank">15</span><div class="p-main"><div class="p-topline"><span class="tag">829</span><span class="p-name">Te,Duck_chang</span></div><div class="p-subline"><span>鯖829</span><span>同盟順位12</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>10<span class="orig">（41）</span></b></div><div class="stat-block">マスター<br><b>24<span class="orig">（75）</span></b></div></div></div>
+      <div class="p-row"><span class="p-rank">16</span><div class="p-main"><div class="p-topline"><span class="tag">RoK</span><span class="p-name">Meshaal</span></div><div class="p-subline"><span>鯖826</span><span>同盟順位13</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>17<span class="orig">（52）</span></b></div><div class="stat-block">マスター<br><b>21<span class="orig">（62）</span></b></div></div></div>
+      <div class="p-row"><span class="p-rank">17</span><div class="p-main"><div class="p-topline"><span class="tag">809</span><span class="p-name">DJF<sup>sky</sup></span></div><div class="p-subline"><span>鯖809</span><span>同盟順位10</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>18<span class="orig">（53）</span></b></div><div class="stat-block">マスター<br><b>20<span class="orig">（61）</span></b></div></div></div>
+      <div class="p-row"><span class="p-rank">18</span><div class="p-main"><div class="p-topline"><span class="tag">MYT</span><span class="p-name">Flogrown</span></div><div class="p-subline"><span>鯖793</span><span>同盟順位14</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>26<span class="orig">（68）</span></b></div><div class="stat-block">マスター<br><b>13<span class="orig">（40）</span></b></div></div></div>
+      <div class="p-row"><span class="p-rank">19</span><div class="p-main"><div class="p-topline"><span class="tag">MAD</span><span class="p-name">Ëððýýššėůš</span></div><div class="p-subline"><span>鯖789</span><span>同盟順位15</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>28<span class="orig">（72）</span></b></div><div class="stat-block">マスター<br><b>11<span class="orig">（37）</span></b></div></div></div>
+      <div class="p-row"><span class="p-rank">20</span><div class="p-main"><div class="p-topline"><span class="tag">CGF</span><span class="p-name">Corgi</span></div><div class="p-subline"><span>鯖846</span><span>同盟順位16</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>23<span class="orig">（61）</span></b></div><div class="stat-block">マスター<br><b>19<span class="orig">（60）</span></b></div></div></div>
+      <div class="p-row"><span class="p-rank">21</span><div class="p-main"><div class="p-topline"><span class="tag">OWL</span><span class="p-name">captain홍</span></div><div class="p-subline"><span>鯖829</span><span>同盟順位17</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>25<span class="orig">（63）</span></b></div><div class="stat-block">マスター<br><b>17<span class="orig">（56）</span></b></div></div></div>
+      <div class="p-row"><span class="p-rank">22</span><div class="p-main"><div class="p-topline"><span class="tag">LUX</span><span class="p-name">Asra</span></div><div class="p-subline"><span>鯖792</span><span>同盟順位18</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>19<span class="orig">（54）</span></b></div><div class="stat-block">マスター<br><b>25<span class="orig">（76）</span></b></div></div></div>
+      <div class="p-row"><span class="p-rank">23</span><div class="p-main"><div class="p-topline"><span class="tag">KFS</span><span class="p-name">Persil</span></div><div class="p-subline"><span>鯖836</span><span>同盟順位19</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>22<span class="orig">（58）</span></b></div><div class="stat-block">マスター<br><b>22<span class="orig">（65）</span></b></div></div></div>
+      <div class="p-row"><span class="p-rank">24</span><div class="p-main"><div class="p-topline"><span class="tag">NOT</span><span class="p-name">LLB</span></div><div class="p-subline"><span>鯖799</span><span>同盟順位5</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>12<span class="orig">（45）</span></b></div><div class="stat-block na">マスター<br><b>—</b></div></div></div>
+      <div class="p-row"><span class="p-rank">25</span><div class="p-main"><div class="p-topline"><span class="tag">RYO</span><span class="p-name">NomNomNom</span></div><div class="p-subline"><span>鯖846</span><span>同盟順位20</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>13<span class="orig">（47）</span></b></div><div class="stat-block">マスター<br><b>34<span class="orig">（99）</span></b></div></div></div>
+      <div class="p-row"><span class="p-rank">26</span><div class="p-main"><div class="p-topline"><span class="tag">LFG</span><span class="p-name">Senior Clamp</span></div><div class="p-subline"><span>鯖810</span><span>同盟順位6</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>15<span class="orig">（50）</span></b></div><div class="stat-block na">マスター<br><b>—</b></div></div></div>
+      <div class="p-row"><span class="p-rank">27</span><div class="p-main"><div class="p-topline"><span class="tag">HHR</span><span class="p-name">KaRoSSo</span></div><div class="p-subline"><span>鯖795</span><span>同盟順位1</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>34<span class="orig">（98）</span></b></div><div class="stat-block">マスター<br><b>18<span class="orig">（59）</span></b></div></div></div>
+      <div class="p-row"><span class="p-rank">28</span><div class="p-main"><div class="p-topline"><span class="tag">HHR</span><span class="p-name">Khaleesi</span></div><div class="p-subline"><span>鯖795</span><span>同盟順位1</span></div></div><div class="p-stats"><div class="stat-block na">試練<br><b>—</b></div><div class="stat-block">マスター<br><b>15<span class="orig">（50）</span></b></div></div></div>
+      <div class="p-row"><span class="p-rank">29</span><div class="p-main"><div class="p-topline"><span class="tag">SHD</span><span class="p-name">†Estel†</span></div><div class="p-subline"><span>鯖801</span><span>同盟順位21</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>32<span class="orig">（90）</span></b></div><div class="stat-block">マスター<br><b>23<span class="orig">（71）</span></b></div></div></div>
+      <div class="p-row"><span class="p-rank">30</span><div class="p-main"><div class="p-topline"><span class="tag">ATM</span><span class="p-name">Auroring星辰</span></div><div class="p-subline"><span>鯖815</span><span>同盟順位22</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>24<span class="orig">（62）</span></b></div><div class="stat-block na">マスター<br><b>—</b></div></div></div>
+      <div class="p-row"><span class="p-rank">31</span><div class="p-main"><div class="p-topline"><span class="tag none">なし</span><span class="p-name">Wasabi</span></div><div class="p-subline"><span>鯖831</span><span>同盟順位23</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>31<span class="orig">（82）</span></b></div><div class="stat-block">マスター<br><b>29<span class="orig">（86）</span></b></div></div></div>
+      <div class="p-row"><span class="p-rank">32</span><div class="p-main"><div class="p-topline"><span class="tag">ARC</span><span class="p-name">乂KnightOWL乂</span></div><div class="p-subline"><span>鯖831</span><span>同盟順位24</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>29<span class="orig">（78）</span></b></div><div class="stat-block">マスター<br><b>32<span class="orig">（89）</span></b></div></div></div>
+      <div class="p-row"><span class="p-rank">33</span><div class="p-main"><div class="p-topline"><span class="tag">007</span><span class="p-name">♀진미채 Mr K♂</span></div><div class="p-subline"><span>鯖848</span><span>同盟順位25</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>27<span class="orig">（71）</span></b></div><div class="stat-block na">マスター<br><b>—</b></div></div></div>
+      <div class="p-row"><span class="p-rank">34</span><div class="p-main"><div class="p-topline"><span class="tag">RYO</span><span class="p-name">山山27</span></div><div class="p-subline"><span>鯖846</span><span>同盟順位20</span></div></div><div class="p-stats"><div class="stat-block na">試練<br><b>—</b></div><div class="stat-block">マスター<br><b>27<span class="orig">（82）</span></b></div></div></div>
+      <div class="p-row"><span class="p-rank">35</span><div class="p-main"><div class="p-topline"><span class="tag">BWM</span><span class="p-name">STORM<sup>ksa</sup></span></div><div class="p-subline"><span>鯖780</span><span>同盟順位26</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>30<span class="orig">（80）</span></b></div><div class="stat-block na">マスター<br><b>—</b></div></div></div>
+      <div class="p-row"><span class="p-rank">36</span><div class="p-main"><div class="p-topline"><span class="tag">ROK</span><span class="p-name">것 북Turtle</span></div><div class="p-subline"><span>鯖823</span><span>同盟順位8</span></div></div><div class="p-stats"><div class="stat-block na">試練<br><b>—</b></div><div class="stat-block">マスター<br><b>28<span class="orig">（84）</span></b></div></div></div>
+      <div class="p-row"><span class="p-rank">37</span><div class="p-main"><div class="p-topline"><span class="tag">KOR</span><span class="p-name">*엘리。∵。에</span></div><div class="p-subline"><span>鯖841</span><span>同盟順位27</span></div></div><div class="p-stats"><div class="stat-block na">試練<br><b>—</b></div><div class="stat-block">マスター<br><b>30<span class="orig">（87）</span></b></div></div></div>
+      <div class="p-row"><span class="p-rank">38</span><div class="p-main"><div class="p-topline"><span class="tag">OWL</span><span class="p-name">彡EUN彡</span></div><div class="p-subline"><span>鯖829</span><span>同盟順位17</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>33<span class="orig">（91）</span></b></div><div class="stat-block na">マスター<br><b>—</b></div></div></div>
+      <div class="p-row"><span class="p-rank">39</span><div class="p-main"><div class="p-topline"><span class="tag">FKA</span><span class="p-name">Harley Quinn</span></div><div class="p-subline"><span>鯖830</span><span>同盟順位28</span></div></div><div class="p-stats"><div class="stat-block na">試練<br><b>—</b></div><div class="stat-block">マスター<br><b>31<span class="orig">（88）</span></b></div></div></div>
+      <div class="p-row"><span class="p-rank">40</span><div class="p-main"><div class="p-topline"><span class="tag">007</span><span class="p-name">●◇DD◇●</span></div><div class="p-subline"><span>鯖848</span><span>同盟順位25</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>35<span class="orig">（99）</span></b></div><div class="stat-block na">マスター<br><b>—</b></div></div></div>
+      <div class="p-row"><span class="p-rank">41</span><div class="p-main"><div class="p-topline"><span class="tag">MRG</span><span class="p-name">DerangedShitshow</span></div><div class="p-subline"><span>鯖832</span><span>同盟順位9</span></div></div><div class="p-stats"><div class="stat-block na">試練<br><b>—</b></div><div class="stat-block">マスター<br><b>33<span class="orig">（98）</span></b></div></div></div>
+      <div class="p-row"><span class="p-rank">42</span><div class="p-main"><div class="p-topline"><span class="tag">LUX</span><span class="p-name">爪月丁尺モメ<sup>KsA</sup></span></div><div class="p-subline"><span>鯖792</span><span>同盟順位18</span></div></div><div class="p-stats"><div class="stat-block">試練<br><b>36<span class="orig">（100）</span></b></div><div class="stat-block na">マスター<br><b>—</b></div></div></div>
+    </div>
+    <p class="note">※ [ROK](鯖823・大文字)と[RoK](鯖826・大小混在)は表記が異なるため別同盟として扱っています。</p>
+  </section>
+
+  <section id="alliances">
+    <div class="sec-head"><span class="sec-num">02</span><h2>同盟でグルーピング</h2></div>
+    <p class="legend">同盟のベスト総合順位が高い順に並べ、同盟内はメンバーを総合順位順に表示。</p>
+
+    <div class="alliance-grid">
+
+      <div class="a-card">
+        <div class="a-head"><div class="a-head-left"><span class="a-rank">1</span><span class="tag">HHR</span></div><span class="a-meta">3名・鯖795</span></div>
+        <div class="a-body">
+          <div class="m-row"><span class="m-rank">1</span><span class="m-name">루카_Luka</span><span class="m-stats">試練1（5）<br>マスター3（10）</span></div>
+          <div class="m-row"><span class="m-rank">27</span><span class="m-name">KaRoSSo</span><span class="m-stats">試練34（98）<br>マスター18（59）</span></div>
+          <div class="m-row"><span class="m-rank">28</span><span class="m-name">Khaleesi</span><span class="m-stats"><span class="na">試練N/A</span><br>マスター15（50）</span></div>
+        </div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-head"><div class="a-head-left"><span class="a-rank">2</span><span class="tag">WeT</span></div><span class="a-meta">2名・鯖837</span></div>
+        <div class="a-body">
+          <div class="m-row"><span class="m-rank">2</span><span class="m-name">5xNo</span><span class="m-stats">試練2（6）<br>マスター2（9）</span></div>
+          <div class="m-row"><span class="m-rank">6</span><span class="m-name">Admiral Tinky</span><span class="m-stats">試練7（30）<br>マスター7（25）</span></div>
+        </div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-head"><div class="a-head-left"><span class="a-rank">3</span><span class="tag">LGD</span></div><span class="a-meta">1名・鯖827</span></div>
+        <div class="a-body"><div class="m-row"><span class="m-rank">3</span><span class="m-name">Maximus Decimus</span><span class="m-stats">試練4（19）<br>マスター1（4）</span></div></div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-head"><div class="a-head-left"><span class="a-rank">4</span><span class="tag">SIN</span></div><span class="a-meta">1名・鯖803</span></div>
+        <div class="a-body"><div class="m-row"><span class="m-rank">4</span><span class="m-name">WEll99×××</span><span class="m-stats">試練3（13）<br>マスター4（15）</span></div></div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-head"><div class="a-head-left"><span class="a-rank">5</span><span class="tag">NOT</span></div><span class="a-meta">2名・鯖799</span></div>
+        <div class="a-body">
+          <div class="m-row"><span class="m-rank">5</span><span class="m-name">Les Gaulois</span><span class="m-stats">試練5（20）<br>マスター5（19）</span></div>
+          <div class="m-row"><span class="m-rank">24</span><span class="m-name">LLB</span><span class="m-stats">試練12（45）<br><span class="na">マスターN/A</span></span></div>
+        </div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-head"><div class="a-head-left"><span class="a-rank">6</span><span class="tag">LFG</span></div><span class="a-meta">2名・鯖810</span></div>
+        <div class="a-body">
+          <div class="m-row"><span class="m-rank">7</span><span class="m-name">Plazmic</span><span class="m-stats">試練6（22）<br>マスター10（36）</span></div>
+          <div class="m-row"><span class="m-rank">26</span><span class="m-name">Senior Clamp</span><span class="m-stats">試練15（50）<br><span class="na">マスターN/A</span></span></div>
+        </div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-head"><div class="a-head-left"><span class="a-rank">7</span><span class="tag">ADK</span></div><span class="a-meta">1名・鯖805</span></div>
+        <div class="a-body"><div class="m-row"><span class="m-rank">8</span><span class="m-name">ThisGuy</span><span class="m-stats">試練11（43）<br>マスター6（22）</span></div></div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-head"><div class="a-head-left"><span class="a-rank">8</span><span class="tag">ROK</span></div><span class="a-meta">2名・鯖823</span></div>
+        <div class="a-body">
+          <div class="m-row"><span class="m-rank">9</span><span class="m-name">북천문</span><span class="m-stats">試練9（40）<br>マスター12（39）</span></div>
+          <div class="m-row"><span class="m-rank">36</span><span class="m-name">것 북Turtle</span><span class="m-stats"><span class="na">試練N/A</span><br>マスター28（84）</span></div>
+        </div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-head"><div class="a-head-left"><span class="a-rank">9</span><span class="tag">MRG</span></div><span class="a-meta">3名・鯖832</span></div>
+        <div class="a-body">
+          <div class="m-row"><span class="m-rank">10</span><span class="m-name">North</span><span class="m-stats">試練20（56）<br>マスター8（29）</span></div>
+          <div class="m-row"><span class="m-rank">12</span><span class="m-name">SCOLIOSIS</span><span class="m-stats">試練16（51）<br>マスター14（48）</span></div>
+          <div class="m-row"><span class="m-rank">41</span><span class="m-name">DerangedShitshow</span><span class="m-stats"><span class="na">試練N/A</span><br>マスター33（98）</span></div>
+        </div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-head"><div class="a-head-left"><span class="a-rank">10</span><span class="tag">809</span></div><span class="a-meta">2名・鯖809</span></div>
+        <div class="a-body">
+          <div class="m-row"><span class="m-rank">11</span><span class="m-name">Ichigo</span><span class="m-stats">試練14（48）<br>マスター16（55）</span></div>
+          <div class="m-row"><span class="m-rank">17</span><span class="m-name">DJF<sup>sky</sup></span><span class="m-stats">試練18（53）<br>マスター20（61）</span></div>
+        </div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-head"><div class="a-head-left"><span class="a-rank">11</span><span class="tag">BAR</span></div><span class="a-meta">1名・鯖780</span></div>
+        <div class="a-body"><div class="m-row"><span class="m-rank">13</span><span class="m-name">GBG</span><span class="m-stats">試練21（57）<br>マスター9（32）</span></div></div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-head"><div class="a-head-left"><span class="a-rank">12</span><span class="tag">829</span></div><span class="a-meta">2名・鯖829</span></div>
+        <div class="a-body">
+          <div class="m-row"><span class="m-rank">14</span><span class="m-name">Narbel</span><span class="m-stats">試練8（39）<br>マスター26（79）</span></div>
+          <div class="m-row"><span class="m-rank">15</span><span class="m-name">Te,Duck_chang</span><span class="m-stats">試練10（41）<br>マスター24（75）</span></div>
+        </div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-head"><div class="a-head-left"><span class="a-rank">13</span><span class="tag">RoK</span></div><span class="a-meta">1名・鯖826</span></div>
+        <div class="a-body"><div class="m-row"><span class="m-rank">16</span><span class="m-name">Meshaal</span><span class="m-stats">試練17（52）<br>マスター21（62）</span></div></div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-head"><div class="a-head-left"><span class="a-rank">14</span><span class="tag">MYT</span></div><span class="a-meta">1名・鯖793</span></div>
+        <div class="a-body"><div class="m-row"><span class="m-rank">18</span><span class="m-name">Flogrown</span><span class="m-stats">試練26（68）<br>マスター13（40）</span></div></div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-head"><div class="a-head-left"><span class="a-rank">15</span><span class="tag">MAD</span></div><span class="a-meta">1名・鯖789</span></div>
+        <div class="a-body"><div class="m-row"><span class="m-rank">19</span><span class="m-name">Ëððýýššėůš</span><span class="m-stats">試練28（72）<br>マスター11（37）</span></div></div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-head"><div class="a-head-left"><span class="a-rank">16</span><span class="tag">CGF</span></div><span class="a-meta">1名・鯖846</span></div>
+        <div class="a-body"><div class="m-row"><span class="m-rank">20</span><span class="m-name">Corgi</span><span class="m-stats">試練23（61）<br>マスター19（60）</span></div></div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-head"><div class="a-head-left"><span class="a-rank">17</span><span class="tag">OWL</span></div><span class="a-meta">2名・鯖829</span></div>
+        <div class="a-body">
+          <div class="m-row"><span class="m-rank">21</span><span class="m-name">captain홍</span><span class="m-stats">試練25（63）<br>マスター17（56）</span></div>
+          <div class="m-row"><span class="m-rank">38</span><span class="m-name">彡EUN彡</span><span class="m-stats">試練33（91）<br><span class="na">マスターN/A</span></span></div>
+        </div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-head"><div class="a-head-left"><span class="a-rank">18</span><span class="tag">LUX</span></div><span class="a-meta">2名・鯖792</span></div>
+        <div class="a-body">
+          <div class="m-row"><span class="m-rank">22</span><span class="m-name">Asra</span><span class="m-stats">試練19（54）<br>マスター25（76）</span></div>
+          <div class="m-row"><span class="m-rank">42</span><span class="m-name">爪月丁尺モメ<sup>KsA</sup></span><span class="m-stats">試練36（100）<br><span class="na">マスターN/A</span></span></div>
+        </div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-head"><div class="a-head-left"><span class="a-rank">19</span><span class="tag">KFS</span></div><span class="a-meta">1名・鯖836</span></div>
+        <div class="a-body"><div class="m-row"><span class="m-rank">23</span><span class="m-name">Persil</span><span class="m-stats">試練22（58）<br>マスター22（65）</span></div></div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-head"><div class="a-head-left"><span class="a-rank">20</span><span class="tag">RYO</span></div><span class="a-meta">2名・鯖846</span></div>
+        <div class="a-body">
+          <div class="m-row"><span class="m-rank">25</span><span class="m-name">NomNomNom</span><span class="m-stats">試練13（47）<br>マスター34（99）</span></div>
+          <div class="m-row"><span class="m-rank">34</span><span class="m-name">山山27</span><span class="m-stats"><span class="na">試練N/A</span><br>マスター27（82）</span></div>
+        </div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-head"><div class="a-head-left"><span class="a-rank">21</span><span class="tag">SHD</span></div><span class="a-meta">1名・鯖801</span></div>
+        <div class="a-body"><div class="m-row"><span class="m-rank">29</span><span class="m-name">†Estel†</span><span class="m-stats">試練32（90）<br>マスター23（71）</span></div></div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-head"><div class="a-head-left"><span class="a-rank">22</span><span class="tag">ATM</span></div><span class="a-meta">1名・鯖815</span></div>
+        <div class="a-body"><div class="m-row"><span class="m-rank">30</span><span class="m-name">Auroring星辰</span><span class="m-stats">試練24（62）<br><span class="na">マスターN/A</span></span></div></div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-head"><div class="a-head-left"><span class="a-rank">23</span><span class="tag none">なし</span></div><span class="a-meta">1名・鯖831</span></div>
+        <div class="a-body"><div class="m-row"><span class="m-rank">31</span><span class="m-name">Wasabi</span><span class="m-stats">試練31（82）<br>マスター29（86）</span></div></div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-head"><div class="a-head-left"><span class="a-rank">24</span><span class="tag">ARC</span></div><span class="a-meta">1名・鯖831</span></div>
+        <div class="a-body"><div class="m-row"><span class="m-rank">32</span><span class="m-name">乂KnightOWL乂</span><span class="m-stats">試練29（78）<br>マスター32（89）</span></div></div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-head"><div class="a-head-left"><span class="a-rank">25</span><span class="tag">007</span></div><span class="a-meta">2名・鯖848</span></div>
+        <div class="a-body">
+          <div class="m-row"><span class="m-rank">33</span><span class="m-name">♀진미채 Mr K♂</span><span class="m-stats">試練27（71）<br><span class="na">マスターN/A</span></span></div>
+          <div class="m-row"><span class="m-rank">40</span><span class="m-name">●◇DD◇●</span><span class="m-stats">試練35（99）<br><span class="na">マスターN/A</span></span></div>
+        </div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-head"><div class="a-head-left"><span class="a-rank">26</span><span class="tag">BWM</span></div><span class="a-meta">1名・鯖780</span></div>
+        <div class="a-body"><div class="m-row"><span class="m-rank">35</span><span class="m-name">STORM<sup>ksa</sup></span><span class="m-stats">試練30（80）<br><span class="na">マスターN/A</span></span></div></div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-head"><div class="a-head-left"><span class="a-rank">27</span><span class="tag">KOR</span></div><span class="a-meta">1名・鯖841</span></div>
+        <div class="a-body"><div class="m-row"><span class="m-rank">37</span><span class="m-name">*엘리。∵。에</span><span class="m-stats"><span class="na">試練N/A</span><br>マスター30（87）</span></div></div>
+      </div>
+
+      <div class="a-card">
+        <div class="a-head"><div class="a-head-left"><span class="a-rank">28</span><span class="tag">FKA</span></div><span class="a-meta">1名・鯖830</span></div>
+        <div class="a-body"><div class="m-row"><span class="m-rank">39</span><span class="m-name">Harley Quinn</span><span class="m-stats"><span class="na">試練N/A</span><br>マスター31（88）</span></div></div>
+      </div>
+
+    </div>
+  </section>
+
+  <footer>
+    出典：ゲーム内ランキング画面「秘境の試練」「マスター全体総力」（1〜100位）を手動で書き起こし・集計。<br>
+    [ROK](鯖823・大文字)と[RoK](鯖826・大小混在)は表記が異なるため別同盟として扱っています。
+  </footer>
+
+</div>
+</body>
+</html>
