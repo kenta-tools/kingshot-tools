@@ -161,7 +161,8 @@ function selfSave_(token, p) {
           alliance: row.alliance, entry: row.entry, grade: row.grade, monthly: row.monthly, leaveEarly: row.leaveEarly,
           vc: row.vc, vivian4: row.vivian4, troops: row.troops, tier: row.tier, joinAt: row.joinAt, leaveAt: row.leaveAt,
           note: row.note, marchCount: row.marchCount, marchPet: row.marchPet, rallyCount: row.rallyCount,
-          rallyPet: row.rallyPet, rallySpeedPet: row.rallySpeedPet, id: existing ? existing.id : newId_("r"), eventId: ev.id, userId: user.id
+          rallyPet: row.rallyPet, rallySpeedPet: row.rallySpeedPet, updatedAt: new Date().toISOString(),
+          id: existing ? existing.id : newId_("r"), eventId: ev.id, userId: user.id
         };
         if (existing) d.entries[d.entries.indexOf(existing)] = e;
         else d.entries.push(e);

@@ -44,6 +44,7 @@
   .top-link { font-size: 13px; color: #2c5cc5; text-decoration: none; }
   .center { text-align: center; padding: 30px 10px; color: #666; }
 
+  .warn { color: #c0392b; font-weight: bold; font-size: 14px; line-height: 1.6; }
   .howto { background: #eef4ff; border-radius: 10px; padding: 10px 14px; margin: 12px 0 14px; font-size: 14px; line-height: 1.8; }
 
   .field { margin-bottom: 16px; }
@@ -102,6 +103,7 @@
   ② 内容を入れて「登録する」<br>
   ③「登録しました」と出たら完了<br>
   <span style="font-size: 13px; color: #555;">変更・取消も、同じ名前を入れて「次へ」でできます。</span>
+  <div class="warn" style="margin-top: 6px;">⚠ 入力した参加時間に参加できなそうなときは、必ず連絡してください。</div>
 </div>
 
 <div class="card center" id="loadingView">読み込み中…</div>
@@ -131,7 +133,7 @@
   <div class="card" id="formCard" style="display: none;">
     <div class="event-title" id="formEvent"></div>
     <div class="who" id="whoText"></div>
-    <div class="banner" id="registeredBanner" style="display: none;">登録済みです。直して「変更を保存する」か、いちばん下の「登録を取り消す」を押してください。</div>
+    <div class="banner" id="registeredBanner" style="display: none;">登録済みです。直して「変更を保存する」か、いちばん下の「登録を取り消す」を押してください。<span id="registeredAt"></span></div>
     <div class="banner" id="prevBanner" style="display: none;"></div>
 
     <div class="field">
@@ -227,6 +229,7 @@
       <input type="text" id="fNote" maxlength="100">
     </div>
 
+    <div class="warn" style="margin-bottom: 10px;">⚠ 入力した参加時間に参加できなそうなときは、必ず連絡してください。</div>
     <button type="button" class="main" id="saveBtn">登録する</button>
     <div class="msg" id="formMsg"></div>
     <div class="row" style="margin-top: 14px; justify-content: space-between;">
@@ -253,7 +256,7 @@
       <div class="table-wrap">
         <table>
           <thead><tr><th></th><th>同盟</th><th>名前</th><th>参加</th><th>区分</th><th>印</th><th>T11兵種</th><th>時間</th>
-            <th>出征部隊</th><th>出征容量ペット</th><th>集結部隊</th><th>集結容量ペット</th><th>行軍速度ペット</th><th>ひとこと</th></tr></thead>
+            <th>出征部隊</th><th>出征容量ペット</th><th>集結部隊</th><th>集結容量ペット</th><th>行軍速度ペット</th><th>ひとこと</th><th>更新日時</th></tr></thead>
           <tbody id="listBody"></tbody>
         </table>
       </div>
@@ -382,6 +385,14 @@
   }
 
   // ---------- 表示 ----------
+  // 「11/01 20:30」
+  function formatTime(iso) {
+    var d = new Date(iso);
+    if (isNaN(d)) return "";
+    function p2(n) { return (n < 10 ? "0" : "") + n; }
+    return (d.getMonth() + 1) + "/" + p2(d.getDate()) + " " + p2(d.getHours()) + ":" + p2(d.getMinutes());
+  }
+
   function marksOf(m) {
     return (m.monthly ? "◯" : "") + (m.leaveEarly ? "△" : "") + (m.vc ? "◇" : "") + (m.vivian4 ? "◆" : "");
   }
@@ -442,8 +453,8 @@
           "<td>" + v(m.grade) + '</td><td class="marks">' + marksOf(m) + "</td><td>" + v(m.troops) + "</td><td>" + v(time) + "</td>" +
           "<td>" + v(m.marchCount) + "</td><td>" + pet(m.marchPet) + "</td><td>" + v(m.rallyCount) + "</td><td>" +
           pet(m.rallyPet) + "</td><td>" + pet(m.rallySpeedPet) + "</td>") +
-        '<td class="note">' + v(m.note) + "</td></tr>";
-    }).join("") : '<tr><td colspan="14" style="color: #777;">まだ誰も登録していません</td></tr>';
+        '<td class="note">' + v(m.note) + "</td><td>" + (m.updatedAt ? formatTime(m.updatedAt) : "") + "</td></tr>";
+    }).join("") : '<tr><td colspan="15" style="color: #777;">まだ誰も登録していません</td></tr>';
     $("listBody").querySelectorAll("button.edit").forEach(function(btn) {
       btn.addEventListener("click", function() {
         var u = userById(btn.dataset.user);
@@ -499,6 +510,7 @@
     $("whoText").innerHTML = "名前: <b>" + escapeHtml(name) + "</b>" +
       (me.oldName ? '<span style="color: #777; font-size: 13px;">（前の名前「' + escapeHtml(me.oldName) + "」）</span>" : "");
     $("registeredBanner").style.display = existing ? "block" : "none";
+    $("registeredAt").textContent = existing && existing.updatedAt ? "（最終更新: " + formatTime(existing.updatedAt) + "）" : "";
     $("cancelEntryBtn").style.display = existing ? "inline-block" : "none";
     $("saveBtn").textContent = existing ? "変更を保存する" : "登録する";
     var prev = !existing && user && previousEntry(user.id);

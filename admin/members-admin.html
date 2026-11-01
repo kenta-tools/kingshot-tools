@@ -297,7 +297,7 @@
       <div class="msg" id="bulkMsg"></div>
       <div id="previewWrap" style="display:none; margin-top: 10px;">
         <table>
-          <thead><tr><th class="nosort">同盟</th><th class="nosort">参加</th><th class="nosort">G</th><th class="nosort">名前</th><th class="nosort">印</th><th class="nosort">兵種</th><th class="nosort">時間</th><th class="nosort">部隊・ペット</th><th class="nosort">備考</th><th class="nosort">ユーザー判定</th></tr></thead>
+          <thead><tr><th class="nosort">同盟</th><th class="nosort">参加</th><th class="nosort">G</th><th class="nosort">名前</th><th class="nosort">印</th><th class="nosort">兵種</th><th class="nosort">時間</th><th class="nosort">部隊・ペット</th><th class="nosort">備考</th><th class="nosort">更新日時</th><th class="nosort">ユーザー判定</th></tr></thead>
           <tbody id="previewBody"></tbody>
         </table>
       </div>
@@ -417,6 +417,7 @@
             <th class="nosort">時間</th>
             <th class="nosort">部隊・ペット</th>
             <th class="nosort">備考</th>
+            <th class="nosort">更新日時</th>
             <th class="nosort"></th>
           </tr>
         </thead>
@@ -703,6 +704,7 @@
       rallyCount: num(m.rallyCount),
       rallyPet: petLv(m.rallyPet, "rallyPet"),
       rallySpeedPet: petLv(m.rallySpeedPet, "rallySpeedPet"),
+      updatedAt: str(m.updatedAt), // 最後に登録・変更した日時（ISO）
       sameAs: str(m.sameAs) // AI変換で登録者が「同一人物」と確認した登録済みユーザー名（取り込み時のみ使う）
     };
   }
@@ -1199,6 +1201,7 @@
     delete e.name;
     delete e.sameAs;
     e.id = id || newId("r");
+    e.updatedAt = new Date().toISOString();
     e.eventId = currentEventId;
     e.userId = userId;
     return e;
@@ -1607,6 +1610,7 @@
       '<td>' + escapeHtml(timeText(m)) + '</td>' +
       '<td class="num">' + escapeHtml(capText(m)) + '</td>' +
       '<td>' + escapeHtml(m.note) + '</td>' +
+      '<td style="white-space: nowrap;">' + escapeHtml(m.updatedAt ? formatTime(m.updatedAt) : "") + '</td>' +
       (withOps
         ? '<td class="ops"><button class="small sub-btn" data-act="edit">変更</button> ' +
           '<button class="small danger" data-act="delete">削除</button></td>'
@@ -1633,7 +1637,7 @@
       html.push('<tr data-id="' + m.id + '"' + (m.id === editingId ? ' class="editing"' : "") + '>' + memberRowHtml(m, true) + '</tr>');
     });
     if (!rows.length) {
-      html.push('<tr><td colspan="10" class="hint" style="text-align:center;">このイベントにはまだ参加者が登録されていません</td></tr>');
+      html.push('<tr><td colspan="11" class="hint" style="text-align:center;">このイベントにはまだ参加者が登録されていません</td></tr>');
     }
     $("memberBody").innerHTML = html.join("");
     $("countText").textContent = (q || fa) ? "（" + shown + " / " + rows.length + "人）" : "（" + rows.length + "人）";
