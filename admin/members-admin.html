@@ -157,10 +157,11 @@
     </div>
     <div class="msg" id="ghMsg" style="width: 100%;"></div>
     <details id="ghDetails" style="width: 100%;">
-      <summary class="hint" style="cursor: pointer;">⚙ GitHub保存の設定（管理者ごとに最初の1回だけ） <span id="ghTokenState"></span></summary>
+      <summary class="hint" style="cursor: pointer;">⚙ 保存のしくみ・GitHubオーナー用の設定 <span id="ghTokenState"></span></summary>
       <div class="hint" style="margin-top: 6px;">
         「GitHubに公開」を押すと、GitHub上の最新の members.json に自分の変更をマージして保存します（他の人が先に保存していても消えません）。サイトへの反映は1〜2分後です。<br>
-        使うには、GitHubアカウント <b>kenta-tools</b> で作ったアクセストークンが必要です（トークンはこのブラウザにだけ保存され、サイトには載りません）。<br>
+        ログインできる人なら、<b>GitHubのアカウントやトークンがなくても</b>保存できます（保存は中継役がログインパスワードを確認して行います）。<br>
+        <b>以下は GitHubオーナー（kenta-tools）用で、通常は設定不要です。</b>このブラウザにトークンを保存すると、中継役を通さず直接GitHubに保存します（中継役が止まっているときの予備）。<br>
         <b>トークンの作り方</b>：GitHubに kenta-tools でログイン → 右上アイコン → Settings → Developer settings → Personal access tokens → <b>Fine-grained tokens</b> → Generate new token →
         Repository access で「Only select repositories」→ <b>kingshot-tools</b> を選択 → Permissions の <b>Contents</b> を「Read and write」→ Generate token → 表示された文字列をコピーして下に貼り付け
       </div>
@@ -393,6 +394,7 @@
   var ADMIN_HASH = "e940b89eba04b1ccd64833f111d60eaac2fecea7be7deb1089a4ed36b3f9eb85";
   var SALT = "kingshot-admin:";
   var AUTH_KEY = "ksAdminAuth";
+  var PW_KEY = "ksAdminPw";
   var DRAFT_KEY = "ksMembersDraftV2";
   var EVENT_KEY = "ksAdminEvent";
   var DATA_URL = "../data/members.json";
@@ -506,7 +508,10 @@
     if (!pw) return;
     sha256Hex(SALT + pw).then(function(hash) {
       if (hash === ADMIN_HASH) {
-        try { sessionStorage.setItem(AUTH_KEY, hash); } catch (e) {}
+        try {
+          sessionStorage.setItem(AUTH_KEY, hash);
+          sessionStorage.setItem(PW_KEY, pw); // 中継役（GAS）への保存時に使う。このタブを閉じると消える
+        } catch (e) {}
         showApp();
       } else {
         $("loginMsg").textContent = "パスワードが違います";
@@ -518,7 +523,7 @@
   $("loginBtn").addEventListener("click", tryLogin);
   $("pwInput").addEventListener("keydown", function(e) { if (e.key === "Enter") tryLogin(); });
   $("logoutBtn").addEventListener("click", function() {
-    try { sessionStorage.removeItem(AUTH_KEY); } catch (e) {}
+    try { sessionStorage.removeItem(AUTH_KEY); sessionStorage.removeItem(PW_KEY); } catch (e) {}
     location.reload();
   });
 
@@ -620,10 +625,32 @@
   }
 
   // ---------- GitHubへの保存 ----------
-  // GitHub Pages は読み取り専用なので、members.json の更新は GitHub API（Contents API）で直接コミットする。
-  // トークンは管理者ごとにこのブラウザの localStorage にだけ保存する。
+  // GitHub Pages は読み取り専用なので、members.json の更新は GitHub API（Contents API）でコミットする。
+  // 通常は中継役（Google Apps Script: work/gas_members_proxy.gs）にログインパスワード付きで頼む（トークンは中継役にだけ置く）。
+  // このブラウザにトークンが保存されていれば、中継役を通さず直接 GitHub API を使う（GitHubオーナー用）。
   var GH = { owner: "kenta-tools", repo: "kingshot-tools", path: "data/members.json", branch: "main" };
   var TOKEN_KEY = "ksGhToken";
+  var GAS_URL = ""; // 中継役のウェブアプリURL（https://script.google.com/macros/s/.../exec）
+
+  function adminPassword() {
+    try { return sessionStorage.getItem(PW_KEY) || ""; } catch (e) { return ""; }
+  }
+
+  // 保存方法: "token"=直接GitHub / "gas"=中継役 / ""=保存できない
+  function saveMode() {
+    return ghToken() ? "token" : (GAS_URL ? "gas" : "");
+  }
+
+  function gasCall(payload) {
+    payload.password = adminPassword();
+    // text/plain にして CORS のプリフライトを避ける（GAS ウェブアプリの決まりごと）
+    return fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) })
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (!res.ok && res.status === 401) throw new Error("保存用のパスワードが合いません。ログアウトしてログインし直してください");
+        return res;
+      });
+  }
 
   function ghToken() {
     try { return localStorage.getItem(TOKEN_KEY) || ""; } catch (e) { return ""; }
@@ -665,9 +692,15 @@
       .then(function(data) { return { data: data, sha: null }; });
   }
 
-  // 公開データを取得。トークンがあれば GitHub API（最新・sha付き）、なければ GitHub Pages（反映に1〜2分遅れあり）
+  // 公開データを取得。トークンまたは中継役があれば GitHub の最新（sha付き）、なければ GitHub Pages（反映に1〜2分遅れあり）
   function fetchRemote() {
     var token = ghToken();
+    if (!token && GAS_URL) {
+      return gasCall({ action: "get" }).then(function(res) {
+        if (!res.ok) throw new Error(res.error || ghError(res.status));
+        return { data: res.content ? JSON.parse(b64ToUtf8(res.content) || "{}") : {}, sha: res.sha };
+      });
+    }
     if (!token) return fetchFromPages();
     return fetch(ghUrl() + "?ref=" + GH.branch, { headers: ghHeaders(token), cache: "no-store" }).then(function(r) {
       if (r.status === 404) return { data: {}, sha: null };
@@ -800,11 +833,24 @@
     } catch (e) {}
   }
 
-  function publish(isRetry) {
+  // members.json を保存。戻り値 { ok, status }
+  function remotePut(contentB64, sha) {
     var token = ghToken();
-    if (!token) {
+    if (token) {
+      var payload = { message: "Update members.json from admin page", branch: GH.branch, content: contentB64 };
+      if (sha) payload.sha = sha;
+      return fetch(ghUrl(), { method: "PUT", headers: ghHeaders(token), body: JSON.stringify(payload) })
+        .then(function(r) { return { ok: r.ok, status: r.status }; });
+    }
+    return gasCall({ action: "put", content: contentB64, sha: sha }).then(function(res) {
+      return { ok: res.ok, status: res.ok ? 200 : (res.status || 500), error: res.error };
+    });
+  }
+
+  function publish(isRetry) {
+    if (!saveMode()) {
       $("ghDetails").open = true;
-      setMsg($("ghMsg"), "先に「GitHub保存の設定」でトークンを保存してください", false);
+      setMsg($("ghMsg"), "保存先がまだ設定されていません（中継役のURLが未設定です。サイトの管理者に連絡してください）", false);
       return Promise.resolve();
     }
     $("publishBtn").disabled = true;
@@ -814,12 +860,9 @@
       var merged = mergeIntoRemote(normalizeState(JSON.parse(publishedJson)), state, remote);
       var body = { updated: new Date().toISOString(), users: merged.users, events: merged.events,
         entries: merged.entries, notSame: merged.notSame };
-      var payload = { message: "Update members.json from admin page", branch: GH.branch,
-        content: utf8ToB64(JSON.stringify(body, null, 2) + "\n") };
-      if (res.sha) payload.sha = res.sha;
-      return fetch(ghUrl(), { method: "PUT", headers: ghHeaders(token), body: JSON.stringify(payload) }).then(function(r) {
+      return remotePut(utf8ToB64(JSON.stringify(body, null, 2) + "\n"), res.sha).then(function(r) {
         if ((r.status === 409 || r.status === 422) && !isRetry) return publish(true); // 直前に他の人が保存した → 取り直してもう一度
-        if (!r.ok) throw new Error(ghError(r.status));
+        if (!r.ok) throw new Error(r.error && r.status >= 500 ? r.error : ghError(r.status));
         publishedJson = JSON.stringify(merged);
         state = merged;
         if (editingId && !state.entries.some(function(x) { return x.id === editingId; })) resetForm(false);
@@ -835,7 +878,9 @@
   }
 
   function renderTokenState() {
-    $("ghTokenState").textContent = ghToken() ? "（トークン設定済み）" : "（未設定）";
+    var mode = saveMode();
+    $("ghTokenState").textContent = mode === "token" ? "（このブラウザ: トークンで直接保存）"
+      : mode === "gas" ? "（中継役で保存）" : "（保存先が未設定）";
   }
 
   $("publishBtn").addEventListener("click", function() { publish(false); });
