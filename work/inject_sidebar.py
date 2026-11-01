@@ -26,7 +26,8 @@ FOLDER = Path(__file__).resolve().parent.parent
 # トップページ（◯◯-index.html）を置き、個別の実績レポート（ランキングHTML等）は
 # そのトップページ側でカード一覧として管理する（グローバルサイドバーには載せない）。
 TOOLS = [
-    ("tools/tools-index.html", "🏠", "ツール一覧"),
+    ("index.html", "🏠", "ホーム"),
+    ("tools/tools-index.html", "🛠️", "ツール一覧"),
     ("tools/炎龍の覇者_攻城タイムライン計算.html", "🐉", "炎龍 集結タイムライン計算"),
     ("tools/王城到着同期カウントアップ.html", "⏱️", "KvK同着スタート カウントアップ表"),
     ("tools/KvK同着スタート カウントダウン表.html", "⏲️", "KvK同着スタート カウントダウン表"),
