@@ -11,24 +11,23 @@
     font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
     background: #f4f5f7;
     color: #222;
-    max-width: 640px;
-    margin: 24px auto;
+    max-width: 560px;
+    margin: 20px auto;
     padding: 0 16px;
+    font-size: 15px;
   }
-  h1 { font-size: 21px; margin: 0 0 4px; }
-  h2 { font-size: 16px; margin: 0 0 12px; }
-  .sub { color: #666; font-size: 13px; margin-bottom: 16px; line-height: 1.6; }
+  h1 { font-size: 21px; margin: 0; }
   .card {
     background: #fff;
     border-radius: 12px;
     padding: 18px;
     box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-    margin-bottom: 16px;
+    margin-bottom: 14px;
   }
   .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   input[type=text], input[type=number], select {
-    font: inherit; font-size: 16px; padding: 9px 10px; width: 100%;
-    border: 1px solid #ccd2db; border-radius: 6px; background: #fff;
+    font: inherit; font-size: 16px; padding: 10px; width: 100%;
+    border: 1px solid #ccd2db; border-radius: 8px; background: #fff;
   }
   button {
     font: inherit; font-size: 15px; padding: 10px 18px; border-radius: 8px;
@@ -36,42 +35,52 @@
   }
   button.sub-btn { background: #fff; color: #1a2332; }
   button.danger { background: #fff; color: #c0392b; border-color: #c0392b; }
-  button.small { padding: 6px 12px; font-size: 13px; }
-  button.main { width: 100%; font-size: 16px; padding: 12px; }
-  button:hover { opacity: 0.85; }
+  button.main { width: 100%; font-size: 17px; padding: 14px; font-weight: bold; }
   button:disabled { opacity: 0.4; cursor: default; }
-  .hint { font-size: 12px; color: #777; line-height: 1.6; }
-  .msg { font-size: 14px; margin-top: 10px; white-space: pre-wrap; }
+  .msg { font-size: 15px; margin-top: 10px; white-space: pre-wrap; font-weight: bold; }
   .msg:empty { display: none; }
   .msg.ok { color: #1e7d3a; }
   .msg.err { color: #c0392b; }
   .top-link { font-size: 13px; color: #2c5cc5; text-decoration: none; }
-  .top-link:hover { text-decoration: underline; }
-
-  .field { margin-bottom: 14px; }
-  .field label.cap { display: block; font-size: 13px; color: #444; margin-bottom: 4px; font-weight: bold; }
-  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
-  .checks { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; }
-  .checks label { white-space: nowrap; cursor: pointer; padding: 4px 0; }
-  .checks input { transform: scale(1.2); margin-right: 4px; }
-  .event-title { font-size: 18px; font-weight: bold; color: #2c5cc5; }
-  .who { background: #f0f5ff; border: 1px solid #d5e1fb; border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; font-size: 14px; }
-  .who b { font-size: 16px; }
-  .banner { background: #fff1d6; color: #8a5600; border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; font-size: 13px; }
-  .cand { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
-  .cand button { text-align: left; }
-  .done { text-align: center; }
-  .done .big { font-size: 20px; font-weight: bold; color: #1e7d3a; margin-bottom: 8px; }
-  .done .line { font-family: Consolas, "MS Gothic", monospace; background: #f4f5f7; border-radius: 6px; padding: 8px; margin: 10px 0; word-break: break-all; }
   .center { text-align: center; padding: 30px 10px; color: #666; }
 
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td { padding: 6px 6px; border-bottom: 1px solid #e6e9ee; text-align: left; }
+  .howto { background: #eef4ff; border-radius: 10px; padding: 10px 14px; margin: 12px 0 14px; font-size: 14px; line-height: 1.8; }
+
+  .field { margin-bottom: 16px; }
+  .cap { display: block; font-size: 14px; font-weight: bold; margin-bottom: 6px; }
+  .cap .req { color: #c0392b; font-size: 12px; margin-left: 4px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
+  .two .cap { font-size: 13px; }
+
+  /* 押して選ぶボタン */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { cursor: pointer; }
+  .chip input { position: absolute; opacity: 0; pointer-events: none; }
+  .chip span {
+    display: inline-block; padding: 9px 14px; border-radius: 999px; font-size: 15px;
+    border: 1px solid #c3cad5; background: #fff; color: #333; user-select: none;
+  }
+  .chip input:checked + span { background: #1a2332; border-color: #1a2332; color: #fff; }
+  .chip input:focus-visible + span { outline: 2px solid #2c5cc5; }
+  .sub-field { margin-top: 10px; }
+
+  .event-title { font-size: 18px; font-weight: bold; color: #2c5cc5; }
+  .who { font-size: 15px; margin: 4px 0 14px; }
+  .banner { background: #fff1d6; color: #8a5600; border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; font-size: 14px; }
+  .cand { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+  .cand button { text-align: left; }
+  .rally { border: 1px dashed #c3cad5; border-radius: 10px; padding: 12px; margin-bottom: 16px; }
+  .rally .two { margin-top: 12px; }
+  .done { text-align: center; }
+  .done .big { font-size: 22px; font-weight: bold; color: #1e7d3a; margin-bottom: 6px; }
+  .done .sub { color: #666; font-size: 14px; margin-bottom: 14px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+  th, td { padding: 6px; border-bottom: 1px solid #e6e9ee; text-align: left; }
   th { background: #f0f2f5; white-space: nowrap; }
   td.marks { letter-spacing: 2px; white-space: nowrap; }
   tr.me td { background: #fffbe8; font-weight: bold; }
-  details summary { cursor: pointer; font-weight: bold; font-size: 14px; }
-  .legend { font-size: 12px; color: #555; margin: 8px 0; }
+  details summary { cursor: pointer; font-size: 14px; color: #555; }
 </style>
 </head>
 <body>
@@ -80,123 +89,155 @@
   <h1>📝 イベント参加登録</h1>
   <a href="../index.html" class="top-link">← TOP</a>
 </div>
-<div class="sub">イベントに参加する人は、ここから自分の参加情報を登録してください。登録した内容は後から変更・取消できます。</div>
+<div class="howto">
+  ① 名前を入れて「次へ」<br>
+  ② 内容を入れて「登録する」<br>
+  ③「登録しました」と出たら完了<br>
+  <span style="font-size: 13px; color: #555;">変更・取消も、同じ名前を入れて「次へ」でできます。</span>
+</div>
 
 <div class="card center" id="loadingView">読み込み中…</div>
-<div class="card center" id="emptyView" style="display: none;">現在、受付中のイベントはありません。</div>
+<div class="card center" id="emptyView" style="display: none;">いま受付中のイベントはありません。</div>
 
 <div id="appView" style="display: none;">
-  <!-- 1. イベントと名前 -->
+  <!-- ① イベントと名前 -->
   <div class="card" id="nameCard">
-    <div class="field">
-      <label class="cap">イベント</label>
+    <div class="field" id="eventField">
+      <span class="cap">イベント</span>
       <select id="eventSelect"></select>
     </div>
     <div class="field">
-      <label class="cap">ゲーム内の名前</label>
-      <input type="text" id="nameInput" list="nameList" autocomplete="off" maxlength="30" placeholder="例: あんこ">
+      <span class="cap">ゲーム内の名前</span>
+      <input type="text" id="nameInput" list="nameList" autocomplete="off" maxlength="30">
       <datalist id="nameList"></datalist>
-      <div class="hint">前に登録したことがある人は、入力すると候補に出ます。</div>
     </div>
     <button type="button" class="main" id="nextBtn">次へ</button>
     <div class="msg" id="nameMsg"></div>
     <div id="candView" style="display: none;">
-      <div class="banner">似た名前の人が登録されています。<b>この中にあなたはいますか？</b><br>名前を変えた場合は、前の名前を選んでください（名前は今の名前に更新されます）。</div>
+      <div class="banner" style="margin: 12px 0 0;">似た名前の人がいます。<b>あなたはこの中にいますか？</b></div>
       <div class="cand" id="candList"></div>
     </div>
   </div>
 
-  <!-- 2. 参加情報 -->
+  <!-- ② 参加情報 -->
   <div class="card" id="formCard" style="display: none;">
     <div class="event-title" id="formEvent"></div>
     <div class="who" id="whoText"></div>
-    <div class="banner" id="registeredBanner" style="display: none;">このイベントに登録済みです。内容を変更するか、参加を取り消せます。</div>
+    <div class="banner" id="registeredBanner" style="display: none;">登録済みです。直して「変更を保存する」か、いちばん下の「参加を取り消す」を押してください。</div>
 
-    <div class="two">
-      <div class="field">
-        <label class="cap">同盟 ※必須</label>
-        <input type="text" id="fAlliance" maxlength="20" placeholder="例: EGG" list="allianceList">
-        <datalist id="allianceList"></datalist>
-      </div>
-      <div class="field">
-        <label class="cap">区分</label>
-        <select id="fGrade">
-          <option>G8</option><option selected>G7</option><option>G6</option><option>G5</option><option>その他</option>
-        </select>
-      </div>
-    </div>
     <div class="field">
-      <label class="cap">参加</label>
-      <select id="fEntry">
-        <option value="start">最初から参加できる</option>
-        <option value="late">途中参加</option>
-      </select>
+      <span class="cap">同盟<span class="req">必須</span></span>
+      <input type="text" id="fAlliance" maxlength="20" list="allianceList">
+      <datalist id="allianceList"></datalist>
     </div>
+
     <div class="field">
-      <label class="cap">当てはまるものにチェック</label>
-      <div class="checks">
-        <label><input type="checkbox" id="fMonthly"> ◯ マンスリー持ち</label>
-        <label><input type="checkbox" id="fLeaveEarly"> △ 途中抜け</label>
-        <label><input type="checkbox" id="fVc"> ◇ VC参加可能（聴き専可）</label>
-        <label><input type="checkbox" id="fVivian4"> ◆ ビビアン星4以上持ち</label>
+      <span class="cap">区分</span>
+      <div class="chips">
+        <label class="chip"><input type="radio" name="fGrade" value="G8"><span>G8</span></label>
+        <label class="chip"><input type="radio" name="fGrade" value="G7"><span>G7</span></label>
+        <label class="chip"><input type="radio" name="fGrade" value="G6"><span>G6</span></label>
+        <label class="chip"><input type="radio" name="fGrade" value="G5"><span>G5</span></label>
+        <label class="chip"><input type="radio" name="fGrade" value="その他"><span>その他</span></label>
       </div>
     </div>
-    <div class="two">
-      <div class="field">
-        <label class="cap">参加開始（途中参加のとき）</label>
+
+    <div class="field">
+      <span class="cap">参加</span>
+      <div class="chips">
+        <label class="chip"><input type="radio" name="fEntry" value="start"><span>最初から</span></label>
+        <label class="chip"><input type="radio" name="fEntry" value="late"><span>途中から</span></label>
+      </div>
+      <div class="sub-field" id="joinAtField">
+        <span class="cap">何時から？</span>
         <input type="text" id="fJoinAt" maxlength="20" placeholder="例: 23時">
       </div>
-      <div class="field">
-        <label class="cap">抜ける時刻（途中抜けのとき）</label>
+    </div>
+
+    <div class="field">
+      <span class="cap">当てはまるものを押す</span>
+      <div class="chips">
+        <label class="chip"><input type="checkbox" id="fMonthly"><span>◯ マンスリー持ち</span></label>
+        <label class="chip"><input type="checkbox" id="fLeaveEarly"><span>△ 途中で抜ける</span></label>
+        <label class="chip"><input type="checkbox" id="fVc"><span>◇ VC参加OK（聴き専OK）</span></label>
+        <label class="chip"><input type="checkbox" id="fVivian4"><span>◆ ビビアン星4以上</span></label>
+      </div>
+      <div class="sub-field" id="leaveAtField">
+        <span class="cap">何時に抜ける？</span>
         <input type="text" id="fLeaveAt" maxlength="20" placeholder="例: 22時">
       </div>
     </div>
+
     <div class="field">
-      <label class="cap">兵種（出せる兵種。全部ならすべてチェック）</label>
-      <div class="checks">
-        <label><input type="checkbox" class="fTroop" value="歩"> 歩兵</label>
-        <label><input type="checkbox" class="fTroop" value="騎"> 騎兵</label>
-        <label><input type="checkbox" class="fTroop" value="弓"> 弓兵</label>
+      <span class="cap">兵種（出せるものを全部押す）</span>
+      <div class="chips">
+        <label class="chip"><input type="checkbox" class="fTroop" value="歩"><span>歩兵</span></label>
+        <label class="chip"><input type="checkbox" class="fTroop" value="騎"><span>騎兵</span></label>
+        <label class="chip"><input type="checkbox" class="fTroop" value="弓"><span>弓兵</span></label>
       </div>
     </div>
+
+    <div class="field">
+      <span class="cap">兵士レベル（T）</span>
+      <input type="number" id="fTier" min="1" max="30" inputmode="numeric" placeholder="例: 11" style="max-width: 160px;">
+    </div>
+
     <div class="two">
       <div class="field">
-        <label class="cap">兵士レベル（T）</label>
-        <input type="number" id="fTier" min="1" max="30" inputmode="numeric" placeholder="例: 11">
+        <span class="cap">出征部隊数<span class="req">必須</span></span>
+        <input type="number" id="fMarchCount" min="0" inputmode="numeric">
       </div>
-      <div class="field"></div>
+      <div class="field">
+        <span class="cap">出征容量ペットLv<span class="req">必須</span></span>
+        <input type="number" id="fMarchPet" min="0" inputmode="numeric">
+      </div>
     </div>
+
+    <div class="rally">
+      <div class="chips">
+        <label class="chip"><input type="checkbox" id="fRallyOn"><span>集結の指示があった人はここを押す</span></label>
+      </div>
+      <div class="two" id="rallyFields">
+        <div class="field" style="margin-bottom: 0;">
+          <span class="cap">集結部隊数</span>
+          <input type="number" id="fRallyCount" min="0" inputmode="numeric">
+        </div>
+        <div class="field" style="margin-bottom: 0;">
+          <span class="cap">集結容量ペットLv</span>
+          <input type="number" id="fRallyPet" min="0" inputmode="numeric">
+        </div>
+      </div>
+    </div>
+
     <div class="field">
-      <label class="cap">備考</label>
+      <span class="cap">ひとこと（なくてOK）</span>
       <input type="text" id="fNote" maxlength="100">
     </div>
 
     <button type="button" class="main" id="saveBtn">登録する</button>
-    <div class="row" style="margin-top: 10px; justify-content: space-between;">
-      <button type="button" class="sub-btn small" id="backBtn">← 名前を入力し直す</button>
-      <button type="button" class="danger small" id="cancelEntryBtn" style="display: none;">参加を取り消す</button>
-    </div>
     <div class="msg" id="formMsg"></div>
+    <div class="row" style="margin-top: 14px; justify-content: space-between;">
+      <button type="button" class="sub-btn" id="backBtn">← 戻る</button>
+      <button type="button" class="danger" id="cancelEntryBtn" style="display: none;">参加を取り消す</button>
+    </div>
   </div>
 
-  <!-- 3. 完了 -->
+  <!-- ③ 完了 -->
   <div class="card done" id="doneCard" style="display: none;">
     <div class="big" id="doneTitle"></div>
-    <div class="hint" id="doneEvent"></div>
-    <div class="line" id="doneLine"></div>
+    <div class="sub" id="doneEvent"></div>
     <div class="row" style="justify-content: center;">
-      <button type="button" class="sub-btn small" id="editAgainBtn">内容を変更する</button>
-      <button type="button" class="sub-btn small" id="anotherBtn">別の人を登録する</button>
+      <button type="button" class="sub-btn" id="editAgainBtn">内容を直す</button>
+      <button type="button" class="sub-btn" id="anotherBtn">別の人を登録する</button>
     </div>
   </div>
 
   <!-- 登録済みの人 -->
   <div class="card">
     <details id="listDetails">
-      <summary>登録済みの人 <span id="listCount" class="hint"></span></summary>
-      <div class="legend">◯:マンスリー持ち　△:途中抜け　◇:VC参加可能(聴き専可)　◆:ビビアン星4以上持ち</div>
+      <summary>登録済みの人を見る <span id="listCount"></span></summary>
       <table>
-        <thead><tr><th>同盟</th><th>参加</th><th>区分</th><th>名前</th><th>印</th></tr></thead>
+        <thead><tr><th>同盟</th><th>区分</th><th>名前</th><th>印</th></tr></thead>
         <tbody id="listBody"></tbody>
       </table>
     </details>
@@ -205,7 +246,7 @@
 
 <div class="card center" id="errorView" style="display: none;">
   <div class="msg err" id="errorMsg"></div>
-  <button type="button" class="sub-btn small" id="retryBtn" style="margin-top: 10px;">もう一度読み込む</button>
+  <button type="button" class="sub-btn" id="retryBtn" style="margin-top: 10px;">もう一度読み込む</button>
 </div>
 
 <script>
@@ -216,8 +257,6 @@
   var NAME_KEY = "ksEntryName";
   var EVENT_KEY = "ksEntryEvent";
   var GRADES = ["G8", "G7", "G6", "G5", "その他"];
-  var ENTRY_SHORT = { start: "最初から", late: "途中参加" };
-  var TROOP_ORDER = "歩騎弓";
 
   var data = { events: [], users: [], entries: [] };
   var currentEventId = null;
@@ -321,17 +360,6 @@
     return (m.monthly ? "◯" : "") + (m.leaveEarly ? "△" : "") + (m.vc ? "◇" : "") + (m.vivian4 ? "◆" : "");
   }
 
-  // 募集フォーマットと同じ書き方（例: G7: あんこ◯△◆(〜22時)(T11)）
-  function entryLine(m, name) {
-    var s = m.grade + ": " + name + marksOf(m);
-    if (m.joinAt || m.leaveAt) s += "(" + (m.joinAt || "") + "〜" + (m.leaveAt || "") + ")";
-    var troops = m.troops === TROOP_ORDER ? "" : m.troops;
-    var tr = m.tier != null ? troops + "T" + m.tier : troops;
-    if (tr) s += "(" + tr + ")";
-    if (m.note) s += "(" + m.note + ")";
-    return s;
-  }
-
   function show(view) {
     $("nameCard").style.display = view === "name" ? "block" : "none";
     $("formCard").style.display = view === "form" ? "block" : "none";
@@ -345,7 +373,8 @@
       return '<option value="' + escapeHtml(ev.id) + '"' + (ev.id === currentEventId ? " selected" : "") + ">" +
         escapeHtml(eventLabel(ev)) + "</option>";
     }).join("");
-    $("eventSelect").disabled = events.length < 2;
+    // イベントが1つだけなら選ぶ必要はないので隠す（②の画面上部にイベント名が出る）
+    $("eventField").style.display = events.length > 1 ? "block" : "none";
     $("nameList").innerHTML = data.users.map(function(u) {
       return '<option value="' + escapeHtml(u.name) + '">';
     }).join("");
@@ -361,18 +390,17 @@
       var u = userById(e.userId);
       return Object.assign({}, e, { name: u ? u.name : "?" });
     }).sort(function(a, b) {
-      return a.alliance.localeCompare(b.alliance) || (a.entry === b.entry ? 0 : a.entry === "start" ? -1 : 1)
-        || GRADES.indexOf(a.grade) - GRADES.indexOf(b.grade) || a.name.localeCompare(b.name);
+      return a.alliance.localeCompare(b.alliance) || GRADES.indexOf(a.grade) - GRADES.indexOf(b.grade) || a.name.localeCompare(b.name);
     });
     $("listCount").textContent = "（" + rows.length + "人）";
     $("listBody").innerHTML = rows.length ? rows.map(function(m) {
       var mine = me && me.userId === m.userId;
-      return '<tr' + (mine ? ' class="me"' : "") + "><td>" + escapeHtml(m.alliance) + "</td><td>" + ENTRY_SHORT[m.entry] +
-        "</td><td>" + escapeHtml(m.grade) + "</td><td>" + escapeHtml(m.name) + '</td><td class="marks">' + marksOf(m) + "</td></tr>";
-    }).join("") : '<tr><td colspan="5" class="hint">まだ誰も登録していません</td></tr>';
+      return '<tr' + (mine ? ' class="me"' : "") + "><td>" + escapeHtml(m.alliance) + "</td><td>" + escapeHtml(m.grade) +
+        "</td><td>" + escapeHtml(m.name) + '</td><td class="marks">' + marksOf(m) + "</td></tr>";
+    }).join("") : '<tr><td colspan="4" style="color: #777;">まだ誰も登録していません</td></tr>';
   }
 
-  // ---------- 1. 名前 ----------
+  // ---------- ① 名前 ----------
   function load() {
     $("loadingView").style.display = "block";
     $("errorView").style.display = "none";
@@ -401,14 +429,12 @@
     store(NAME_KEY, name);
     var existing = user && entryOf(currentEventId, user.id);
     $("formEvent").textContent = eventLabel(eventById(currentEventId));
-    $("whoText").innerHTML = "名前: <b>" + escapeHtml(name) + "</b>　" +
-      (me.oldName ? '<span class="hint">（前の名前「' + escapeHtml(me.oldName) + "」から更新します）</span>"
-        : user ? '<span class="hint">（登録済みの人）</span>' : '<span class="hint">（はじめての登録）</span>');
+    $("whoText").innerHTML = "名前: <b>" + escapeHtml(name) + "</b>" +
+      (me.oldName ? '<span style="color: #777; font-size: 13px;">（前の名前「' + escapeHtml(me.oldName) + "」）</span>" : "");
     $("registeredBanner").style.display = existing ? "block" : "none";
     $("cancelEntryBtn").style.display = existing ? "inline-block" : "none";
     $("saveBtn").textContent = existing ? "変更を保存する" : "登録する";
-    fillForm(existing || { alliance: user ? user.alliance : "", entry: "start", grade: "G7", monthly: false, leaveEarly: false,
-      vc: false, vivian4: false, troops: "", tier: null, joinAt: "", leaveAt: "", note: "" });
+    fillForm(existing || { alliance: user ? user.alliance : "", entry: "start", grade: "G7" });
     $("formMsg").textContent = "";
     show("form");
     renderList();
@@ -418,18 +444,16 @@
   $("nextBtn").addEventListener("click", function() {
     var name = str($("nameInput").value);
     $("candView").style.display = "none";
-    if (!name) { setMsg($("nameMsg"), "名前を入力してください", false); return; }
-    if (name.length > 30) { setMsg($("nameMsg"), "名前は30文字までです", false); return; }
+    if (!name) { setMsg($("nameMsg"), "名前を入れてください", false); return; }
     $("nameMsg").textContent = "";
     var user = findUserByName(name);
     if (user) { startForm(user, user.name); return; }
     var cands = similarUsers(name);
     if (!cands.length) { startForm(null, name); return; }
     $("candList").innerHTML = cands.map(function(u, i) {
-      var olds = (u.aliases || []).length ? '<span class="hint">（前の名前: ' + escapeHtml(u.aliases.join("、")) + "）</span>" : "";
       return '<button type="button" class="sub-btn" data-i="' + i + '">はい、<b>' + escapeHtml(u.name) + "</b>（" +
-        escapeHtml(u.alliance || "同盟なし") + "）は私です " + olds + "</button>";
-    }).join("") + '<button type="button" data-i="new">いいえ、「' + escapeHtml(name) + "」で新しく登録する</button>";
+        escapeHtml(u.alliance || "同盟なし") + "）です</button>";
+    }).join("") + '<button type="button" data-i="new">いいえ、はじめて登録します</button>';
     $("candView").style.display = "block";
     $("candList").querySelectorAll("button").forEach(function(btn) {
       btn.addEventListener("click", function() {
@@ -450,42 +474,87 @@
     renderList();
   });
 
-  // ---------- 2. 参加情報 ----------
+  // ---------- ② 参加情報 ----------
+  function radioValue(name) {
+    var r = document.querySelector("input[name=" + name + "]:checked");
+    return r ? r.value : "";
+  }
+  function setRadio(name, value) {
+    document.querySelectorAll("input[name=" + name + "]").forEach(function(r) { r.checked = r.value === value; });
+  }
+  function numValue(id) {
+    var v = $(id).value.trim();
+    return v === "" ? null : Number(v);
+  }
+  function setNum(id, v) {
+    $(id).value = v == null ? "" : v;
+  }
+
+  // 「途中から」「途中で抜ける」「集結の指示」を押したときだけ、時刻・集結の欄を出す
+  function syncSubFields() {
+    $("joinAtField").style.display = radioValue("fEntry") === "late" ? "block" : "none";
+    $("leaveAtField").style.display = $("fLeaveEarly").checked ? "block" : "none";
+    $("rallyFields").style.display = $("fRallyOn").checked ? "grid" : "none";
+  }
+  document.querySelectorAll("input[name=fEntry], #fLeaveEarly, #fRallyOn").forEach(function(el) {
+    el.addEventListener("change", syncSubFields);
+  });
+
   function readForm() {
     var troops = "";
     document.querySelectorAll(".fTroop:checked").forEach(function(cb) { troops += cb.value; });
-    var tier = $("fTier").value.trim();
-    var m = {
+    var late = radioValue("fEntry") === "late", leave = $("fLeaveEarly").checked, rally = $("fRallyOn").checked;
+    return {
       alliance: str($("fAlliance").value),
-      entry: $("fEntry").value,
-      grade: $("fGrade").value,
+      entry: late ? "late" : "start",
+      grade: radioValue("fGrade") || "その他",
       monthly: $("fMonthly").checked,
-      leaveEarly: $("fLeaveEarly").checked,
+      leaveEarly: leave,
       vc: $("fVc").checked,
       vivian4: $("fVivian4").checked,
       troops: troops,
-      tier: tier ? Number(tier) : null,
-      joinAt: str($("fJoinAt").value),
-      leaveAt: str($("fLeaveAt").value),
-      note: str($("fNote").value)
+      tier: numValue("fTier"),
+      joinAt: late ? str($("fJoinAt").value) : "",
+      leaveAt: leave ? str($("fLeaveAt").value) : "",
+      note: str($("fNote").value),
+      marchCount: numValue("fMarchCount"),
+      marchPet: numValue("fMarchPet"),
+      rallyCount: rally ? numValue("fRallyCount") : null,
+      rallyPet: rally ? numValue("fRallyPet") : null
     };
-    if (m.leaveAt) m.leaveEarly = true;
-    return m;
   }
 
   function fillForm(m) {
     $("fAlliance").value = m.alliance || "";
-    $("fEntry").value = m.entry;
-    $("fGrade").value = GRADES.indexOf(m.grade) >= 0 ? m.grade : "その他";
+    setRadio("fEntry", m.entry === "late" ? "late" : "start");
+    setRadio("fGrade", GRADES.indexOf(m.grade) >= 0 ? m.grade : "その他");
     $("fMonthly").checked = !!m.monthly;
     $("fLeaveEarly").checked = !!m.leaveEarly;
     $("fVc").checked = !!m.vc;
     $("fVivian4").checked = !!m.vivian4;
     document.querySelectorAll(".fTroop").forEach(function(cb) { cb.checked = (m.troops || "").indexOf(cb.value) >= 0; });
-    $("fTier").value = m.tier == null ? "" : m.tier;
+    setNum("fTier", m.tier);
     $("fJoinAt").value = m.joinAt || "";
     $("fLeaveAt").value = m.leaveAt || "";
     $("fNote").value = m.note || "";
+    setNum("fMarchCount", m.marchCount);
+    setNum("fMarchPet", m.marchPet);
+    setNum("fRallyCount", m.rallyCount);
+    setNum("fRallyPet", m.rallyPet);
+    $("fRallyOn").checked = m.rallyCount != null || m.rallyPet != null;
+    syncSubFields();
+  }
+
+  // 入力の確認。問題があればメッセージを返す
+  function checkForm(m) {
+    function bad(v) { return v != null && !(v >= 0 && Math.floor(v) === v); }
+    if (!m.alliance) return "同盟を入れてください";
+    if (m.marchCount == null) return "出征部隊数を入れてください";
+    if (m.marchPet == null) return "出征容量ペットLvを入れてください";
+    if (bad(m.marchCount) || bad(m.marchPet) || bad(m.rallyCount) || bad(m.rallyPet)) return "部隊数・ペットLvは数字で入れてください";
+    if ($("fRallyOn").checked && m.rallyCount == null && m.rallyPet == null) return "集結部隊数・集結容量ペットLvを入れてください";
+    if (m.tier != null && !(m.tier >= 1 && m.tier <= 30)) return "兵士レベルは1〜30の数字で入れてください";
+    return "";
   }
 
   function setSaving(on) {
@@ -496,8 +565,8 @@
   function send(cancel) {
     if (saving) return;
     var m = cancel ? null : readForm();
-    if (m && !m.alliance) { setMsg($("formMsg"), "同盟を入力してください", false); return; }
-    if (m && m.tier != null && !(m.tier >= 1 && m.tier <= 30)) { setMsg($("formMsg"), "兵士レベルは1〜30の数字で入力してください", false); return; }
+    var err = m && checkForm(m);
+    if (err) { setMsg($("formMsg"), err, false); return; }
     setSaving(true);
     setMsg($("formMsg"), cancel ? "取り消し中…" : "保存中…", true);
     var payload = { action: "selfSave", eventId: currentEventId, userId: me.userId, name: me.name, cancel: !!cancel, entry: m };
@@ -507,11 +576,9 @@
       me.oldName = "";
       return load().then(function() {
         $("doneTitle").textContent = res.result === "canceled" ? "参加を取り消しました"
-          : res.result === "updated" ? "✅ 変更を保存しました" : "✅ 登録しました";
+          : res.result === "updated" ? "✅ 変更しました" : "✅ 登録しました";
         $("doneEvent").textContent = eventLabel(eventById(currentEventId)) + "　" + me.name;
-        $("doneLine").textContent = cancel ? "" : entryLine(m, me.name);
-        $("doneLine").style.display = cancel ? "none" : "block";
-        $("editAgainBtn").textContent = cancel ? "もう一度登録する" : "内容を変更する";
+        $("editAgainBtn").textContent = cancel ? "もう一度登録する" : "内容を直す";
         show("done");
         renderList();
         window.scrollTo(0, 0);
@@ -525,11 +592,10 @@
 
   $("saveBtn").addEventListener("click", function() { send(false); });
   $("cancelEntryBtn").addEventListener("click", function() {
-    if (confirm("「" + eventLabel(eventById(currentEventId)) + "」の参加を取り消します。よろしいですか？")) send(true);
+    if (confirm("参加を取り消します。よろしいですか？")) send(true);
   });
   $("backBtn").addEventListener("click", function() {
     show("name");
-    $("nameInput").focus();
   });
   $("editAgainBtn").addEventListener("click", function() {
     startForm(me.userId ? userById(me.userId) : null, me.name);

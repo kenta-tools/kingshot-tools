@@ -160,7 +160,8 @@ function selfSave_(token, p) {
         var e = {
           alliance: row.alliance, entry: row.entry, grade: row.grade, monthly: row.monthly, leaveEarly: row.leaveEarly,
           vc: row.vc, vivian4: row.vivian4, troops: row.troops, tier: row.tier, joinAt: row.joinAt, leaveAt: row.leaveAt,
-          note: row.note, id: existing ? existing.id : newId_("r"), eventId: ev.id, userId: user.id
+          note: row.note, marchCount: row.marchCount, marchPet: row.marchPet, rallyCount: row.rallyCount,
+          rallyPet: row.rallyPet, id: existing ? existing.id : newId_("r"), eventId: ev.id, userId: user.id
         };
         if (existing) d.entries[d.entries.indexOf(existing)] = e;
         else d.entries.push(e);
@@ -195,7 +196,11 @@ function cleanEntry_(m) {
     tier: tier >= 1 && tier <= 30 && Math.floor(tier) === tier ? tier : null,
     joinAt: clip_(m.joinAt, 20),
     leaveAt: clip_(m.leaveAt, 20),
-    note: clip_(m.note, 100)
+    note: clip_(m.note, 100),
+    marchCount: count_(m.marchCount),
+    marchPet: count_(m.marchPet),
+    rallyCount: count_(m.rallyCount),
+    rallyPet: count_(m.rallyPet)
   };
   if (r.leaveAt) r.leaveEarly = true;
   return r;
@@ -206,6 +211,12 @@ function findUser_(users, name) {
   return users.filter(function(u) { return key_(u.name) === k; })[0]
     || users.filter(function(u) { return (u.aliases || []).some(function(a) { return key_(a) === k; }); })[0]
     || null;
+}
+
+// 部隊数・ペットLv（0〜99999の整数、空なら null）
+function count_(v) {
+  var n = Number(String(v == null ? "" : v).replace(/[,，]/g, ""));
+  return String(v == null ? "" : v).trim() !== "" && n >= 0 && n <= 99999 && Math.floor(n) === n ? n : null;
 }
 
 function key_(s) { return String(s).trim().toLowerCase(); }

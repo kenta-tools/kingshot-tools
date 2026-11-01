@@ -278,7 +278,7 @@
       <div class="msg" id="bulkMsg"></div>
       <div id="previewWrap" style="display:none; margin-top: 10px;">
         <table>
-          <thead><tr><th class="nosort">同盟</th><th class="nosort">参加</th><th class="nosort">G</th><th class="nosort">名前</th><th class="nosort">印</th><th class="nosort">兵種</th><th class="nosort">時間</th><th class="nosort">備考</th><th class="nosort">ユーザー判定</th></tr></thead>
+          <thead><tr><th class="nosort">同盟</th><th class="nosort">参加</th><th class="nosort">G</th><th class="nosort">名前</th><th class="nosort">印</th><th class="nosort">兵種</th><th class="nosort">時間</th><th class="nosort">部隊・ペット</th><th class="nosort">備考</th><th class="nosort">ユーザー判定</th></tr></thead>
           <tbody id="previewBody"></tbody>
         </table>
       </div>
@@ -342,6 +342,22 @@
           <label class="cap">抜ける時刻</label>
           <input type="text" id="fLeaveAt" placeholder="例: 22時">
         </div>
+        <div class="field">
+          <label class="cap">出征部隊数</label>
+          <input type="number" id="fMarchCount" min="0">
+        </div>
+        <div class="field">
+          <label class="cap">出征容量ペットLv</label>
+          <input type="number" id="fMarchPet" min="0">
+        </div>
+        <div class="field">
+          <label class="cap">集結部隊数（指示があった人）</label>
+          <input type="number" id="fRallyCount" min="0">
+        </div>
+        <div class="field">
+          <label class="cap">集結容量ペットLv（指示があった人）</label>
+          <input type="number" id="fRallyPet" min="0">
+        </div>
         <div class="field wide">
           <label class="cap">備考</label>
           <input type="text" id="fNote">
@@ -375,6 +391,7 @@
             <th class="nosort">印</th>
             <th data-key="tier">兵種</th>
             <th class="nosort">時間</th>
+            <th class="nosort">部隊・ペット</th>
             <th class="nosort">備考</th>
             <th class="nosort"></th>
           </tr>
@@ -458,6 +475,11 @@
   var ENTRY_LABEL = { start: "最初から参加できる", late: "途中参加" };
   var ENTRY_SHORT = { start: "最初から", late: "途中参加" };
   var TROOP_ORDER = "歩騎弓";
+  // 数値の登録項目（出征＝全員、集結＝指示があった人だけ）
+  var NUM_FIELDS = [
+    ["marchCount", "出征部隊数"], ["marchPet", "出征容量ペットLv"],
+    ["rallyCount", "集結部隊数"], ["rallyPet", "集結容量ペットLv"]
+  ];
   var LEGEND = "◯:マンスリー持ち\n△:途中抜け\n◇:VC参加可能(聴き専可)\n◆:ビビアン星4以上持ち";
   var SAMPLE = [
     "EGG(最初から参加できる)", LEGEND,
@@ -616,6 +638,10 @@
 
   function str(v) { return String(v == null ? "" : v).trim(); }
   function bool(v) { return v === true || v === 1 || /^(1|true|◯|○|〇|yes|y)$/i.test(str(v)); }
+  function num(v) {
+    var s = str(v).replace(/[,，]/g, "").replace(/^(Lv|LV|lv)\.?/, "");
+    return s && !isNaN(Number(s)) && Number(s) >= 0 ? Math.floor(Number(s)) : null;
+  }
   function pad2(n) { return (n < 10 ? "0" : "") + n; }
   function today() {
     var d = new Date();
@@ -640,6 +666,10 @@
       joinAt: str(m.joinAt),
       leaveAt: str(m.leaveAt),
       note: str(m.note),
+      marchCount: num(m.marchCount),
+      marchPet: num(m.marchPet),
+      rallyCount: num(m.rallyCount),
+      rallyPet: num(m.rallyPet),
       sameAs: str(m.sameAs) // AI変換で登録者が「同一人物」と確認した登録済みユーザー名（取り込み時のみ使う）
     };
   }
@@ -1199,6 +1229,15 @@
     return (m.joinAt || "") + "〜" + (m.leaveAt || "");
   }
 
+  // 「出征3部隊 Lv50／集結1部隊 Lv40」
+  function capText(m) {
+    function part(label, count, pet) {
+      if (count == null && pet == null) return "";
+      return label + (count != null ? count + "部隊" : "") + (pet != null ? " Lv" + pet : "");
+    }
+    return [part("出征", m.marchCount, m.marchPet), part("集結", m.rallyCount, m.rallyPet)].filter(Boolean).join("／");
+  }
+
   function gradeRank(g) {
     var i = GRADES.indexOf(g);
     return i < 0 ? GRADES.length : i;
@@ -1357,7 +1396,7 @@
     ["alliance", "同盟"], ["entry", "参加"], ["grade", "区分"], ["name", "名前"],
     ["monthly", "マンスリー"], ["leaveEarly", "途中抜け"], ["vc", "VC"], ["vivian4", "ビビアン星4"],
     ["troops", "兵種"], ["tier", "T"], ["joinAt", "参加開始"], ["leaveAt", "抜ける時刻"], ["note", "備考"]
-  ];
+  ].concat(NUM_FIELDS);
 
   function splitCsvLine(line) {
     if (line.indexOf("\t") >= 0) return line.split("\t");
@@ -1507,6 +1546,7 @@
       '<td class="marks">' + marksOf(m) + '</td>' +
       '<td>' + escapeHtml(troopText(m)) + '</td>' +
       '<td>' + escapeHtml(timeText(m)) + '</td>' +
+      '<td class="num">' + escapeHtml(capText(m)) + '</td>' +
       '<td>' + escapeHtml(m.note) + '</td>' +
       (withOps
         ? '<td class="ops"><button class="small sub-btn" data-act="edit">変更</button> ' +
@@ -1534,7 +1574,7 @@
       html.push('<tr data-id="' + m.id + '"' + (m.id === editingId ? ' class="editing"' : "") + '>' + memberRowHtml(m, true) + '</tr>');
     });
     if (!rows.length) {
-      html.push('<tr><td colspan="9" class="hint" style="text-align:center;">このイベントにはまだ参加者が登録されていません</td></tr>');
+      html.push('<tr><td colspan="10" class="hint" style="text-align:center;">このイベントにはまだ参加者が登録されていません</td></tr>');
     }
     $("memberBody").innerHTML = html.join("");
     $("countText").textContent = (q || fa) ? "（" + shown + " / " + rows.length + "人）" : "（" + rows.length + "人）";
@@ -1718,7 +1758,11 @@
       tier: tier ? Number(tier) : null,
       joinAt: $("fJoinAt").value.trim(),
       leaveAt: $("fLeaveAt").value.trim(),
-      note: $("fNote").value.trim()
+      note: $("fNote").value.trim(),
+      marchCount: num($("fMarchCount").value),
+      marchPet: num($("fMarchPet").value),
+      rallyCount: num($("fRallyCount").value),
+      rallyPet: num($("fRallyPet").value)
     };
     if (m.leaveAt) m.leaveEarly = true;
     return m;
@@ -1738,13 +1782,18 @@
     $("fJoinAt").value = m.joinAt;
     $("fLeaveAt").value = m.leaveAt;
     $("fNote").value = m.note;
+    $("fMarchCount").value = m.marchCount == null ? "" : m.marchCount;
+    $("fMarchPet").value = m.marchPet == null ? "" : m.marchPet;
+    $("fRallyCount").value = m.rallyCount == null ? "" : m.rallyCount;
+    $("fRallyPet").value = m.rallyPet == null ? "" : m.rallyPet;
   }
 
   // キャンセル／登録後のリセット。同盟・参加・区分は連続入力しやすいよう残す
   function resetForm(keepContext) {
     var ctx = { alliance: $("fAlliance").value, entry: $("fEntry").value, grade: $("fGrade").value };
     fillForm({ alliance: "", entry: "start", grade: "G7", name: "", monthly: false, leaveEarly: false, vc: false,
-      vivian4: false, troops: "", tier: null, joinAt: "", leaveAt: "", note: "" });
+      vivian4: false, troops: "", tier: null, joinAt: "", leaveAt: "", note: "",
+      marchCount: null, marchPet: null, rallyCount: null, rallyPet: null });
     if (keepContext) {
       $("fAlliance").value = ctx.alliance; $("fEntry").value = ctx.entry; $("fGrade").value = ctx.grade;
     }
@@ -2170,7 +2219,8 @@
     return {
       "同盟": m.alliance, "名前": m.name, "参加": ENTRY_SHORT[m.entry], "区分": m.grade,
       "マンスリー": m.monthly, "途中抜け": m.leaveEarly, "VC": m.vc, "ビビアン星4以上": m.vivian4,
-      "兵種": m.troops, "T": m.tier, "参加開始": m.joinAt, "抜ける時刻": m.leaveAt, "備考": m.note
+      "兵種": m.troops, "T": m.tier, "参加開始": m.joinAt, "抜ける時刻": m.leaveAt, "備考": m.note,
+      "出征部隊数": m.marchCount, "出征容量ペットLv": m.marchPet, "集結部隊数": m.rallyCount, "集結容量ペットLv": m.rallyPet
     };
   }
 
@@ -2190,12 +2240,15 @@
       "- 兵種: 歩＝歩兵、騎＝騎兵、弓＝弓兵（例: 歩弓＝歩兵と弓兵）。空欄は指定なし",
       "- T: 兵士レベル（大きいほど強い）。空欄は不明",
       "- 参加開始・抜ける時刻: 途中から参加する時刻／途中で抜ける時刻。空欄は指定なし",
+      "- 出征部隊数・出征容量ペットLv: 出せる部隊の数と、出征容量を上げるペットのレベル（全員が登録）",
+      "- 集結部隊数・集結容量ペットLv: 集結の部隊の数と、集結容量を上げるペットのレベル（集結の指示があった人だけ登録。空欄は対象外）",
       "",
       "## データ（" + (format === "csv" ? "CSV" : "JSON") + "）"
     ];
     var body;
     if (format === "csv") {
-      var cols = ["同盟", "名前", "参加", "区分", "マンスリー", "途中抜け", "VC", "ビビアン星4以上", "兵種", "T", "参加開始", "抜ける時刻", "備考"];
+      var cols = ["同盟", "名前", "参加", "区分", "マンスリー", "途中抜け", "VC", "ビビアン星4以上", "兵種", "T", "参加開始", "抜ける時刻", "備考",
+        "出征部隊数", "出征容量ペットLv", "集結部隊数", "集結容量ペットLv"];
       body = [cols.join(",")].concat(rows.map(function(m) {
         var r = aiRecord(m);
         return cols.map(function(c) {
