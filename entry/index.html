@@ -70,7 +70,6 @@
   .cand { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
   .cand button { text-align: left; }
   .rally { border: 1px dashed #c3cad5; border-radius: 10px; padding: 12px; margin-bottom: 16px; }
-  .rally .two { margin-top: 12px; }
   .done { text-align: center; }
   .done .big { font-size: 22px; font-weight: bold; color: #1e7d3a; margin-bottom: 6px; }
   .done .sub { color: #666; font-size: 14px; margin-bottom: 14px; }
@@ -181,29 +180,31 @@
       </div>
     </div>
 
-    <div class="two">
-      <div class="field">
-        <span class="cap">出征部隊数<span class="req">必須</span></span>
-        <input type="number" id="fMarchCount" min="0" inputmode="numeric">
-      </div>
-      <div class="field">
-        <span class="cap">出征容量ペットLv<span class="req">必須</span></span>
-        <input type="number" id="fMarchPet" min="0" inputmode="numeric">
-      </div>
+    <div class="field">
+      <span class="cap">出征部隊数<span class="req">必須</span></span>
+      <input type="number" id="fMarchCount" min="0" inputmode="numeric" style="max-width: 160px;">
+    </div>
+    <div class="field">
+      <span class="cap">出征容量ペット（巨大蛮牛）<span class="req">必須</span></span>
+      <select id="fMarchPet" data-pet="march"></select>
     </div>
 
     <div class="rally">
       <div class="chips">
         <label class="chip"><input type="checkbox" id="fRallyOn"><span>集結の指示があった人はここを押す</span></label>
       </div>
-      <div class="two" id="rallyFields">
-        <div class="field" style="margin-bottom: 0;">
+      <div id="rallyFields" style="margin-top: 12px;">
+        <div class="field">
           <span class="cap">集結部隊数</span>
-          <input type="number" id="fRallyCount" min="0" inputmode="numeric">
+          <input type="number" id="fRallyCount" min="0" inputmode="numeric" style="max-width: 160px;">
+        </div>
+        <div class="field">
+          <span class="cap">集結容量ペット（巨大ヘラジカ）</span>
+          <select id="fRallyPet" data-pet="rally"></select>
         </div>
         <div class="field" style="margin-bottom: 0;">
-          <span class="cap">集結容量ペットLv</span>
-          <input type="number" id="fRallyPet" min="0" inputmode="numeric">
+          <span class="cap">行軍速度ペット（グリズリー）</span>
+          <select id="fRallySpeedPet" data-pet="speed"></select>
         </div>
       </div>
     </div>
@@ -257,6 +258,12 @@
   var NAME_KEY = "ksEntryName";
   var EVENT_KEY = "ksEntryEvent";
   var GRADES = ["G8", "G7", "G6", "G5", "その他"];
+  // ペットのレベルと効果（0＝持っていない）
+  var PETS = {
+    march: { max: 10, effect: function(lv) { return "+" + (1500 * lv).toLocaleString(); } },          // 出征容量（レイジングビースト）
+    rally: { max: 10, effect: function(lv) { return "+" + (50000 + 10000 * lv).toLocaleString(); } }, // 集結容量（ヘラジカアタック）
+    speed: { max: 8, effect: function(lv) { return "+" + (lv === 8 ? 30 : 13 + 2 * lv) + "%"; } }     // 行軍速度（恐怖の咆哮）
+  };
 
   var data = { events: [], users: [], entries: [] };
   var currentEventId = null;
@@ -495,7 +502,7 @@
   function syncSubFields() {
     $("joinAtField").style.display = radioValue("fEntry") === "late" ? "block" : "none";
     $("leaveAtField").style.display = $("fLeaveEarly").checked ? "block" : "none";
-    $("rallyFields").style.display = $("fRallyOn").checked ? "grid" : "none";
+    $("rallyFields").style.display = $("fRallyOn").checked ? "block" : "none";
     $("joinFields").style.display = radioValue("fEntry") === "absent" ? "none" : "block";
   }
   document.querySelectorAll("input[name=fEntry], #fLeaveEarly, #fRallyOn").forEach(function(el) {
@@ -510,7 +517,7 @@
     if (entry === "absent") {
       return { alliance: alliance, entry: entry, grade: radioValue("fGrade") || "その他", monthly: false, leaveEarly: false,
         vc: false, vivian4: false, troops: "", tier: null, joinAt: "", leaveAt: "", note: str($("fNote").value),
-        marchCount: null, marchPet: null, rallyCount: null, rallyPet: null };
+        marchCount: null, marchPet: null, rallyCount: null, rallyPet: null, rallySpeedPet: null };
     }
     var late = entry === "late", leave = $("fLeaveEarly").checked, rally = $("fRallyOn").checked;
     return {
@@ -529,7 +536,8 @@
       marchCount: numValue("fMarchCount"),
       marchPet: numValue("fMarchPet"),
       rallyCount: rally ? numValue("fRallyCount") : null,
-      rallyPet: rally ? numValue("fRallyPet") : null
+      rallyPet: rally ? numValue("fRallyPet") : null,
+      rallySpeedPet: rally ? numValue("fRallySpeedPet") : null
     };
   }
 
@@ -549,7 +557,8 @@
     setNum("fMarchPet", m.marchPet);
     setNum("fRallyCount", m.rallyCount);
     setNum("fRallyPet", m.rallyPet);
-    $("fRallyOn").checked = m.rallyCount != null || m.rallyPet != null;
+    setNum("fRallySpeedPet", m.rallySpeedPet);
+    $("fRallyOn").checked = m.rallyCount != null || m.rallyPet != null || m.rallySpeedPet != null;
     syncSubFields();
   }
 
@@ -559,9 +568,13 @@
     if (!/^[A-Za-z]{3}$/.test(m.alliance)) return "同盟は英字3文字で入れてください（例: EGG）";
     if (m.entry === "absent") return "";
     if (m.marchCount == null) return "出征部隊数を入れてください";
-    if (m.marchPet == null) return "出征容量ペットLvを入れてください";
-    if (bad(m.marchCount) || bad(m.marchPet) || bad(m.rallyCount) || bad(m.rallyPet)) return "部隊数・ペットLvは数字で入れてください";
-    if ($("fRallyOn").checked && m.rallyCount == null && m.rallyPet == null) return "集結部隊数・集結容量ペットLvを入れてください";
+    if (m.marchPet == null) return "出征容量ペットを選んでください";
+    if (bad(m.marchCount) || bad(m.rallyCount)) return "部隊数は数字で入れてください";
+    if ($("fRallyOn").checked) {
+      if (m.rallyCount == null) return "集結部隊数を入れてください";
+      if (m.rallyPet == null) return "集結容量ペットを選んでください";
+      if (m.rallySpeedPet == null) return "行軍速度ペットを選んでください";
+    }
     return "";
   }
 
@@ -618,6 +631,12 @@
     $("nameInput").focus();
   });
   $("retryBtn").addEventListener("click", load);
+
+  document.querySelectorAll("select[data-pet]").forEach(function(sel) {
+    var pet = PETS[sel.dataset.pet], html = '<option value="">選んでください</option><option value="0">持っていない</option>';
+    for (var lv = pet.max; lv >= 1; lv--) html += '<option value="' + lv + '">Lv' + lv + "（" + pet.effect(lv) + "）</option>";
+    sel.innerHTML = html;
+  });
 
   $("nameInput").value = stored(NAME_KEY);
   load();

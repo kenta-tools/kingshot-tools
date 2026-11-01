@@ -161,7 +161,7 @@ function selfSave_(token, p) {
           alliance: row.alliance, entry: row.entry, grade: row.grade, monthly: row.monthly, leaveEarly: row.leaveEarly,
           vc: row.vc, vivian4: row.vivian4, troops: row.troops, tier: row.tier, joinAt: row.joinAt, leaveAt: row.leaveAt,
           note: row.note, marchCount: row.marchCount, marchPet: row.marchPet, rallyCount: row.rallyCount,
-          rallyPet: row.rallyPet, id: existing ? existing.id : newId_("r"), eventId: ev.id, userId: user.id
+          rallyPet: row.rallyPet, rallySpeedPet: row.rallySpeedPet, id: existing ? existing.id : newId_("r"), eventId: ev.id, userId: user.id
         };
         if (existing) d.entries[d.entries.indexOf(existing)] = e;
         else d.entries.push(e);
@@ -200,7 +200,8 @@ function cleanEntry_(m) {
     marchCount: count_(m.marchCount),
     marchPet: count_(m.marchPet),
     rallyCount: count_(m.rallyCount),
-    rallyPet: count_(m.rallyPet)
+    rallyPet: count_(m.rallyPet),
+    rallySpeedPet: count_(m.rallySpeedPet)
   };
   if (r.leaveAt) r.leaveEarly = true;
   return r;

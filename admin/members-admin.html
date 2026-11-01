@@ -360,6 +360,10 @@
           <label class="cap">集結容量ペットLv（指示があった人）</label>
           <input type="number" id="fRallyPet" min="0">
         </div>
+        <div class="field">
+          <label class="cap">行軍速度ペットLv（指示があった人）</label>
+          <input type="number" id="fRallySpeedPet" min="0">
+        </div>
         <div class="field wide">
           <label class="cap">備考</label>
           <input type="text" id="fNote">
@@ -481,7 +485,7 @@
   // 数値の登録項目（出征＝全員、集結＝指示があった人だけ）
   var NUM_FIELDS = [
     ["marchCount", "出征部隊数"], ["marchPet", "出征容量ペットLv"],
-    ["rallyCount", "集結部隊数"], ["rallyPet", "集結容量ペットLv"]
+    ["rallyCount", "集結部隊数"], ["rallyPet", "集結容量ペットLv"], ["rallySpeedPet", "行軍速度ペットLv"]
   ];
   var LEGEND = "◯:マンスリー持ち\n△:途中抜け\n◇:VC参加可能(聴き専可)\n◆:ビビアン星4以上持ち";
   var SAMPLE = [
@@ -674,6 +678,7 @@
       marchPet: num(m.marchPet),
       rallyCount: num(m.rallyCount),
       rallyPet: num(m.rallyPet),
+      rallySpeedPet: num(m.rallySpeedPet),
       sameAs: str(m.sameAs) // AI変換で登録者が「同一人物」と確認した登録済みユーザー名（取り込み時のみ使う）
     };
   }
@@ -1239,7 +1244,8 @@
       if (count == null && pet == null) return "";
       return label + (count != null ? count + "部隊" : "") + (pet != null ? " Lv" + pet : "");
     }
-    return [part("出征", m.marchCount, m.marchPet), part("集結", m.rallyCount, m.rallyPet)].filter(Boolean).join("／");
+    var rally = part("集結", m.rallyCount, m.rallyPet) + (m.rallySpeedPet != null ? " 速度Lv" + m.rallySpeedPet : "");
+    return [part("出征", m.marchCount, m.marchPet), rally].filter(Boolean).join("／");
   }
 
   function gradeRank(g) {
@@ -1766,7 +1772,8 @@
       marchCount: num($("fMarchCount").value),
       marchPet: num($("fMarchPet").value),
       rallyCount: num($("fRallyCount").value),
-      rallyPet: num($("fRallyPet").value)
+      rallyPet: num($("fRallyPet").value),
+      rallySpeedPet: num($("fRallySpeedPet").value)
     };
     if (m.leaveAt) m.leaveEarly = true;
     return m;
@@ -1790,6 +1797,7 @@
     $("fMarchPet").value = m.marchPet == null ? "" : m.marchPet;
     $("fRallyCount").value = m.rallyCount == null ? "" : m.rallyCount;
     $("fRallyPet").value = m.rallyPet == null ? "" : m.rallyPet;
+    $("fRallySpeedPet").value = m.rallySpeedPet == null ? "" : m.rallySpeedPet;
   }
 
   // キャンセル／登録後のリセット。同盟・参加・区分は連続入力しやすいよう残す
@@ -1797,7 +1805,7 @@
     var ctx = { alliance: $("fAlliance").value, entry: $("fEntry").value, grade: $("fGrade").value };
     fillForm({ alliance: "", entry: "start", grade: "G7", name: "", monthly: false, leaveEarly: false, vc: false,
       vivian4: false, troops: "", tier: null, joinAt: "", leaveAt: "", note: "",
-      marchCount: null, marchPet: null, rallyCount: null, rallyPet: null });
+      marchCount: null, marchPet: null, rallyCount: null, rallyPet: null, rallySpeedPet: null });
     if (keepContext) {
       $("fAlliance").value = ctx.alliance; $("fEntry").value = ctx.entry; $("fGrade").value = ctx.grade;
     }
@@ -2224,7 +2232,8 @@
       "同盟": m.alliance, "名前": m.name, "参加": ENTRY_SHORT[m.entry], "区分": m.grade,
       "マンスリー": m.monthly, "途中抜け": m.leaveEarly, "VC": m.vc, "ビビアン星4以上": m.vivian4,
       "兵種": m.troops, "T": m.tier, "参加開始": m.joinAt, "抜ける時刻": m.leaveAt, "備考": m.note,
-      "出征部隊数": m.marchCount, "出征容量ペットLv": m.marchPet, "集結部隊数": m.rallyCount, "集結容量ペットLv": m.rallyPet
+      "出征部隊数": m.marchCount, "出征容量ペットLv": m.marchPet, "集結部隊数": m.rallyCount, "集結容量ペットLv": m.rallyPet,
+      "行軍速度ペットLv": m.rallySpeedPet
     };
   }
 
@@ -2245,14 +2254,15 @@
       "- T: 兵士レベル（大きいほど強い）。空欄は不明",
       "- 参加開始・抜ける時刻: 途中から参加する時刻／途中で抜ける時刻。空欄は指定なし",
       "- 出征部隊数・出征容量ペットLv: 出せる部隊の数と、出征容量を上げるペットのレベル（全員が登録）",
-      "- 集結部隊数・集結容量ペットLv: 集結の部隊の数と、集結容量を上げるペットのレベル（集結の指示があった人だけ登録。空欄は対象外）",
+      "- 集結部隊数・集結容量ペットLv・行軍速度ペットLv: 集結の部隊の数と、集結容量・行軍速度を上げるペットのレベル（集結の指示があった人だけ登録。空欄は対象外）",
+      "- ペットLvの効果（0は持っていない）: 出征容量ペット Lv×1,500（最大Lv10で+15,000）／集結容量ペット 50,000＋Lv×10,000（Lv1で+60,000、最大Lv10で+150,000）／行軍速度ペット Lv1で+15%・Lv7まで1つ上がるごとに+2%（Lv7で+27%）・最大Lv8で+30%",
       "",
       "## データ（" + (format === "csv" ? "CSV" : "JSON") + "）"
     ];
     var body;
     if (format === "csv") {
       var cols = ["同盟", "名前", "参加", "区分", "マンスリー", "途中抜け", "VC", "ビビアン星4以上", "兵種", "T", "参加開始", "抜ける時刻", "備考",
-        "出征部隊数", "出征容量ペットLv", "集結部隊数", "集結容量ペットLv"];
+        "出征部隊数", "出征容量ペットLv", "集結部隊数", "集結容量ペットLv", "行軍速度ペットLv"];
       body = [cols.join(",")].concat(rows.map(function(m) {
         var r = aiRecord(m);
         return cols.map(function(c) {
