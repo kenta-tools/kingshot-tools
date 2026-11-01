@@ -372,6 +372,23 @@
       </table>
     </div>
 
+    <!-- AIに渡す用 -->
+    <div class="card">
+      <h2>🤖 AIに渡す用のデータ（<span class="event-name"></span>）</h2>
+      <div class="hint">
+        このイベントの参加者一覧を、AI（ChatGPT・Claude など）にそのまま貼り付けられる形でコピーします。イベント名と各列の意味の説明が先頭に付くので、続けて「この人たちを3チームに分けて」などと頼めます。<br>
+        形式は <b>CSV がおすすめ</b>です（同じ人数でもJSONより短く、AIが読み違えにくい）。AIの答えをこのツールに取り込み直したいときだけ JSON を使ってください。
+      </div>
+      <div class="row" style="margin: 10px 0;">
+        <label class="hint"><input type="radio" name="aiFormat" value="csv" checked> CSV（おすすめ）</label>
+        <label class="hint"><input type="radio" name="aiFormat" value="json"> JSON</label>
+        <label class="hint"><input type="checkbox" id="aiFilteredOnly"> 上の一覧で絞り込み中の人だけ</label>
+        <button type="button" class="small" id="aiCopyBtn">AIに渡す用にコピー</button>
+        <span class="hint" id="aiInfo"></span>
+      </div>
+      <details><summary class="hint" style="cursor: pointer;">コピーされる内容を見る</summary><textarea id="aiOut" readonly></textarea></details>
+    </div>
+
     <!-- フォーマットで書き出し -->
     <div class="card">
       <h2>募集フォーマットで書き出し（<span class="event-name"></span>）</h2>
@@ -1576,6 +1593,7 @@
     if (currentEventId) {
       renderEntries();
       $("promptText").value = buildPrompt();
+      refreshAiText();
     }
     renderUsers();
   }
@@ -2101,6 +2119,73 @@
     });
     return blocks.join("\n\n");
   }
+
+  // ---------- AIに渡す用 ----------
+  // 上の参加者一覧と同じ並び。絞り込み指定時は一覧の同盟・検索の絞り込みも反映する
+  function aiRows() {
+    var rows = sortRows(eventRows());
+    if (!$("aiFilteredOnly").checked) return rows;
+    var q = $("filterInput").value.trim().toLowerCase(), fa = $("filterAlliance").value;
+    return rows.filter(function(m) {
+      return (!fa || m.alliance === fa) && (!q || (m.name + " " + m.note).toLowerCase().indexOf(q) >= 0);
+    });
+  }
+
+  // 列名は日本語にして、AIが説明なしでも意味を取りやすくする
+  function aiRecord(m) {
+    return {
+      "同盟": m.alliance, "名前": m.name, "参加": ENTRY_SHORT[m.entry], "区分": m.grade,
+      "マンスリー": m.monthly, "途中抜け": m.leaveEarly, "VC": m.vc, "ビビアン星4以上": m.vivian4,
+      "兵種": m.troops, "T": m.tier, "参加開始": m.joinAt, "抜ける時刻": m.leaveAt, "備考": m.note
+    };
+  }
+
+  function buildAiText() {
+    var format = document.querySelector("input[name=aiFormat]:checked").value;
+    var rows = aiRows();
+    var head = [
+      "# " + eventLabel(eventById(currentEventId)) + " 参加者一覧（" + rows.length + "人）",
+      "",
+      "## 列の意味",
+      "- 同盟・名前: プレイヤーの所属同盟と名前",
+      "- 参加: 最初から（開始時から参加）／途中参加",
+      "- 区分: G8・G7・G6・G5・その他（募集フォーマットでの区分）",
+      format === "csv"
+        ? "- マンスリー・途中抜け・VC・ビビアン星4以上: ◯なら該当（VC＝ボイスチャット参加可能・聴き専含む）"
+        : "- マンスリー・途中抜け・VC・ビビアン星4以上: true なら該当（VC＝ボイスチャット参加可能・聴き専含む）",
+      "- 兵種: 歩＝歩兵、騎＝騎兵、弓＝弓兵（例: 歩弓＝歩兵と弓兵）。空欄は指定なし",
+      "- T: 兵士レベル（大きいほど強い）。空欄は不明",
+      "- 参加開始・抜ける時刻: 途中から参加する時刻／途中で抜ける時刻。空欄は指定なし",
+      "",
+      "## データ（" + (format === "csv" ? "CSV" : "JSON") + "）"
+    ];
+    var body;
+    if (format === "csv") {
+      var cols = ["同盟", "名前", "参加", "区分", "マンスリー", "途中抜け", "VC", "ビビアン星4以上", "兵種", "T", "参加開始", "抜ける時刻", "備考"];
+      body = [cols.join(",")].concat(rows.map(function(m) {
+        var r = aiRecord(m);
+        return cols.map(function(c) {
+          var v = r[c];
+          if (typeof v === "boolean") v = v ? "◯" : "";
+          return csvCell(v == null ? "" : v);
+        }).join(",");
+      })).join("\n");
+    } else {
+      body = JSON.stringify(rows.map(aiRecord), null, 1);
+    }
+    return head.join("\n") + "\n" + FENCE + (format === "csv" ? "csv" : "json") + "\n" + body + "\n" + FENCE + "\n";
+  }
+
+  function refreshAiText() {
+    var text = buildAiText();
+    $("aiOut").value = text;
+    $("aiInfo").textContent = aiRows().length + "人・約" + text.length.toLocaleString() + "文字";
+    return text;
+  }
+
+  $("aiCopyBtn").addEventListener("click", function() { copyText(refreshAiText(), this); });
+  document.querySelectorAll("input[name=aiFormat]").forEach(function(r) { r.addEventListener("change", refreshAiText); });
+  $("aiFilteredOnly").addEventListener("change", refreshAiText);
 
   $("formatBtn").addEventListener("click", function() { $("formatOut").value = buildFormatText(); });
   $("copyFormatBtn").addEventListener("click", function() {
