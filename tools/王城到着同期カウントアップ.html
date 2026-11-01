@@ -3,7 +3,7 @@
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta charset="UTF-8">
-<title>KvK同着スタート カウントダウン表</title>
+<title>KvK同着スタート カウントアップ表</title>
 <style>
   :root{
     --bg:#f5f6f8; --card:#ffffff; --ink:#222; --sub:#666;
@@ -28,7 +28,6 @@
   .result-wrap th{ position:sticky; top:0; z-index:1; }
   td.hit{ background:var(--hit); font-weight:bold; }
   td.none{ color:var(--none); }
-  tr.arrival td { background:#e6f4ea; font-weight:bold; }
   .chat-box{ margin-top:16px; }
   .chat-box h3{ font-size:0.9rem; margin:0; }
   .chat-title-row{ display:flex; align-items:center; justify-content:space-between; margin:14px 0 4px; }
@@ -123,7 +122,7 @@
     <button type="button" class="ks-toggle-btn" id="ksToggleBtn" onclick="ksToggleSidebar()" aria-label="メニュー開閉">←</button>
   </div>
   <nav>
-    <a href="index.html" class="ks-link" title="メニュー"><span class="ks-icon">🏠</span><span class="ks-label">メニュー</span></a><a href="炎龍の覇者_攻城タイムライン計算.html" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="王城到着同期カウントアップ.html" class="ks-link" title="KvK同着スタート カウントアップ表"><span class="ks-icon">⏱️</span><span class="ks-label">KvK同着スタート カウントアップ表</span></a><a href="KvK同着スタート カウントダウン表.html" class="ks-link ks-active" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="周期ウェーブタイマー.html" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><a href="音声アナウンス付きストップウォッチ.html" class="ks-link" title="音声ストップウォッチ（工事中）"><span class="ks-icon">🔊</span><span class="ks-label">音声ストップウォッチ（工事中）</span></a>
+    <a href="../index.html" class="ks-link" title="メニュー"><span class="ks-icon">🏠</span><span class="ks-label">メニュー</span></a><a href="../flame-dragon/炎龍の覇者_攻城タイムライン計算.html" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="王城到着同期カウントアップ.html" class="ks-link ks-active" title="KvK同着スタート カウントアップ表"><span class="ks-icon">⏱️</span><span class="ks-label">KvK同着スタート カウントアップ表</span></a><a href="KvK同着スタート カウントダウン表.html" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="周期ウェーブタイマー.html" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><a href="音声アナウンス付きストップウォッチ.html" class="ks-link" title="音声ストップウォッチ（工事中）"><span class="ks-icon">🔊</span><span class="ks-label">音声ストップウォッチ（工事中）</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -149,8 +148,8 @@
 <!-- ks-sidebar:end -->
 
 
-<h1>KvK同着スタート カウントダウン表</h1>
-<div class="sub">カウントアップ版と同じ計算（行軍が一番長い人＝すぐ出発、短い人ほど待ってから出発）で、表示だけ「最後に出発する人＝0」になるよう反転させたものです。0から数字が増えるほど、最後の出発より前のタイミングを表します。グループ列は「実際秒数一致」かつ「グループ所属」の両方を満たす人だけを表示。</div>
+<h1>KvK同着スタート カウントアップ表</h1>
+<div class="sub">Excelなしで動く版。全員が同じタイミングで到着できるよう、各自の出発カウントを計算します。カウント0＝行軍が一番長い人（すぐ出発）、カウントが増えるほど行軍が短い人が待ってから出発。グループ列は「実際秒数一致」かつ「グループ所属」の両方を満たす人だけを表示（未所属だけの場合はきちんと「なし」になります）。</div>
 
 <div class="panel">
   <h2>名簿</h2>
@@ -164,7 +163,7 @@
     <button class="btn secondary small" onclick="addRow()">＋行を追加</button>
   </div>
   <div class="cfg-row" style="margin-top:14px;">
-    <label>最大カウント秒（表示上限、最後の出発を超える分は自動でカット）: <input type="number" id="maxSec" value="120" min="1" max="600"></label>
+    <label>最大カウント秒: <input type="number" id="maxSec" value="120" min="1" max="600"></label>
     <button class="btn" onclick="compute()">計算する</button>
   </div>
 </div>
@@ -204,7 +203,7 @@ function addRow(data){
 }
 
 // --- 名簿・最大カウント秒の自動保存（このブラウザのみ） ---
-const ROSTER_STORAGE_KEY = "kvkCountdownRosterState";
+const ROSTER_STORAGE_KEY = "kvkCountupRosterState";
 
 function getRawRoster(){
   return [...document.querySelectorAll("#roster-body tr")].map(tr => {
@@ -273,8 +272,6 @@ function compute(){
 
   const atkGroups = distinctGroups(roster, "atk");
   const garGroups = distinctGroups(roster, "gar");
-  // カウントアップ版と全く同じ基準（行軍最長の人＝カウント0ですぐ出発）で計算し、
-  // 表示ラベルだけ「最後に出発する人が0」になるよう反転させる。
   const overallBase = Math.max(...roster.map(p => p.actual));
 
   const groupBase = {};
@@ -287,38 +284,30 @@ function compute(){
     groupBase["gar:" + g] = vals.length ? Math.max(...vals) : null;
   }
 
-  // 「全体」で実際に誰かが出発する一番大きいカウントアップ値（＝最後に出発する人のカウント）を反転の基準にする
-  const lastDepartCount = overallBase - Math.min(...roster.map(p => p.actual));
-  const rowMax = Math.min(maxSec, lastDepartCount);
-
   // header
   const thead = document.createElement("thead");
   const headTr = document.createElement("tr");
-  const headers = ["最後の出発まで", "全体", ...atkGroups.map(g => g + "(攻)"), ...garGroups.map(g => g + "(駐)")];
+  const headers = ["秒", "全体", ...atkGroups.map(g => g + "(攻)"), ...garGroups.map(g => g + "(駐)")];
   headers.forEach(h => { const th = document.createElement("th"); th.textContent = h; headTr.appendChild(th); });
   thead.appendChild(headTr);
   table.appendChild(thead);
 
   const tbody = document.createElement("tbody");
-  const chatLines = {}; // key -> array of "N秒前：xxx"
+  const chatLines = {}; // key -> array of "N秒：xxx"
   const chatKeys = ["全体", ...atkGroups.map(g=>g+"(攻)"), ...garGroups.map(g=>g+"(駐)")];
   chatKeys.forEach(k => chatLines[k] = []);
 
-  for(let c = 0; c <= rowMax; c++){
-    const countdownVal = lastDepartCount - c; // 0＝最後に出発する人
+  for(let c = 0; c <= maxSec; c++){
     const tr = document.createElement("tr");
-    if (countdownVal === 0) tr.classList.add("arrival");
     const tdSec = document.createElement("td");
-    tdSec.textContent = countdownVal;
+    tdSec.textContent = c;
     tr.appendChild(tdSec);
 
-    const label = `${countdownVal}秒`;
-
-    // overall（カウントアップ版と同じ target = overallBase - c）
+    // overall
     const overallTarget = overallBase - c;
     const overallNames = roster.filter(p => p.actual === overallTarget).map(p => p.name);
     tr.appendChild(makeCell(overallNames));
-    if(overallNames.length) chatLines["全体"].push(`${label}：${overallNames.join("、")}`);
+    if(overallNames.length) chatLines["全体"].push(`${c}秒：${overallNames.join("、")}`);
 
     for(const g of atkGroups){
       const base = groupBase["atk:" + g];
@@ -327,7 +316,7 @@ function compute(){
         names = membersAt(roster, "atk", g, base - c);
       }
       tr.appendChild(makeCell(names));
-      if(names.length) chatLines[g + "(攻)"].push(`${label}：${names.join("、")}`);
+      if(names.length) chatLines[g + "(攻)"].push(`${c}秒：${names.join("、")}`);
     }
     for(const g of garGroups){
       const base = groupBase["gar:" + g];
@@ -336,7 +325,7 @@ function compute(){
         names = membersAt(roster, "gar", g, base - c);
       }
       tr.appendChild(makeCell(names));
-      if(names.length) chatLines[g + "(駐)"].push(`${label}：${names.join("、")}`);
+      if(names.length) chatLines[g + "(駐)"].push(`${c}秒：${names.join("、")}`);
     }
     tbody.appendChild(tr);
   }

@@ -5,24 +5,31 @@
 再実行しても二重挿入されないよう、既存のサイドバーマーカーを検知したら
 その部分を置き換える。
 
+フォルダ分け対応（2026-11-01）:
+- TOOLSの各エントリはリポジトリルートからの相対パス（例: "tools/周期ウェーブタイマー.html"）
+- 各ページから他ページへのリンクは、そのページ自身のフォルダ位置を基準に
+  相対パスを計算する（posixpath.relpathで "../" 等を自動算出）
+
 レスポンシブ対応内容:
 - viewport metaタグが無ければ<head>に追加
 - サイドバーはPC幅(>760px)では左固定、モバイル幅(<=760px)では上部の横スクロールバーに変形
 - テーブル・.card/.panel/.result-wrapはモバイル幅で横スクロール可能にする安全策を追加
 """
+import posixpath
 import re
 from pathlib import Path
 
 FOLDER = Path(__file__).resolve().parent.parent
 
+# (リポジトリルートからの相対パス, アイコン, ラベル)
 TOOLS = [
     ("index.html", "🏠", "メニュー"),
-    ("炎龍の覇者_攻城タイムライン計算.html", "🐉", "炎龍 集結タイムライン計算"),
-    ("王城到着同期カウントアップ.html", "⏱️", "KvK同着スタート カウントアップ表"),
-    ("KvK同着スタート カウントダウン表.html", "⏲️", "KvK同着スタート カウントダウン表"),
-    ("KvK占領判定.html", "🏳️", "KvK占領戦 勝利判定ツール"),
-    ("周期ウェーブタイマー.html", "🌊", "周期ウェーブタイマー"),
-    ("音声アナウンス付きストップウォッチ.html", "🔊", "音声ストップウォッチ（工事中）"),
+    ("flame-dragon/炎龍の覇者_攻城タイムライン計算.html", "🐉", "炎龍 集結タイムライン計算"),
+    ("tools/王城到着同期カウントアップ.html", "⏱️", "KvK同着スタート カウントアップ表"),
+    ("tools/KvK同着スタート カウントダウン表.html", "⏲️", "KvK同着スタート カウントダウン表"),
+    ("tools/KvK占領判定.html", "🏳️", "KvK占領戦 勝利判定ツール"),
+    ("tools/周期ウェーブタイマー.html", "🌊", "周期ウェーブタイマー"),
+    ("tools/音声アナウンス付きストップウォッチ.html", "🔊", "音声ストップウォッチ（工事中）"),
 ]
 
 MARK_START = "<!-- ks-sidebar:start -->"
@@ -31,13 +38,21 @@ MARK_END = "<!-- ks-sidebar:end -->"
 VIEWPORT_TAG = '<meta name="viewport" content="width=device-width, initial-scale=1.0">'
 
 
-def build_sidebar(current_file):
+def rel_href(from_rel_path: str, to_rel_path: str) -> str:
+    """from_rel_path のページから見た to_rel_path への相対リンクを計算する"""
+    from_dir = posixpath.dirname(from_rel_path) or "."
+    href = posixpath.relpath(to_rel_path, start=from_dir)
+    return href
+
+
+def build_sidebar(current_rel_path):
     links = []
-    for fname, icon, label in TOOLS:
-        active = fname == current_file
+    for rel_path, icon, label in TOOLS:
+        active = rel_path == current_rel_path
         cls = "ks-link ks-active" if active else "ks-link"
+        href = rel_href(current_rel_path, rel_path)
         links.append(
-            f'<a href="{fname}" class="{cls}" title="{label}">'
+            f'<a href="{href}" class="{cls}" title="{label}">'
             f'<span class="ks-icon">{icon}</span><span class="ks-label">{label}</span></a>'
         )
 
@@ -157,15 +172,11 @@ def ensure_viewport(text: str) -> str:
     return re.sub(r"(<head[^>]*>)", lambda m: m.group(1) + "\n" + VIEWPORT_TAG, text, count=1)
 
 
-def inject(path: Path):
+def inject(path: Path, rel_path: str):
     text = path.read_text(encoding="utf-8")
-    fname = path.name
-
-    if fname not in {t[0] for t in TOOLS}:
-        return False
 
     text = ensure_viewport(text)
-    sidebar = build_sidebar(fname)
+    sidebar = build_sidebar(rel_path)
 
     if MARK_START in text:
         text = re.sub(
@@ -188,13 +199,13 @@ def inject(path: Path):
 
 def main():
     done = []
-    for fname, _, _ in TOOLS:
-        p = FOLDER / fname
+    for rel_path, _, _ in TOOLS:
+        p = FOLDER / rel_path
         if p.exists():
-            if inject(p):
-                done.append(fname)
+            if inject(p, rel_path):
+                done.append(rel_path)
         else:
-            print("NOT FOUND:", fname)
+            print("NOT FOUND:", rel_path)
     print("injected:", len(done))
     for d in done:
         print(" -", d)
