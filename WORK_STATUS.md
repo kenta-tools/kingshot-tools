@@ -74,7 +74,7 @@ Kingshot関連の単体HTMLツールのうち、ゲームプレイの実務で�
   - 編集中はブラウザのlocalStorageに下書き保存 → 「members.json を書き出し」→ `data/members.json` を置き換えて commit・push で公開
   - 登録内容を募集フォーマットのテキストに書き戻す機能あり
 - `data/members.json` — 登録データ（チーム分けツールが読み込む想定）
-- `work/set_admin_password.py` — 管理者パスワード設定（ハッシュだけをHTMLに書き込む）。**初期状態はパスワード未設定でログイン不可**
+- ログインパスワード：2026-11-01にページ内のハッシュを廃止。中継役GASのスクリプトプロパティ EDIT_PASSWORD だけで管理し、ログインも保存も中継役が確認（変更はGAS側のプロパティを書き換えるだけ、再デプロイ不要）。旧 work/set_admin_password.py は削除
 - 募集フォーマットの読み取りルール：見出し「同盟名(最初から参加できる)」「同盟名(途中参加)」、`G8/G7/G6/G5/その他:`行に「、」区切りでメンバー。名前の後ろの◯マンスリー/△途中抜け/◇VC/◆ビビアン星4以上。括弧は (〜22時)=抜ける時刻（△も自動ON）、(23時〜)=参加開始、(T11)=3兵種T11、(歩弓T11)/(歩弓)=兵種指定、それ以外は備考
 - 2026-11-01改修：データを「ユーザー（蓄積）」「イベント」「イベントごとの参加情報」の3層に分割
   - ユーザーは**名前だけ**で同一人物判定（同盟は最新値に更新）。改名で別人登録された場合はユーザー一覧の「統合」でまとめる
@@ -82,6 +82,7 @@ Kingshot関連の単体HTMLツールのうち、ゲームプレイの実務で�
   - members.json形式: `{updated, users:[{id,name,alliance}], events:[{id,type,date}], entries:[{id,eventId,userId,alliance,entry,grade,monthly,leaveEarly,vc,vivian4,troops,tier,joinAt,leaveAt,note}]}`
   - 似た名前の判定（2026-11-01追加）：取り込み確認表の「ユーザー判定」で、似た名前の行は「新規／〇〇と同一人物（名前を更新／そのまま）」を管理者が選ぶ。同一にした名前はaliases（旧名・別表記）に記録して次回から自動一致。既存ユーザー同士は「似た名前の候補」で統合（どちらを残すか）か「別人」（notSameに記録）を選ぶ。類似判定は全角半角・大小文字・カナひら・記号を無視＋編集距離（4文字以下は1、それ以上は2）＋包含
   - 保存（2026-11-01改修）：「GitHubに公開」ボタンで GitHub Contents API から data/members.json を直接コミット。公開時に最新を取得し、下書きの base（読込時点の公開版）との差分（自分の追加・変更・削除）だけを最新に重ねる3-wayマージ。同じ種類+開催日のイベント・同じ名前のユーザーは統合。409時は1回リトライ
+  - 2026-11-01追加：GitHubにログインできるのは本人(kenta-tools)だけ、サイトからの登録は他の人もできる方針 → 中継役 Google Apps Script（work/gas_members_proxy.gs）経由で保存。GASのスクリプトプロパティに GITHUB_TOKEN と EDIT_PASSWORD（=ログインパスワード）。管理画面はログイン時のパスワードをsessionStorageに持ち、GASへtext/plainでPOST。members-admin.html の GAS_URL に ウェブアプリURLを設定する（2026-11-01デプロイ・設定済み、kenta.mail.777@gmail.com のGAS）
   - トークン：kenta-tools の Fine-grained PAT（kingshot-tools のみ、Contents: Read and write）を管理者ごとにブラウザへ保存（localStorage ksGhToken）。サイトには載せない
   - AIプロンプトはイベント名と登録済みユーザー一覧を埋め込み、「まとめて出力」時にAIが似た名前を登録者に確認 → sameAs で返す
   - AI変換プロンプト（募集フォーマット→JSON）をコピーしてAIで変換→貼り付けて取り込む運用がおすすめ

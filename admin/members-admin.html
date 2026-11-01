@@ -407,12 +407,8 @@
 
 <script>
 (function() {
-  // 管理者パスワードのSHA-256ハッシュ（SALT + パスワード）。
-  // 変更は work/set_admin_password.py で行う（パスワード本体はファイルに残さない）。
-  // ※ 静的サイトでの簡易認証のため、ソースを読めば回避できる「目隠し」レベルの保護。
-  var ADMIN_HASH = "e940b89eba04b1ccd64833f111d60eaac2fecea7be7deb1089a4ed36b3f9eb85";
-  var SALT = "kingshot-admin:";
-  var AUTH_KEY = "ksAdminAuth";
+  // ログインパスワードはこのページには持たず、中継役（GAS のスクリプトプロパティ EDIT_PASSWORD）で確認する。
+  // ソースを見てもパスワードの手がかりはなく、保存も中継役が毎回パスワードを確認する。
   var PW_KEY = "ksAdminPw";
   var DRAFT_KEY = "ksMembersDraftV2";
   var EVENT_KEY = "ksAdminEvent";
@@ -504,16 +500,9 @@
   var $ = function(id) { return document.getElementById(id); };
 
   // ---------- 認証 ----------
-  function sha256Hex(text) {
-    return crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)).then(function(buf) {
-      return Array.prototype.map.call(new Uint8Array(buf), function(b) {
-        return b.toString(16).padStart(2, "0");
-      }).join("");
-    });
-  }
-
+  // ログイン済み = このタブに中継役で確認済みのパスワードがある（保存時に中継役が毎回確認し直す）
   function isAuthed() {
-    try { return sessionStorage.getItem(AUTH_KEY) === ADMIN_HASH; } catch (e) { return false; }
+    try { return !!sessionStorage.getItem(PW_KEY); } catch (e) { return false; }
   }
 
   function showApp() {
@@ -522,27 +511,37 @@
     loadData();
   }
 
+  // 中継役に「取得」を頼み、パスワードが正しければ成功する（間違いは中継役が1秒待たせるので総当たりしにくい）
   function tryLogin() {
     var pw = $("pwInput").value;
     if (!pw) return;
-    sha256Hex(SALT + pw).then(function(hash) {
-      if (hash === ADMIN_HASH) {
-        try {
-          sessionStorage.setItem(AUTH_KEY, hash);
-          sessionStorage.setItem(PW_KEY, pw); // 中継役（GAS）への保存時に使う。このタブを閉じると消える
-        } catch (e) {}
-        showApp();
-      } else {
-        $("loginMsg").textContent = "パスワードが違います";
-        $("pwInput").select();
-      }
-    });
+    $("loginBtn").disabled = true;
+    $("loginMsg").textContent = "確認中…";
+    fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "get", password: pw }) })
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (res.ok) {
+          try { sessionStorage.setItem(PW_KEY, pw); } catch (e) {} // このタブを閉じると消える
+          $("loginMsg").textContent = "";
+          showApp();
+        } else if (res.status === 401) {
+          $("loginMsg").textContent = "パスワードが違います";
+          $("pwInput").select();
+        } else {
+          $("loginMsg").textContent = "確認できませんでした（" + (res.error || res.status) + "）";
+        }
+      })
+      .catch(function() {
+        $("loginMsg").textContent = "接続できませんでした。時間をおいてもう一度試してください";
+      })
+      .then(function() { $("loginBtn").disabled = false; });
   }
 
   $("loginBtn").addEventListener("click", tryLogin);
   $("pwInput").addEventListener("keydown", function(e) { if (e.key === "Enter") tryLogin(); });
   $("logoutBtn").addEventListener("click", function() {
-    try { sessionStorage.removeItem(AUTH_KEY); sessionStorage.removeItem(PW_KEY); } catch (e) {}
+    try { sessionStorage.removeItem(PW_KEY); sessionStorage.removeItem("ksAdminAuth"); } catch (e) {}
     location.reload();
   });
 
