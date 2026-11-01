@@ -78,8 +78,13 @@
   .done .big { font-size: 22px; font-weight: bold; color: #1e7d3a; margin-bottom: 6px; }
   .done .sub { color: #666; font-size: 14px; margin-bottom: 14px; }
 
-  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
-  th, td { padding: 6px; border-bottom: 1px solid #e6e9ee; text-align: left; }
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 6px; border-bottom: 1px solid #e6e9ee; text-align: left; white-space: nowrap; }
+  td.note { white-space: normal; min-width: 120px; }
+  td .edit { padding: 4px 10px; font-size: 13px; }
+  tr.absent td { color: #999; }
+  .list-filter { margin-top: 10px; max-width: 200px; }
   th { background: #f0f2f5; white-space: nowrap; }
   td.marks { letter-spacing: 2px; white-space: nowrap; }
   tr.me td { background: #fffbe8; font-weight: bold; }
@@ -244,10 +249,14 @@
   <div class="card">
     <details id="listDetails">
       <summary>登録済みの人を見る <span id="listCount"></span></summary>
-      <table>
-        <thead><tr><th>同盟</th><th>区分</th><th>名前</th><th>印</th></tr></thead>
-        <tbody id="listBody"></tbody>
-      </table>
+      <select id="listAlliance" class="list-filter"></select>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th></th><th>同盟</th><th>名前</th><th>参加</th><th>区分</th><th>印</th><th>T11兵種</th><th>時間</th>
+            <th>出征部隊</th><th>出征容量ペット</th><th>集結部隊</th><th>集結容量ペット</th><th>行軍速度ペット</th><th>ひとこと</th></tr></thead>
+          <tbody id="listBody"></tbody>
+        </table>
+      </div>
     </details>
   </div>
 </div>
@@ -265,6 +274,7 @@
   var NAME_KEY = "ksEntryName";
   var EVENT_KEY = "ksEntryEvent";
   var GRADES = ["G8", "G7", "G6", "G5", "その他"];
+  var ENTRY_SHORT = { start: "最初から", late: "途中から", absent: "不参加" };
   // ペットのレベルと効果（0＝持っていない）
   var PETS = {
     march: { max: 10, effect: function(lv) { return "+" + (1500 * lv).toLocaleString(); } },          // 出征容量（レイジングビースト）
@@ -410,11 +420,36 @@
     });
     var absent = rows.filter(function(m) { return m.entry === "absent"; }).length;
     $("listCount").textContent = "（参加" + (rows.length - absent) + "人" + (absent ? "・不参加" + absent + "人" : "") + "）";
-    $("listBody").innerHTML = rows.length ? rows.map(function(m) {
-      var mine = me && me.userId === m.userId;
-      return '<tr' + (mine ? ' class="me"' : "") + "><td>" + escapeHtml(m.alliance) + "</td><td>" + escapeHtml(m.grade) +
-        "</td><td>" + escapeHtml(m.name) + '</td><td class="marks">' + (m.entry === "absent" ? "不参加" : marksOf(m)) + "</td></tr>";
-    }).join("") : '<tr><td colspan="4" style="color: #777;">まだ誰も登録していません</td></tr>';
+
+    // 同盟で絞り込み（選んでいた同盟は残す）
+    var sel = $("listAlliance"), picked = sel.value, alliances = [];
+    rows.forEach(function(m) { if (alliances.indexOf(m.alliance) < 0) alliances.push(m.alliance); });
+    sel.innerHTML = '<option value="">すべての同盟</option>' + alliances.map(function(a) {
+      return '<option value="' + escapeHtml(a) + '"' + (a === picked ? " selected" : "") + ">" + escapeHtml(a) + "</option>";
+    }).join("");
+    if (picked && alliances.indexOf(picked) < 0) sel.value = "";
+    var shown = sel.value ? rows.filter(function(m) { return m.alliance === sel.value; }) : rows;
+
+    function v(x) { return x == null || x === "" ? "" : escapeHtml(x); }
+    function pet(lv) { return lv == null ? "" : lv === 0 ? "なし" : "Lv" + lv; }
+    $("listBody").innerHTML = shown.length ? shown.map(function(m) {
+      var mine = me && me.userId === m.userId, abs = m.entry === "absent";
+      var time = m.joinAt || m.leaveAt ? (m.joinAt || "") + "〜" + (m.leaveAt || "") : "";
+      return '<tr class="' + (mine ? "me" : "") + (abs ? " absent" : "") + '">' +
+        '<td><button type="button" class="sub-btn edit" data-user="' + escapeHtml(m.userId) + '">直す</button></td>' +
+        "<td>" + v(m.alliance) + "</td><td>" + v(m.name) + "</td><td>" + ENTRY_SHORT[m.entry] + "</td>" +
+        (abs ? '<td colspan="9"></td>' :
+          "<td>" + v(m.grade) + '</td><td class="marks">' + marksOf(m) + "</td><td>" + v(m.troops) + "</td><td>" + v(time) + "</td>" +
+          "<td>" + v(m.marchCount) + "</td><td>" + pet(m.marchPet) + "</td><td>" + v(m.rallyCount) + "</td><td>" +
+          pet(m.rallyPet) + "</td><td>" + pet(m.rallySpeedPet) + "</td>") +
+        '<td class="note">' + v(m.note) + "</td></tr>";
+    }).join("") : '<tr><td colspan="14" style="color: #777;">まだ誰も登録していません</td></tr>';
+    $("listBody").querySelectorAll("button.edit").forEach(function(btn) {
+      btn.addEventListener("click", function() {
+        var u = userById(btn.dataset.user);
+        if (u) startForm(u, u.name);
+      });
+    });
   }
 
   // ---------- ① 名前 ----------
@@ -507,6 +542,8 @@
     if (e.key === "Enter") $("nextBtn").click();
   });
   $("nameInput").addEventListener("input", function() { $("candView").style.display = "none"; });
+
+  $("listAlliance").addEventListener("change", renderList);
 
   $("eventSelect").addEventListener("change", function() {
     currentEventId = this.value;
