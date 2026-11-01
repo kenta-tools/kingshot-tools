@@ -132,7 +132,7 @@
     <button type="button" class="ks-toggle-btn" id="ksToggleBtn" onclick="ksToggleSidebar()" aria-label="メニュー開閉">←</button>
   </div>
   <nav>
-    <a href="../index.html?v=20261101212241" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261101212241" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="KvK同着スタート カウントダウン表.html?v=20261101212241" class="ks-link ks-active" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261101212241" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="周期ウェーブタイマー.html?v=20261101212241" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a>
+    <a href="../index.html?v=20261101213626" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261101213626" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="KvK同着スタート カウントダウン表.html?v=20261101213626" class="ks-link ks-active" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261101213626" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="周期ウェーブタイマー.html?v=20261101213626" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -183,6 +183,7 @@
 
 <div class="panel">
   <h2>名簿</h2>
+  <p class="save-note" id="opponentNote">相手候補: （KvK相手突合せがまだ作られていません）</p>
   <div class="table-scroll">
   <table id="roster-table">
     <thead>
@@ -197,6 +198,7 @@
   </div>
   <datalist id="regUserList"></datalist>
   <datalist id="groupDatalist"></datalist>
+  <datalist id="opponentNameList"></datalist>
   <div class="row-actions">
     <button type="button" class="btn secondary small" onclick="addRow()">＋行を追加</button>
   </div>
@@ -321,6 +323,19 @@ function fetchRegData(){
   });
 }
 
+// --- KvK相手突合せ（kvk-matchup）の最新の相手鯖名簿を、「相手の名前」欄の候補にする ---
+function fetchOpponentNames(){
+  fetch("../kvk-matchup/latest-opponents.json", { cache: "no-store" })
+    .then(r => r.ok ? r.json() : null)
+    .then(data => {
+      if(!data || !Array.isArray(data.names)) return;
+      document.getElementById("opponentNameList").innerHTML = data.names.map(n => `<option value="${escapeAttr(n)}">`).join("");
+      const note = document.getElementById("opponentNote");
+      if(note) note.textContent = `相手候補: ${data.opponentLabel}（更新: ${formatTime(data.updatedAt)}）`;
+    })
+    .catch(() => {});
+}
+
 // --- 名簿データ（配列ベース）。自分用／共有用で同じ構造を使う ---
 let rosterRows = []; // {id, name, role, march, adj, petLevel, usePet, group, opponentName, opponentSec}
 let rowSeq = 0;
@@ -392,7 +407,7 @@ function renderRoster(){
       <td><input type="text" class="f-march-pet" data-id="${row.id}" value="${formatMarchPetDisplay(row)}" readonly tabindex="-1" style="background:#f3f3f3;color:#555;"></td>
       <td class="pet-use"><input type="checkbox" data-id="${row.id}" class="f-use" ${row.usePet ? "checked" : ""}></td>
       <td><input type="text" data-id="${row.id}" class="f-group" list="groupDatalist" value="${escapeAttr(row.group)}"></td>
-      <td><input type="text" data-id="${row.id}" class="f-oname" value="${escapeAttr(row.opponentName)}"></td>
+      <td><input type="text" data-id="${row.id}" class="f-oname" list="opponentNameList" value="${escapeAttr(row.opponentName)}"></td>
       <td><input type="number" data-id="${row.id}" class="f-osec" value="${row.opponentSec}"></td>
       <td><button type="button" class="btn secondary small" onclick="removeRow('${row.id}')">削除</button></td>
     `;
@@ -744,6 +759,7 @@ document.getElementById("maxSec").addEventListener("input", () => {
 // init：まずローカルのサンプル/保存データで即座に表示し、裏でユーザー登録データを取得する
 loadPersonalIntoState();
 fetchRegData();
+fetchOpponentNames();
 </script>
 
 </body>
