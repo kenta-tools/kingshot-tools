@@ -47,6 +47,8 @@
   }
   .page{ max-width:820px; margin:0 auto; padding:28px 16px 80px; }
 
+  .back-top{ display:inline-block; font-size:13px; color:var(--ink-faint); text-decoration:none; margin-right:14px; margin-bottom:10px; }
+  .back-top:hover{ text-decoration:underline; }
   .eyebrow-row{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
   .pill{
     display:inline-flex; align-items:center; gap:6px;
@@ -136,7 +138,7 @@
     .mobile-only{ display:none; }
     .desktop-only{ display:block; }
   }
-  .table-wrap{ overflow-x:auto; border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow); background:var(--surface); }
+  .table-wrap{ overflow:auto; max-height:75vh; border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow); background:var(--surface); }
   table{ width:100%; border-collapse:collapse; }
   thead th{
     position:sticky; top:0; z-index:10;
@@ -182,6 +184,8 @@
 <body>
 <div class="page">
 
+
+  <a class="back-top" href="../index.html">← TOP</a> <a class="back-top" href="flame-dragon-index.html">← 炎龍 ランキングまとめ</a>
   <div class="eyebrow-row">
     <span class="pill accent">Kingshot</span>
     <span class="pill">鯖 778–849</span>
