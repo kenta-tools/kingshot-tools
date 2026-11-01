@@ -45,7 +45,16 @@
   .msg.ok { color: #1e7d3a; }
   .msg.err { color: #c0392b; }
 
-  .save-card { position: sticky; top: 8px; z-index: 50; border-left: 6px solid #2e9e57; }
+  .save-card { border-left: 6px solid #2e9e57; }
+  /* 保存の帯が画面外に出たときだけ、右下についてくる保存ボタン */
+  .float-save {
+    position: fixed; right: 16px; bottom: 16px; z-index: 100; display: none;
+    font-size: 15px; padding: 11px 20px; border-radius: 999px;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.25);
+  }
+  .float-save.show { display: block; }
+  .float-save.dirty { background: #e8890c; border-color: #e8890c; }
+  .float-save.clean { background: #fff; color: #1e7d3a; border-color: #b9dfc7; opacity: 1; }
   .save-card.dirty { border-left-color: #f0ad4e; background: #fffaf0; box-shadow: 0 2px 10px rgba(240,173,78,0.35); }
   .save-main { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
   .save-title { font-size: 15px; font-weight: bold; }
@@ -191,6 +200,8 @@
       </div>
     </details>
   </div>
+
+  <button type="button" class="float-save" id="floatSaveBtn"></button>
 
   <!-- イベント選択 -->
   <div class="card event-card">
@@ -875,7 +886,8 @@
       setMsg($("ghMsg"), "保存先がまだ設定されていません。サイトの管理者に連絡してください", false);
       return Promise.resolve();
     }
-    $("publishBtn").disabled = true;
+    saving = true;
+    renderState();
     setMsg($("ghMsg"), "保存中…", true);
     return fetchRemote().then(function(res) {
       var remote = normalizeState(res.data);
@@ -895,7 +907,9 @@
       });
     }).catch(function(e) {
       setMsg($("ghMsg"), "保存できませんでした: " + e.message, false);
+      if (!saveCardVisible) alert("保存できませんでした: " + e.message);
     }).then(function() {
+      saving = false;
       renderState();
     });
   }
@@ -1377,9 +1391,25 @@
     $("saveSub").textContent = dirty
       ? "「保存する」を押すまで、この変更はこの端末にだけ残っていて、他の人には見えません。"
       : (lastSaved ? "最終保存: " + formatTime(lastSaved) : "");
-    $("publishBtn").disabled = !dirty;
+    $("publishBtn").disabled = !dirty || saving;
     $("discardBtn").style.display = dirty ? "" : "none";
+
+    var fb = $("floatSaveBtn");
+    fb.className = "float-save " + (dirty ? "dirty" : "clean") + (saveCardVisible ? "" : " show");
+    fb.textContent = saving ? "保存中…" : dirty ? "💾 保存する（未保存 " + (n || 1) + "件）" : "✅ 保存済み";
+    fb.disabled = !dirty || saving;
   }
+
+  // 保存の帯が見えているかどうか（見えないときだけ右下の保存ボタンを出す）
+  var saveCardVisible = true;
+  var saving = false;
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(function(es) {
+      saveCardVisible = es[0].isIntersecting;
+      if (publishedJson) renderState();
+    }).observe($("saveCard"));
+  }
+  $("floatSaveBtn").addEventListener("click", function() { publish(false); });
 
   function sortedEvents() {
     return state.events.slice().sort(function(a, b) {
