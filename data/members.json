@@ -2652,20 +2652,5 @@
   ],
   "notSame": [],
   "kvkRosters": [
-    {
-      "eventId": "TEST_DEPLOY_CHECK_DELETE_ME",
-      "rows": [
-        {
-          "name": "�f�v���C�m�F�p�e�X�g",
-          "march": 10,
-          "petLevel": 0,
-          "usePet": true,
-          "group": "",
-          "opponentName": "",
-          "opponentSec": null
-        }
-      ],
-      "updatedAt": "2026-11-01T12:00:31.563Z"
-    }
   ]
 }
