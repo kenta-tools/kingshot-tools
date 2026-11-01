@@ -95,6 +95,15 @@
   .ai-steps details { flex: 1; min-width: 200px; }
   .ai-steps details textarea { margin-top: 6px; min-height: 260px; }
   .scroll { max-height: 520px; overflow-y: auto; }
+  .alias { font-size: 11px; color: #888; }
+  tr.similar td { background: #fff8e6; }
+  select.decide { font-size: 12px; padding: 4px 6px; max-width: 320px; }
+  .name-hint { font-size: 12px; margin-top: 4px; color: #a86a00; }
+  .name-hint button { margin: 2px 4px 0 0; }
+  #simDetails { margin-bottom: 10px; }
+  #simDetails summary { cursor: pointer; font-size: 13px; font-weight: bold; color: #a86a00; }
+  .sim-pair { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 13px; }
+  .sim-pair .names { flex: 1; min-width: 220px; }
 
   /* ログイン画面 */
   #loginView { max-width: 360px; margin: 80px auto; text-align: center; }
@@ -170,7 +179,9 @@
         <ol>
           <li>「AI変換用プロンプトをコピー」を押して、ChatGPT・Claude などに貼り付ける</li>
           <li>プロンプト末尾に、記入済みの募集フォーマットを貼り付けて送信する</li>
-          <li>AIが返したJSON（<code>[ ... ]</code>）を下の欄に貼り付けて「読み取り結果を確認」→「取り込み」</li>
+          <li>AIが返したJSON（<code>[ ... ]</code>）を下の欄に貼り付けて「読み取り結果を確認」を押す</li>
+          <li>結果の表の「ユーザー判定」を確認する。<b>似た名前の既存ユーザーがいる行（黄色）</b>は、プルダウンで「新規ユーザー」か「〇〇と同一人物（名前を更新／名前はそのまま）」を選ぶ</li>
+          <li>「取り込み」を押す（同一人物にした名前は旧名として覚えるので、次回からは自動で同じ人になります）</li>
         </ol>
         <div class="row">
           <button type="button" class="small" id="copyPromptBtn">AI変換用プロンプトをコピー</button>
@@ -200,7 +211,7 @@
       <div class="msg" id="bulkMsg"></div>
       <div id="previewWrap" style="display:none; margin-top: 10px;">
         <table>
-          <thead><tr><th class="nosort">同盟</th><th class="nosort">参加</th><th class="nosort">G</th><th class="nosort">名前</th><th class="nosort">印</th><th class="nosort">兵種</th><th class="nosort">時間</th><th class="nosort">備考</th></tr></thead>
+          <thead><tr><th class="nosort">同盟</th><th class="nosort">参加</th><th class="nosort">G</th><th class="nosort">名前</th><th class="nosort">印</th><th class="nosort">兵種</th><th class="nosort">時間</th><th class="nosort">備考</th><th class="nosort">ユーザー判定</th></tr></thead>
           <tbody id="previewBody"></tbody>
         </table>
       </div>
@@ -215,6 +226,7 @@
           <label class="cap">名前 ※必須（登録済みユーザーは候補に出ます）</label>
           <input type="text" id="fName" list="nameList" autocomplete="off">
           <datalist id="nameList"></datalist>
+          <div class="name-hint" id="nameHint"></div>
         </div>
         <div class="field">
           <label class="cap">同盟 ※必須</label>
@@ -323,8 +335,13 @@
       <input type="search" id="userFilterInput" placeholder="絞り込み（名前・同盟）">
     </div>
     <div class="hint" style="margin-bottom: 8px;">
-      これまでの全イベントで登録されたユーザーです。名前が変わって別人として登録された場合は「統合」で1人にまとめてください（参加記録は統合先に移ります）。
+      これまでの全イベントで登録されたユーザーです。名前が変わって別人として登録された場合は「統合」で1人にまとめてください（参加記録は統合先に移り、消えたほうの名前は旧名として残ります）。
     </div>
+    <details id="simDetails">
+      <summary>似た名前の候補 <span id="simCount"></span></summary>
+      <div class="hint">同一人物ならどちらの名前を残すか、別人なら「別人」を選んでください。「別人」にした組は次から表示しません。</div>
+      <div id="simPairs"></div>
+    </details>
     <div class="scroll">
       <table>
         <thead>
@@ -455,12 +472,15 @@
   });
 
   // ---------- データ ----------
-  // state.users   : 蓄積されるユーザー { id, name, alliance (最新) }。名前で同一人物を判定
+  // state.users   : 蓄積されるユーザー { id, name, alliance (最新), aliases: 旧名・別表記 }。名前か旧名で同一人物を判定
+  // state.notSame : 「別人」と判断した似た名前の組 "userId|userId"（候補に再表示しない）
   // state.events  : イベント { id, type: EVENT_TYPES のどれか, date: "YYYY-MM-DD" }
   // state.entries : イベントごとの参加情報 { id, eventId, userId, alliance (その時点), entry: "start"|"late",
   //                 grade: "G8".."G5"|"その他", monthly, leaveEarly, vc, vivian4 (各bool),
   //                 troops: "歩騎弓"の部分文字列 ("" = 指定なし), tier: 数値|null, joinAt, leaveAt (例 "23時"), note }
-  var state = { users: [], events: [], entries: [] };
+  var state = { users: [], events: [], entries: [], notSame: [] };
+  var lastParsed = null; // 「読み取り結果を確認」で表示中の内容 { text, parsed }
+  var loadedFile = null; // 読み込んだファイル { name, text }
   var currentEventId = null;
   var publishedJson = "";
   var editingId = null;
@@ -516,7 +536,8 @@
   function normalizeState(data) {
     data = data || {};
     var users = (data.users || []).map(function(u) {
-      return { id: u.id || newId("u"), name: str(u.name), alliance: str(u.alliance) };
+      return { id: u.id || newId("u"), name: str(u.name), alliance: str(u.alliance),
+        aliases: (u.aliases || []).map(str).filter(Boolean) };
     }).filter(function(u) { return u.name; });
     var events = (data.events || []).map(function(e) {
       return { id: e.id || newId("e"), type: EVENT_TYPES.indexOf(e.type) >= 0 ? e.type : EVENT_TYPES[0], date: str(e.date) };
@@ -534,7 +555,11 @@
       r.userId = e.userId;
       return r;
     });
-    return { users: users, events: events, entries: entries };
+    var notSame = (data.notSame || []).filter(function(p) {
+      var ids = String(p).split("|");
+      return userIds[ids[0]] && userIds[ids[1]];
+    });
+    return { users: users, events: events, entries: entries, notSame: notSame };
   }
 
   function serialize() {
@@ -576,9 +601,103 @@
     return state.users.find(function(u) { return u.id === id; });
   }
 
+  function userNames(u) {
+    return [u.name].concat(u.aliases || []);
+  }
+
+  // 名前か旧名が一致するユーザー
   function findUserByName(name) {
     var key = nameKey(name);
-    return state.users.find(function(u) { return nameKey(u.name) === key; });
+    return state.users.find(function(u) { return nameKey(u.name) === key; })
+      || state.users.find(function(u) {
+        return (u.aliases || []).some(function(a) { return nameKey(a) === key; });
+      });
+  }
+
+  function addAlias(u, name) {
+    u.aliases = u.aliases || [];
+    if (nameKey(name) === nameKey(u.name)) return;
+    if (u.aliases.some(function(a) { return nameKey(a) === nameKey(name); })) return;
+    u.aliases.push(name);
+  }
+
+  function renameUser(u, newName) {
+    var old = u.name;
+    u.name = newName;
+    u.aliases = (u.aliases || []).filter(function(a) { return nameKey(a) !== nameKey(newName); });
+    addAlias(u, old);
+  }
+
+  // ---------- 似た名前の判定 ----------
+  // 全角半角・大文字小文字・カタカナひらがな・記号や空白の違いを無視したキー
+  function looseKey(s) {
+    return String(s).normalize("NFKC").toLowerCase()
+      .replace(/[ァ-ヶ]/g, function(c) { return String.fromCharCode(c.charCodeAt(0) - 0x60); })
+      .replace(/[\s・.,_\-ー〜~'"!！?？。、☆★♪]/g, "");
+  }
+
+  function editDistance(a, b) {
+    var prev = [], cur, i, j;
+    for (j = 0; j <= b.length; j++) prev[j] = j;
+    for (i = 1; i <= a.length; i++) {
+      cur = [i];
+      for (j = 1; j <= b.length; j++) {
+        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      }
+      prev = cur;
+    }
+    return prev[b.length];
+  }
+
+  // 似ている度合い（小さいほど似ている）。似ていなければ -1
+  function similarity(a, b) {
+    var x = looseKey(a), y = looseKey(b);
+    if (!x || !y) return -1;
+    if (x === y) return 0;
+    var d = editDistance(x, y);
+    var max = Math.max(x.length, y.length), min = Math.min(x.length, y.length);
+    if (d <= (max <= 4 ? 1 : 2)) return d;
+    if (min >= 2 && (x.indexOf(y) >= 0 || y.indexOf(x) >= 0)) return 3;
+    return -1;
+  }
+
+  function userSimilarity(u, name) {
+    var best = -1;
+    userNames(u).forEach(function(n) {
+      var s = similarity(n, name);
+      if (s >= 0 && (best < 0 || s < best)) best = s;
+    });
+    return best;
+  }
+
+  // 完全一致しない名前に対して、似ている既存ユーザー（似ている順に最大3人）
+  function similarUsers(name) {
+    return state.users.map(function(u) { return { u: u, s: userSimilarity(u, name) }; })
+      .filter(function(r) { return r.s >= 0; })
+      .sort(function(a, b) { return a.s - b.s; })
+      .slice(0, 3);
+  }
+
+  function pairKey(a, b) {
+    return a < b ? a + "|" + b : b + "|" + a;
+  }
+
+  // 既存ユーザー同士で似た名前の組（「別人」にした組は除く）
+  function similarPairs() {
+    var pairs = [];
+    for (var i = 0; i < state.users.length; i++) {
+      for (var j = i + 1; j < state.users.length; j++) {
+        var a = state.users[i], b = state.users[j];
+        if (state.notSame.indexOf(pairKey(a.id, b.id)) >= 0) continue;
+        var best = -1;
+        userNames(a).forEach(function(n) {
+          var s = userSimilarity(b, n);
+          if (s >= 0 && (best < 0 || s < best)) best = s;
+        });
+        if (best >= 0) pairs.push({ a: a, b: b, s: best });
+      }
+    }
+    return pairs.sort(function(x, y) { return x.s - y.s; });
   }
 
   function eventById(id) {
@@ -596,9 +715,21 @@
       if (alliance) user.alliance = alliance;
       return { user: user, created: false };
     }
-    user = { id: newId("u"), name: name, alliance: alliance };
+    user = { id: newId("u"), name: name, alliance: alliance, aliases: [] };
     state.users.push(user);
     return { user: user, created: true };
+  }
+
+  // 取り込み行のユーザーを決める。row.matchUserId があれば「同一人物」判定に従う
+  function resolveUser(row) {
+    var u = row.matchUserId && userById(row.matchUserId);
+    if (!u) return ensureUser(row.name, row.alliance);
+    if (nameKey(u.name) !== nameKey(row.name)) {
+      if (row.renameUser) renameUser(u, row.name);
+      else addAlias(u, row.name);
+    }
+    if (row.alliance) u.alliance = row.alliance;
+    return { user: u, created: false };
   }
 
   function entryOf(eventId, userId) {
@@ -616,7 +747,7 @@
 
   // 現在のイベントに参加情報を登録（同じ人がいれば上書き）。戻り値: { result: "added"|"updated", newUser }
   function upsertEntry(row) {
-    var u = ensureUser(row.name, row.alliance);
+    var u = resolveUser(row);
     var existing = entryOf(currentEventId, u.user.id);
     if (existing) {
       state.entries[state.entries.indexOf(existing)] = toEntry(row, u.user.id, existing.id);
@@ -644,7 +775,9 @@
       moved++;
       return true;
     });
+    userNames(from).forEach(function(n) { addAlias(to, n); });
     state.users = state.users.filter(function(u) { return u.id !== from.id; });
+    state.notSame = state.notSame.filter(function(p) { return p.split("|").indexOf(from.id) < 0; });
     return { moved: moved, dropped: dropped };
   }
 
@@ -891,11 +1024,11 @@
     });
   }
 
-  function memberRowHtml(m, withOps, isNew) {
+  function memberRowHtml(m, withOps) {
     return '<td>' + escapeHtml(m.alliance) + '</td>' +
       '<td><span class="tag ' + m.entry + '">' + ENTRY_SHORT[m.entry] + '</span></td>' +
       '<td>' + escapeHtml(m.grade) + '</td>' +
-      '<td>' + escapeHtml(m.name) + (isNew ? ' <span class="tag new">新規ユーザー</span>' : "") + '</td>' +
+      '<td>' + escapeHtml(m.name) + '</td>' +
       '<td class="marks">' + marksOf(m) + '</td>' +
       '<td>' + escapeHtml(troopText(m)) + '</td>' +
       '<td>' + escapeHtml(timeText(m)) + '</td>' +
@@ -952,12 +1085,27 @@
       return '<option value="' + escapeHtml(u.name) + '">' + escapeHtml(u.alliance) + '</option>';
     }).join("");
 
+    // 似た名前の候補
+    function userLabel(u) {
+      var s = stats[u.id];
+      return "<b>" + escapeHtml(u.name) + "</b>（" + escapeHtml(u.alliance || "同盟なし") + "・参加" + (s ? s.count : 0) + "回）";
+    }
+    var pairs = similarPairs();
+    $("simCount").textContent = "（" + pairs.length + "組）";
+    $("simPairs").innerHTML = pairs.length ? pairs.map(function(p) {
+      return '<div class="sim-pair" data-a="' + p.a.id + '" data-b="' + p.b.id + '">' +
+        '<span class="names">' + userLabel(p.a) + ' ⇔ ' + userLabel(p.b) + '</span>' +
+        '<button class="small sub-btn" data-sact="keepA">同一人物：「' + escapeHtml(p.a.name) + '」を残す</button>' +
+        '<button class="small sub-btn" data-sact="keepB">同一人物：「' + escapeHtml(p.b.name) + '」を残す</button>' +
+        '<button class="small sub-btn" data-sact="notSame">別人</button></div>';
+    }).join("") : '<div class="hint" style="padding: 8px 0;">似た名前のユーザーはいません</div>';
+
     var q = $("userFilterInput").value.trim().toLowerCase();
     var list = state.users.map(function(u) {
       var s = stats[u.id] || { count: 0, last: null };
       return { u: u, count: s.count, last: s.last };
     }).filter(function(r) {
-      return !q || (r.u.name + " " + r.u.alliance).toLowerCase().indexOf(q) >= 0;
+      return !q || (userNames(r.u).join(" ") + " " + r.u.alliance).toLowerCase().indexOf(q) >= 0;
     });
     list.sort(function(a, b) {
       var r;
@@ -969,7 +1117,8 @@
 
     $("userBody").innerHTML = list.length ? list.map(function(r) {
       return '<tr data-uid="' + r.u.id + '">' +
-        '<td>' + escapeHtml(r.u.name) + '</td>' +
+        '<td>' + escapeHtml(r.u.name) +
+        (r.u.aliases.length ? '<div class="alias">旧名・別表記: ' + escapeHtml(r.u.aliases.join("、")) + '</div>' : "") + '</td>' +
         '<td>' + escapeHtml(r.u.alliance) + '</td>' +
         '<td class="num">' + r.count + '</td>' +
         '<td>' + escapeHtml(eventLabel(r.last)) + '</td>' +
@@ -1110,6 +1259,7 @@
     editingId = null;
     $("formCard").classList.remove("editing");
     $("formTitle").textContent = "1人ずつ登録";
+    $("nameHint").innerHTML = "";
     $("saveBtn").textContent = "登録";
   }
 
@@ -1133,6 +1283,30 @@
     if (u && !$("fAlliance").value.trim()) $("fAlliance").value = u.alliance;
   });
 
+  // 入力中の名前が既存ユーザーと一致しないとき、似ている既存ユーザーを表示（押すとその名前にする）
+  function renderNameHint() {
+    var name = $("fName").value.trim();
+    var hint = $("nameHint");
+    if (!name || findUserByName(name)) { hint.innerHTML = ""; return; }
+    var cands = similarUsers(name);
+    hint.innerHTML = cands.length
+      ? "似ている既存ユーザー: " + cands.map(function(c) {
+          return '<button type="button" class="small sub-btn" data-uid="' + c.u.id + '">' +
+            escapeHtml(c.u.name) + "（" + escapeHtml(c.u.alliance || "同盟なし") + "）</button>";
+        }).join("") + "<br>同じ人ならボタンを押してください。押さずに登録すると新規ユーザーになります。"
+      : "";
+  }
+  $("fName").addEventListener("input", renderNameHint);
+  $("nameHint").addEventListener("click", function(e) {
+    var btn = e.target.closest("button[data-uid]");
+    if (!btn) return;
+    var u = userById(btn.dataset.uid);
+    if (!u) return;
+    $("fName").value = u.name;
+    $("fAlliance").value = u.alliance;
+    renderNameHint();
+  });
+
   $("saveBtn").addEventListener("click", function() {
     var m = readForm();
     if (!m.alliance || !m.name) { setMsg($("formMsg"), "同盟と名前は必須です", false); return; }
@@ -1153,6 +1327,11 @@
       setMsg($("formMsg"), "「" + m.name + "」を変更しました" + (u.created ? "（新規ユーザーとして登録）" : ""), true);
     } else {
       if (existing && !confirm("「" + m.name + "」はこのイベントに登録済みです。上書きしますか？")) return;
+      if (!user) {
+        var cands = similarUsers(m.name);
+        if (cands.length && !confirm("「" + m.name + "」は新規ユーザーとして登録されます。\n似ている既存ユーザー: " +
+          cands.map(function(c) { return c.u.name; }).join("、") + "\n新規ユーザーで登録しますか？（同じ人なら「キャンセル」して名前の下のボタンを押してください）")) return;
+      }
       var res = upsertEntry(m);
       resetForm(true);
       commit();
@@ -1202,8 +1381,8 @@
         res = mergeUsers(u, other);
         setMsg($("userMsg"), "「" + u.name + "」を「" + other.name + "」に統合しました（参加記録 " + res.moved + "件を移動）", true);
       } else {
-        u.name = newName;
-        setMsg($("userMsg"), "名前を「" + newName + "」に変更しました", true);
+        renameUser(u, newName);
+        setMsg($("userMsg"), "名前を「" + newName + "」に変更しました（旧名は別表記として残ります）", true);
       }
       commit();
     } else if (act === "merge") {
@@ -1228,7 +1407,76 @@
     }
   });
 
+  $("simPairs").addEventListener("click", function(e) {
+    var btn = e.target.closest("button[data-sact]");
+    if (!btn) return;
+    var box = btn.closest(".sim-pair");
+    var a = userById(box.dataset.a), b = userById(box.dataset.b);
+    if (!a || !b) return;
+    var act = btn.dataset.sact, res;
+    if (act === "notSame") {
+      state.notSame.push(pairKey(a.id, b.id));
+      setMsg($("userMsg"), "「" + a.name + "」と「" + b.name + "」を別人として記録しました", true);
+    } else {
+      var keep = act === "keepA" ? a : b, drop = act === "keepA" ? b : a;
+      res = mergeUsers(drop, keep);
+      setMsg($("userMsg"), "「" + drop.name + "」を「" + keep.name + "」に統合しました（参加記録 " + res.moved + "件を移動" +
+        (res.dropped ? "・同じイベントで重複していた " + res.dropped + "件は「" + keep.name + "」側を残しました" : "") + "）", true);
+    }
+    $("simDetails").open = true;
+    commit();
+  });
+
   // ---------- まとめて登録 ----------
+  // 各行のユーザー判定: exact=既存と一致 / similar=似た名前あり（要選択） / new=新規
+  function classifyRows(parsed) {
+    parsed.rows.forEach(function(r) {
+      var u = findUserByName(r.name);
+      if (u) { r.status = "exact"; r.matchUserId = u.id; return; }
+      r.cands = similarUsers(r.name);
+      r.status = r.cands.length ? "similar" : "new";
+      // 全角半角・大文字小文字だけの違いは同一人物（名前はそのまま）を初期値にする
+      r.defaultChoice = r.cands.length && r.cands[0].s === 0 ? r.cands[0].u.id + "|keep" : "";
+    });
+    return parsed;
+  }
+
+  function decisionCell(r, i) {
+    if (r.status === "exact") {
+      var u = userById(r.matchUserId);
+      return '既存' + (u && nameKey(u.name) !== nameKey(r.name) ? '（「' + escapeHtml(u.name) + '」の旧名）' : "");
+    }
+    if (r.status === "new") return '<span class="tag new">新規ユーザー</span>';
+    var opts = ['<option value="">新規ユーザーとして登録</option>'];
+    r.cands.forEach(function(c) {
+      var label = "「" + c.u.name + "」（" + (c.u.alliance || "同盟なし") + "）と同一人物";
+      opts.push('<option value="' + c.u.id + '|rename">' + escapeHtml(label + "・名前を「" + r.name + "」に更新") + '</option>');
+      opts.push('<option value="' + c.u.id + '|keep">' + escapeHtml(label + "・名前は「" + c.u.name + "」のまま") + '</option>');
+    });
+    return '<select class="decide" data-i="' + i + '">' + opts.join("").replace('value="' + r.defaultChoice + '"', 'value="' + r.defaultChoice + '" selected') + '</select>';
+  }
+
+  // 確認表のプルダウンで選んだ判定を各行に反映
+  function applyDecisions(parsed) {
+    document.querySelectorAll("#previewBody select.decide").forEach(function(sel) {
+      var r = parsed.rows[Number(sel.dataset.i)];
+      if (!r) return;
+      if (sel.value) {
+        var v = sel.value.split("|");
+        r.matchUserId = v[0];
+        r.renameUser = v[1] === "rename";
+      } else {
+        r.matchUserId = null;
+      }
+    });
+  }
+
+  function currentBulk() {
+    var text = $("bulkText").value;
+    var filename = loadedFile && loadedFile.text === text ? loadedFile.name : null;
+    return { text: text, parsed: classifyRows(parseBulk(text, filename)) };
+  }
+
   function parseBulk(text, filename) {
     var trimmed = text.replace(/^\uFEFF/, "").trim();
     // AIの返答は前後に説明文がつくことがあるので、先頭だけでなく中身でもJSONか判定する
@@ -1243,16 +1491,18 @@
     return parseFormatText(text, $("defaultAlliance").value.trim());
   }
 
-  function showPreview(parsed) {
-    var newCount = 0;
-    $("previewBody").innerHTML = parsed.rows.map(function(m) {
-      var isNew = !findUserByName(m.name);
-      if (isNew) newCount++;
-      return "<tr>" + memberRowHtml(m, false, isNew) + "</tr>";
+  function showPreview(bulk) {
+    var parsed = bulk.parsed;
+    lastParsed = bulk;
+    var count = { exact: 0, similar: 0, "new": 0 };
+    $("previewBody").innerHTML = parsed.rows.map(function(m, i) {
+      count[m.status]++;
+      return '<tr' + (m.status === "similar" ? ' class="similar"' : "") + '>' + memberRowHtml(m, false) +
+        '<td>' + decisionCell(m, i) + '</td></tr>';
     }).join("");
     $("previewWrap").style.display = parsed.rows.length ? "block" : "none";
-    var text = parsed.rows.length + "人を読み取りました（うち新規ユーザー " + newCount + "人）";
-    if (newCount) text += "\n※ 新規ユーザーの中に、名前が変わっただけの既存ユーザーがいないか確認してください";
+    var text = parsed.rows.length + "人を読み取りました（既存 " + count.exact + "人・新規 " + count["new"] + "人・似た名前あり " + count.similar + "人）";
+    if (count.similar) text += "\n黄色の行は「ユーザー判定」で新規か同一人物かを選んでから「取り込み」を押してください";
     if (parsed.errors.length) text += "\n読み取れなかった行: " + parsed.errors.join(" / ");
     setMsg($("bulkMsg"), text, !parsed.errors.length);
   }
@@ -1280,29 +1530,44 @@
     if (parsed.errors.length) text += "\n読み取れなかった行: " + parsed.errors.join(" / ");
     setMsg($("bulkMsg"), text, !parsed.errors.length);
     $("previewWrap").style.display = "none";
+    lastParsed = null;
     return true;
   }
 
   $("previewBtn").addEventListener("click", function() {
-    showPreview(parseBulk($("bulkText").value));
+    showPreview(currentBulk());
   });
 
   $("bulkBtn").addEventListener("click", function() {
-    if (importRows(parseBulk($("bulkText").value))) $("bulkText").value = "";
+    var bulk;
+    if (lastParsed && lastParsed.text === $("bulkText").value) {
+      // 確認表を表示中なら、そこで選んだユーザー判定で取り込む
+      bulk = lastParsed;
+      applyDecisions(bulk.parsed);
+    } else {
+      bulk = currentBulk();
+      if (bulk.parsed.rows.some(function(r) { return r.status === "similar"; })) {
+        showPreview(bulk);
+        return;
+      }
+    }
+    if (importRows(bulk.parsed)) { $("bulkText").value = ""; loadedFile = null; }
   });
 
+  $("bulkText").addEventListener("input", function() {
+    if (lastParsed) { lastParsed = null; $("previewWrap").style.display = "none"; }
+  });
+
+  // ファイルは中身を貼り付け欄に入れて、確認表を表示する（取り込みは「取り込み」ボタンで）
   $("fileInput").addEventListener("change", function() {
     var file = this.files[0];
     if (!file) return;
     var reader = new FileReader();
     reader.onload = function() {
-      try {
-        var parsed = parseBulk(String(reader.result), file.name);
-        showPreview(parsed);
-        if (parsed.rows.length && confirm(file.name + " から" + parsed.rows.length + "人を「" + eventLabel(eventById(currentEventId)) + "」に取り込みますか？")) importRows(parsed);
-      } catch (e) {
-        setMsg($("bulkMsg"), "ファイルを読み込めませんでした: " + e.message, false);
-      }
+      var text = String(reader.result);
+      loadedFile = { name: file.name, text: text };
+      $("bulkText").value = text;
+      showPreview(currentBulk());
       $("fileInput").value = "";
     };
     reader.readAsText(file, "utf-8");
@@ -1339,7 +1604,7 @@
   }
 
   $("exportJsonBtn").addEventListener("click", function() {
-    var data = { updated: new Date().toISOString(), users: state.users, events: state.events, entries: state.entries };
+    var data = { updated: new Date().toISOString(), users: state.users, events: state.events, entries: state.entries, notSame: state.notSame };
     download("members.json", JSON.stringify(data, null, 2) + "\n", "application/json");
   });
 
