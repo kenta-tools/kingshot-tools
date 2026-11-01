@@ -96,6 +96,8 @@
   .ai-steps details textarea { margin-top: 6px; min-height: 260px; }
   .scroll { max-height: 520px; overflow-y: auto; }
   .alias { font-size: 11px; color: #888; }
+  .top-link { font-size: 13px; color: #2c5cc5; text-decoration: none; }
+  .top-link:hover { text-decoration: underline; }
   tr.similar td { background: #fff8e6; }
   select.decide { font-size: 12px; padding: 4px 6px; max-width: 320px; }
   .name-hint { font-size: 12px; margin-top: 4px; color: #a86a00; }
@@ -128,12 +130,16 @@
   <input type="password" id="pwInput" placeholder="パスワード" autocomplete="current-password">
   <button type="button" id="loginBtn">ログイン</button>
   <div class="msg err" id="loginMsg"></div>
+  <a href="../index.html" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
 </div>
 
 <div id="appView">
   <div class="row" style="justify-content: space-between;">
     <h1>👥 メンバー管理（管理者）</h1>
-    <button type="button" class="sub-btn small" id="logoutBtn">ログアウト</button>
+    <div class="row">
+      <a href="../index.html" class="top-link">← TOP</a>
+      <button type="button" class="sub-btn small" id="logoutBtn">ログアウト</button>
+    </div>
   </div>
   <div class="sub">ユーザーは蓄積され、イベントごとに参加情報を登録します。登録した内容は「members.json を書き出し」で保存し、リポジトリの <code>data/members.json</code> を置き換えて公開してください。</div>
 
@@ -176,10 +182,11 @@
       <h2>まとめて登録 → <span class="event-name"></span></h2>
       <div class="ai-steps">
         <b>おすすめ：AIで変換してから登録</b>
+        <div class="hint">プロンプトには、選択中のイベント名と登録済みユーザー一覧が自動で入ります（イベントを切り替えたら、そのイベント用のプロンプトをコピーし直してください）。</div>
         <ol>
           <li>「AI変換用プロンプトをコピー」を押して、ChatGPT・Claude などに<b>プロンプトだけ</b>を貼り付けて送信する（AIが「準備OK」と返事します）</li>
           <li>続けて、記入済みの募集フォーマットを<b>同盟ごとに1つずつ送信</b>する（AIは「受け取りました：同盟名 ◯人（累計 ◯人）」と返事します）</li>
-          <li>全同盟分を送り終わったら「<b>まとめて出力</b>」と送る → 全員分が1つのJSONで返ってきます（同じ同盟・同じ名前の重複は後から送った内容で1人にまとめられます）</li>
+          <li>全同盟分を送り終わったら「<b>まとめて出力</b>」と送る。似た名前の人がいると、AIが登録済みユーザーと見比べて「<b>同一人物ですか？</b>」と質問してくるので、番号ごとに はい／いいえ で答える → 全員分が1つのJSONで返ってきます</li>
           <li>そのJSON（<code>[ ... ]</code>）を下の欄に貼り付けて「読み取り結果を確認」を押す（AIが「迷った点」を書いていたら確認してください）</li>
           <li>結果の表の「ユーザー判定」を確認する。<b>似た名前の既存ユーザーがいる行（黄色）</b>は、プルダウンで「新規ユーザー」か「〇〇と同一人物（名前を更新／名前はそのまま）」を選ぶ</li>
           <li>「取り込み」を押す（同一人物にした名前は旧名として覚えるので、次回からは自動で同じ人になります）</li>
@@ -387,52 +394,73 @@
   ].join("\n");
   var BLANK = ["同盟名:", LEGEND, "G8:", "G7:", "G6:", "G5:", "その他:"].join("\n");
   var FENCE = "```";
-  var AI_PROMPT = [
-    "これから、イベント参加者の「募集フォーマット」の記入内容を、同盟ごとなど何回かに分けて送ります。",
-    "",
-    "## 進め方",
-    "- このメッセージへの返事は「準備OK」の一言だけにしてください（まだ変換しないでください）",
-    "- 記入内容が送られてくるたびに、下の変換ルールで読み取って覚えておき、返事は「受け取りました：同盟名 ◯人（累計 ◯人）」の1行だけにしてください（JSONはまだ出さない）",
-    "- 「まとめて出力」と送ったら、それまでに受け取った全員分を1つのJSON配列にまとめて出力してください",
-    "- まとめるとき、同じ同盟の同じ名前の人が複数回出てきたら、後から送られた内容を採用して1人にしてください",
-    "- 名前の一部か印か判断できないなど迷った点があれば、まとめて出力するときにJSONの下に箇条書きで書いてください",
-    "",
-    "## 変換ルール",
-    "- 1人＝1オブジェクト。出力はJSON配列を " + FENCE + "json のコードブロックで出す",
-    "- alliance: 同盟名（見出しの「同盟名:TNP」「EGG(最初から参加できる)」などから取る）",
-    "- entry: 見出しが「途中参加」なら \"途中参加\"、それ以外は \"最初から\"",
-    "- grade: そのメンバーが書かれている区分 \"G8\" \"G7\" \"G6\" \"G5\" \"その他\" のどれか。「G8:」の次の行から1人ずつ書かれている場合も、次の区分が出てくるまでは同じ区分",
-    "- name: プレイヤー名だけ（印・括弧・時間・兵種は含めない）",
-    "- monthly: ◯ があれば true（〇・○・o・O など丸っぽい文字も ◯ とみなす）",
-    "- leaveEarly: △ があれば true。抜ける時刻が書いてあれば true",
-    "- vc: ◇ があれば true",
-    "- vivian4: ◆ があれば true",
-    "- troops: 兵種。歩兵=歩、騎兵=騎、弓兵=弓 を「歩騎弓」の順につなげる（例 \"歩弓\"）。「T11」だけで兵種の指定がなければ \"歩騎弓\"。兵種もTもなければ \"\"",
-    "- tier: 兵士レベルの数字（T11 → 11）。なければ null",
-    "- joinAt: 参加開始時刻（「23時〜」→ \"23時\"）。なければ \"\"",
-    "- leaveAt: 抜ける時刻（「〜22時」→ \"22時\"）。なければ \"\"",
-    "- note: 上のどれにも当てはまらない補足。なければ \"\"",
-    "- 名前の直後の o・〇 は名前の一部ではなく ◯ 印として扱う。名前の一部か印か判断できないときは note に「要確認: 〜」と書く",
-    "- 括弧の全角・半角、〜・～・~ の違いは同じものとして扱う。兵種・Tは括弧の外に書かれていても読み取る",
-    "- 挨拶文や凡例の行（「◯:マンスリー持ち」など）は無視する",
-    "",
-    "## 例（「まとめて出力」したときの形）",
-    "受け取った内容:",
-    "EGG(最初から参加できる)",
-    "G7: あんこ◯△◆(〜22時)(T11)、",
-    "G6: おもち◯◇(歩弓T11)、",
-    "EGG(途中参加)",
-    "G7: かけ◯◇(23時〜)(歩弓)、",
-    "",
-    "出力:",
-    FENCE + "json",
-    "[",
-    "  {\"alliance\":\"EGG\",\"entry\":\"最初から\",\"grade\":\"G7\",\"name\":\"あんこ\",\"monthly\":true,\"leaveEarly\":true,\"vc\":false,\"vivian4\":true,\"troops\":\"歩騎弓\",\"tier\":11,\"joinAt\":\"\",\"leaveAt\":\"22時\",\"note\":\"\"},",
-    "  {\"alliance\":\"EGG\",\"entry\":\"最初から\",\"grade\":\"G6\",\"name\":\"おもち\",\"monthly\":true,\"leaveEarly\":false,\"vc\":true,\"vivian4\":false,\"troops\":\"歩弓\",\"tier\":11,\"joinAt\":\"\",\"leaveAt\":\"\",\"note\":\"\"},",
-    "  {\"alliance\":\"EGG\",\"entry\":\"途中参加\",\"grade\":\"G7\",\"name\":\"かけ\",\"monthly\":true,\"leaveEarly\":false,\"vc\":true,\"vivian4\":false,\"troops\":\"歩弓\",\"tier\":null,\"joinAt\":\"23時\",\"leaveAt\":\"\",\"note\":\"\"}",
-    "]",
-    FENCE
-  ].join("\n");
+  // AI変換用プロンプト。選択中のイベント名と登録済みユーザー一覧を埋め込むので、イベント・ユーザーが変わるたびに作り直す
+  function buildPrompt() {
+    var ev = eventById(currentEventId);
+    var userLines = state.users.slice().sort(function(a, b) { return a.name.localeCompare(b.name, "ja"); }).map(function(u) {
+      return "- " + u.name + "（" + (u.alliance || "同盟なし") + "）" + (u.aliases.length ? " 旧名・別表記: " + u.aliases.join("、") : "");
+    });
+    return [
+      "これから、イベント「" + eventLabel(ev) + "」の参加者の「募集フォーマット」の記入内容を、同盟ごとなど何回かに分けて送ります。",
+      "",
+      "## 進め方",
+      "- このメッセージへの返事は「準備OK（" + eventLabel(ev) + "）」の一言だけにしてください（まだ変換しないでください）",
+      "- 記入内容が送られてくるたびに、下の変換ルールで読み取って覚えておき、返事は「受け取りました：同盟名 ◯人（累計 ◯人）」の1行だけにしてください（JSONはまだ出さない）",
+      "- 「まとめて出力」と送られたら、JSONを出す前に「同一人物の確認」をしてください（下記）。確認が必要な人がいなければ、すぐにJSONを出力してください",
+      "- 確認が終わったら、それまでに受け取った全員分を1つのJSON配列にまとめて出力してください",
+      "- まとめるとき、同じ同盟の同じ名前の人が複数回出てきたら、後から送られた内容を採用して1人にしてください",
+      "- 名前の一部か印か判断できないなど迷った点があれば、JSONの下に箇条書きで書いてください",
+      "",
+      "## 同一人物の確認",
+      "- 受け取った名前を、一番下の「登録済みユーザー一覧」（名前・旧名）と見比べてください",
+      "- 一覧の名前・旧名と完全に同じなら確認不要です（sameAs は \"\"）",
+      "- 完全には同じでないが同一人物かもしれない人（表記ゆれ・全角半角・大文字小文字・カタカナひらがな・1〜2文字違い・記号の有無・改名っぽい名前など）がいたら、番号付きで一覧にして「同一人物ですか？ 番号ごとに はい／いいえ で答えてください」と私に質問してください",
+      "  例: 1. 送られた「R35o」（TNP） ⇔ 登録済み「R35」（TNP）",
+      "- 今回送られた中に、同じ人が別の名前で2回いそうな場合も同じように質問してください（同一なら後から送られた内容で1人にまとめる）",
+      "- 私が「はい」と答えた人は、sameAs に登録済み一覧の名前をそのまま書いてください。「いいえ」の人や確認しなかった人は sameAs を \"\" にしてください",
+      "",
+      "## 変換ルール",
+      "- 1人＝1オブジェクト。出力はJSON配列を " + FENCE + "json のコードブロックで出す",
+      "- alliance: 同盟名（見出しの「同盟名:TNP」「EGG(最初から参加できる)」などから取る）",
+      "- entry: 見出しが「途中参加」なら \"途中参加\"、それ以外は \"最初から\"",
+      "- grade: そのメンバーが書かれている区分 \"G8\" \"G7\" \"G6\" \"G5\" \"その他\" のどれか。「G8:」の次の行から1人ずつ書かれている場合も、次の区分が出てくるまでは同じ区分",
+      "- name: 今回送られてきたプレイヤー名だけ（印・括弧・時間・兵種は含めない）",
+      "- sameAs: 同一人物の確認で「はい」になった登録済みユーザーの名前。それ以外は \"\"",
+      "- monthly: ◯ があれば true（〇・○・o・O など丸っぽい文字も ◯ とみなす）",
+      "- leaveEarly: △ があれば true。抜ける時刻が書いてあれば true",
+      "- vc: ◇ があれば true",
+      "- vivian4: ◆ があれば true",
+      "- troops: 兵種。歩兵=歩、騎兵=騎、弓兵=弓 を「歩騎弓」の順につなげる（例 \"歩弓\"）。「T11」だけで兵種の指定がなければ \"歩騎弓\"。兵種もTもなければ \"\"",
+      "- tier: 兵士レベルの数字（T11 → 11）。なければ null",
+      "- joinAt: 参加開始時刻（「23時〜」→ \"23時\"）。なければ \"\"",
+      "- leaveAt: 抜ける時刻（「〜22時」→ \"22時\"）。なければ \"\"",
+      "- note: 上のどれにも当てはまらない補足。なければ \"\"",
+      "- 名前の直後の o・〇 は名前の一部ではなく ◯ 印として扱う。名前の一部か印か判断できないときは note に「要確認: 〜」と書く",
+      "- 括弧の全角・半角、〜・～・~ の違いは同じものとして扱う。兵種・Tは括弧の外に書かれていても読み取る",
+      "- 挨拶文や凡例の行（「◯:マンスリー持ち」など）は無視する",
+      "",
+      "## 例（「まとめて出力」したときの形）",
+      "受け取った内容:",
+      "EGG(最初から参加できる)",
+      "G7: あんこ◯△◆(〜22時)(T11)、",
+      "G6: おもち◯◇(歩弓T11)、",
+      "EGG(途中参加)",
+      "G7: かけ◯◇(23時〜)(歩弓)、",
+      "（登録済み一覧に「あんこ」がいて、「おもち」は登録済み「お餅」と同一人物か質問して「はい」と回答された場合）",
+      "",
+      "出力:",
+      FENCE + "json",
+      "[",
+      "  {\"alliance\":\"EGG\",\"entry\":\"最初から\",\"grade\":\"G7\",\"name\":\"あんこ\",\"sameAs\":\"\",\"monthly\":true,\"leaveEarly\":true,\"vc\":false,\"vivian4\":true,\"troops\":\"歩騎弓\",\"tier\":11,\"joinAt\":\"\",\"leaveAt\":\"22時\",\"note\":\"\"},",
+      "  {\"alliance\":\"EGG\",\"entry\":\"最初から\",\"grade\":\"G6\",\"name\":\"おもち\",\"sameAs\":\"お餅\",\"monthly\":true,\"leaveEarly\":false,\"vc\":true,\"vivian4\":false,\"troops\":\"歩弓\",\"tier\":11,\"joinAt\":\"\",\"leaveAt\":\"\",\"note\":\"\"},",
+      "  {\"alliance\":\"EGG\",\"entry\":\"途中参加\",\"grade\":\"G7\",\"name\":\"かけ\",\"sameAs\":\"\",\"monthly\":true,\"leaveEarly\":false,\"vc\":true,\"vivian4\":false,\"troops\":\"歩弓\",\"tier\":null,\"joinAt\":\"23時\",\"leaveAt\":\"\",\"note\":\"\"}",
+      "]",
+      FENCE,
+      "",
+      "## 登録済みユーザー一覧（" + state.users.length + "人）",
+      userLines.length ? userLines.join("\n") : "（まだいません。同一人物の確認は、今回送られた中での重複だけ行ってください）"
+    ].join("\n");
+  }
 
   var $ = function(id) { return document.getElementById(id); };
 
@@ -530,7 +558,8 @@
       tier: tier && !isNaN(Number(tier)) ? Number(tier) : null,
       joinAt: str(m.joinAt),
       leaveAt: str(m.leaveAt),
-      note: str(m.note)
+      note: str(m.note),
+      sameAs: str(m.sameAs) // AI変換で登録者が「同一人物」と確認した登録済みユーザー名（取り込み時のみ使う）
     };
   }
 
@@ -555,6 +584,7 @@
     }).map(function(e) {
       var r = normalizeRow(e);
       delete r.name;
+      delete r.sameAs;
       r.id = e.id || newId("r");
       r.eventId = e.eventId;
       r.userId = e.userId;
@@ -744,6 +774,7 @@
   function toEntry(row, userId, id) {
     var e = Object.assign({}, row);
     delete e.name;
+    delete e.sameAs;
     e.id = id || newId("r");
     e.eventId = currentEventId;
     e.userId = userId;
@@ -1170,7 +1201,10 @@
   function render() {
     renderState();
     renderEvents();
-    if (currentEventId) renderEntries();
+    if (currentEventId) {
+      renderEntries();
+      $("promptText").value = buildPrompt();
+    }
     renderUsers();
   }
 
@@ -1462,11 +1496,22 @@
   });
 
   // ---------- まとめて登録 ----------
-  // 各行のユーザー判定: exact=既存と一致 / similar=似た名前あり（要選択） / new=新規
+  // 各行のユーザー判定: exact=既存と一致 / aiSame=登録者がAI上で同一人物と確認済み /
+  //                     similar=似た名前あり（要選択） / new=新規
   function classifyRows(parsed) {
     parsed.rows.forEach(function(r) {
       var u = findUserByName(r.name);
       if (u) { r.status = "exact"; r.matchUserId = u.id; return; }
+      var same = r.sameAs && findUserByName(r.sameAs);
+      if (same) {
+        // 登録者の判断を初期値にする（名前は新しい名前に更新）。管理者は確認表で変更できる
+        r.status = "aiSame";
+        r.matchUserId = same.id;
+        r.renameUser = true;
+        r.cands = [{ u: same, s: 0 }].concat(similarUsers(r.name).filter(function(c) { return c.u.id !== same.id; }));
+        r.defaultChoice = same.id + "|rename";
+        return;
+      }
       r.cands = similarUsers(r.name);
       r.status = r.cands.length ? "similar" : "new";
       // 全角半角・大文字小文字だけの違いは同一人物（名前はそのまま）を初期値にする
@@ -1481,13 +1526,14 @@
       return '既存' + (u && nameKey(u.name) !== nameKey(r.name) ? '（「' + escapeHtml(u.name) + '」の旧名）' : "");
     }
     if (r.status === "new") return '<span class="tag new">新規ユーザー</span>';
+    var prefix = r.status === "aiSame" ? '<div class="alias">登録者が同一人物と回答</div>' : "";
     var opts = ['<option value="">新規ユーザーとして登録</option>'];
     r.cands.forEach(function(c) {
       var label = "「" + c.u.name + "」（" + (c.u.alliance || "同盟なし") + "）と同一人物";
       opts.push('<option value="' + c.u.id + '|rename">' + escapeHtml(label + "・名前を「" + r.name + "」に更新") + '</option>');
       opts.push('<option value="' + c.u.id + '|keep">' + escapeHtml(label + "・名前は「" + c.u.name + "」のまま") + '</option>');
     });
-    return '<select class="decide" data-i="' + i + '">' + opts.join("").replace('value="' + r.defaultChoice + '"', 'value="' + r.defaultChoice + '" selected') + '</select>';
+    return prefix + '<select class="decide" data-i="' + i + '">' + opts.join("").replace('value="' + r.defaultChoice + '"', 'value="' + r.defaultChoice + '" selected') + '</select>';
   }
 
   // 確認表のプルダウンで選んだ判定を各行に反映
@@ -1528,14 +1574,14 @@
   function showPreview(bulk) {
     var parsed = bulk.parsed;
     lastParsed = bulk;
-    var count = { exact: 0, similar: 0, "new": 0 };
+    var count = { exact: 0, aiSame: 0, similar: 0, "new": 0 };
     $("previewBody").innerHTML = parsed.rows.map(function(m, i) {
       count[m.status]++;
       return '<tr' + (m.status === "similar" ? ' class="similar"' : "") + '>' + memberRowHtml(m, false) +
         '<td>' + decisionCell(m, i) + '</td></tr>';
     }).join("");
     $("previewWrap").style.display = parsed.rows.length ? "block" : "none";
-    var text = (parsed.blocks > 1 ? parsed.blocks + "個のJSONから" : "") + parsed.rows.length + "人を読み取りました（既存 " + count.exact + "人・新規 " + count["new"] + "人・似た名前あり " + count.similar + "人）";
+    var text = (parsed.blocks > 1 ? parsed.blocks + "個のJSONから" : "") + parsed.rows.length + "人を読み取りました（既存 " + count.exact + "人・登録者が同一と回答 " + count.aiSame + "人・新規 " + count["new"] + "人・似た名前あり " + count.similar + "人）";
     if (count.similar) text += "\n黄色の行は「ユーザー判定」で新規か同一人物かを選んでから「取り込み」を押してください";
     if (parsed.errors.length) text += "\n読み取れなかった行: " + parsed.errors.join(" / ");
     setMsg($("bulkMsg"), text, !parsed.errors.length);
@@ -1622,8 +1668,7 @@
   }
 
   $("copyBlankBtn").addEventListener("click", function() { copyText(BLANK, this); });
-  $("promptText").value = AI_PROMPT;
-  $("copyPromptBtn").addEventListener("click", function() { copyText(AI_PROMPT, this); });
+  $("copyPromptBtn").addEventListener("click", function() { copyText(buildPrompt(), this); });
   $("sampleBtn").addEventListener("click", function() { $("bulkText").value = SAMPLE; });
 
   // ---------- 書き出し ----------
