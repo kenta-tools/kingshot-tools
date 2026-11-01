@@ -26,7 +26,7 @@
     margin-bottom: 16px;
   }
   .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-  input[type=text], input[type=password], input[type=search], input[type=number], textarea, select {
+  input[type=text], input[type=password], input[type=search], input[type=number], input[type=date], textarea, select {
     font: inherit; font-size: 14px; padding: 7px 9px;
     border: 1px solid #ccd2db; border-radius: 6px; background: #fff;
   }
@@ -53,6 +53,14 @@
   .pill.saved { background: #e3f4e8; color: #1e7d3a; }
   .pill.dirty { background: #fff1d6; color: #a86a00; }
 
+  /* イベント選択 */
+  .event-card { border-left: 5px solid #1a2332; }
+  .event-card .group { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .event-card .sep { width: 1px; height: 28px; background: #e0e4ea; margin: 0 6px; }
+  #eventSelect { min-width: 240px; font-weight: bold; }
+  .event-name { color: #2c5cc5; }
+  .no-event { text-align: center; padding: 30px; color: #777; font-size: 14px; }
+
   /* 1件登録フォーム */
   .form-grid {
     display: grid; gap: 10px 14px;
@@ -75,15 +83,18 @@
   th.nosort { cursor: default; }
   td.ops { white-space: nowrap; text-align: right; }
   td.marks { letter-spacing: 2px; white-space: nowrap; }
+  td.num { text-align: right; }
   tr.editing td { background: #fffbe8; }
   .tag { display: inline-block; padding: 1px 7px; border-radius: 4px; font-size: 11px; font-weight: bold; }
   .tag.start { background: #e3f4e8; color: #1e7d3a; }
   .tag.late { background: #e8eefc; color: #2c5cc5; }
+  .tag.new { background: #fff1d6; color: #a86a00; }
   .legend { font-size: 12px; color: #555; margin-bottom: 8px; }
   .ai-steps { background: #f0f5ff; border: 1px solid #d5e1fb; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px; }
   .ai-steps ol { margin: 6px 0 8px; padding-left: 20px; line-height: 1.7; }
   .ai-steps details { flex: 1; min-width: 200px; }
   .ai-steps details textarea { margin-top: 6px; min-height: 260px; }
+  .scroll { max-height: 520px; overflow-y: auto; }
 
   /* ログイン画面 */
   #loginView { max-width: 360px; margin: 80px auto; text-align: center; }
@@ -95,6 +106,8 @@
     .form-grid { grid-template-columns: 1fr 1fr; }
     .field.wide { grid-column: 1 / -1; }
     table { display: block; overflow-x: auto; }
+    .event-card .sep { display: none; }
+    #eventSelect { min-width: 0; width: 100%; }
   }
 </style>
 </head>
@@ -113,7 +126,7 @@
     <h1>👥 メンバー管理（管理者）</h1>
     <button type="button" class="sub-btn small" id="logoutBtn">ログアウト</button>
   </div>
-  <div class="sub">イベントのチーム分けに使うメンバーを登録します。登録した内容は「members.json を書き出し」で保存し、リポジトリの <code>data/members.json</code> を置き換えて公開してください。</div>
+  <div class="sub">ユーザーは蓄積され、イベントごとに参加情報を登録します。登録した内容は「members.json を書き出し」で保存し、リポジトリの <code>data/members.json</code> を置き換えて公開してください。</div>
 
   <!-- 保存状態 -->
   <div class="card status-bar">
@@ -123,160 +136,210 @@
     </div>
     <div class="row">
       <button type="button" id="exportJsonBtn">members.json を書き出し</button>
-      <button type="button" class="sub-btn" id="exportCsvBtn">CSV書き出し</button>
       <button type="button" class="danger" id="discardBtn">変更を破棄</button>
     </div>
   </div>
 
-  <!-- テンプレート貼り付け・ファイル取り込み -->
-  <div class="card">
-    <h2>まとめて登録（AI変換・募集フォーマットの貼り付け・ファイル）</h2>
-    <div class="ai-steps">
-      <b>おすすめ：AIで変換してから登録</b>
-      <ol>
-        <li>「AI変換用プロンプトをコピー」を押して、ChatGPT・Claude などに貼り付ける</li>
-        <li>プロンプト末尾に、記入済みの募集フォーマットを貼り付けて送信する</li>
-        <li>AIが返したJSON（<code>[ ... ]</code>）を下の欄に貼り付けて「読み取り結果を確認」→「取り込み」</li>
-      </ol>
-      <div class="row">
-        <button type="button" class="small" id="copyPromptBtn">AI変換用プロンプトをコピー</button>
-        <details><summary class="hint">プロンプトの中身を見る</summary><textarea id="promptText" readonly></textarea></details>
+  <!-- イベント選択 -->
+  <div class="card event-card">
+    <h2>📅 イベント</h2>
+    <div class="row">
+      <div class="group">
+        <select id="eventSelect"></select>
+        <button type="button" class="danger small" id="deleteEventBtn">このイベントを削除</button>
+      </div>
+      <span class="sep"></span>
+      <div class="group">
+        <span class="hint">新しいイベント:</span>
+        <select id="newEventType"></select>
+        <input type="date" id="newEventDate">
+        <button type="button" id="createEventBtn">作成</button>
       </div>
     </div>
-    <div class="hint">
-      記入済みの募集フォーマットを直接貼り付けても読み取れます（表記ゆれが多いときはAI変換がおすすめです）。複数の同盟・「最初から参加できる」「途中参加」の見出しが混ざっていても読み取ります。<br>
-      名前の後ろの <b>◯△◇◆</b> と括弧（<b>(〜22時)</b>＝抜ける時刻、<b>(23時〜)</b>＝参加開始、<b>(T11)</b>＝3兵種T11、<b>(歩弓T11)</b>・<b>(歩弓)</b>＝兵種指定）を自動で振り分けます。それ以外の括弧は備考に入ります。<br>
-      同じ同盟に同じ名前のメンバーがいる場合は上書き更新します。ファイルは .txt（このフォーマット）／.csv（CSV書き出しと同じ列）／.json に対応しています。
+    <div class="msg" id="eventMsg"></div>
+  </div>
+
+  <div id="noEventView" class="card no-event">まず上の「新しいイベント」でイベントの種類と開催日を選んで作成してください。</div>
+
+  <div id="eventView">
+    <!-- テンプレート貼り付け・ファイル取り込み -->
+    <div class="card">
+      <h2>まとめて登録 → <span class="event-name"></span></h2>
+      <div class="ai-steps">
+        <b>おすすめ：AIで変換してから登録</b>
+        <ol>
+          <li>「AI変換用プロンプトをコピー」を押して、ChatGPT・Claude などに貼り付ける</li>
+          <li>プロンプト末尾に、記入済みの募集フォーマットを貼り付けて送信する</li>
+          <li>AIが返したJSON（<code>[ ... ]</code>）を下の欄に貼り付けて「読み取り結果を確認」→「取り込み」</li>
+        </ol>
+        <div class="row">
+          <button type="button" class="small" id="copyPromptBtn">AI変換用プロンプトをコピー</button>
+          <details><summary class="hint">プロンプトの中身を見る</summary><textarea id="promptText" readonly></textarea></details>
+        </div>
+      </div>
+      <div class="hint">
+        記入済みの募集フォーマットを直接貼り付けても読み取れます（表記ゆれが多いときはAI変換がおすすめです）。複数の同盟・「最初から参加できる」「途中参加」の見出しが混ざっていても読み取ります。<br>
+        名前の後ろの <b>◯△◇◆</b> と括弧（<b>(〜22時)</b>＝抜ける時刻、<b>(23時〜)</b>＝参加開始、<b>(T11)</b>＝3兵種T11、<b>(歩弓T11)</b>・<b>(歩弓)</b>＝兵種指定）を自動で振り分けます。それ以外の括弧は備考に入ります。<br>
+        ユーザーは<b>名前</b>で同じ人か判定します（名前が変わっていると新しいユーザーとして登録されるので、下の「ユーザー一覧」で統合してください）。このイベントに同じ人がすでにいれば上書き更新します。ファイルは .txt（このフォーマット）／.csv（CSV書き出しと同じ列）／.json に対応しています。
+      </div>
+      <div class="row" style="margin: 10px 0;">
+        <button type="button" class="sub-btn small" id="copyBlankBtn">空のフォーマットをコピー</button>
+        <button type="button" class="sub-btn small" id="sampleBtn">記入例を貼り付け</button>
+        <span class="hint">見出しがないときの同盟名:</span>
+        <input type="text" id="defaultAlliance" placeholder="例: EGG" style="width: 120px;">
+      </div>
+      <textarea id="bulkText" placeholder="AIが返したJSON、または記入済みの募集フォーマットを貼り付け&#10;&#10;EGG(最初から参加できる)&#10;◯:マンスリー持ち&#10;…&#10;G7: あんこ◯△◆(〜22時)(T11)、"></textarea>
+      <div class="row" style="margin-top: 10px;">
+        <label class="hint"><input type="radio" name="importMode" value="merge" checked> 追加・更新</label>
+        <label class="hint"><input type="radio" name="importMode" value="replace"> このイベントの参加者を全件置き換え</label>
+        <button type="button" id="previewBtn" class="sub-btn">読み取り結果を確認</button>
+        <button type="button" id="bulkBtn">取り込み</button>
+        <span class="hint">または</span>
+        <input type="file" id="fileInput" accept=".txt,.csv,.tsv,.json">
+      </div>
+      <div class="msg" id="bulkMsg"></div>
+      <div id="previewWrap" style="display:none; margin-top: 10px;">
+        <table>
+          <thead><tr><th class="nosort">同盟</th><th class="nosort">参加</th><th class="nosort">G</th><th class="nosort">名前</th><th class="nosort">印</th><th class="nosort">兵種</th><th class="nosort">時間</th><th class="nosort">備考</th></tr></thead>
+          <tbody id="previewBody"></tbody>
+        </table>
+      </div>
     </div>
-    <div class="row" style="margin: 10px 0;">
-      <button type="button" class="sub-btn small" id="copyBlankBtn">空のフォーマットをコピー</button>
-      <button type="button" class="sub-btn small" id="sampleBtn">記入例を貼り付け</button>
-      <span class="hint">見出しがないときの同盟名:</span>
-      <input type="text" id="defaultAlliance" placeholder="例: EGG" style="width: 120px;">
+
+    <!-- 1件ずつ登録・変更 -->
+    <div class="card form-card" id="formCard">
+      <h2><span id="formTitle">1人ずつ登録</span> → <span class="event-name"></span></h2>
+      <div class="edit-banner" id="editBanner"></div>
+      <div class="form-grid">
+        <div class="field">
+          <label class="cap">名前 ※必須（登録済みユーザーは候補に出ます）</label>
+          <input type="text" id="fName" list="nameList" autocomplete="off">
+          <datalist id="nameList"></datalist>
+        </div>
+        <div class="field">
+          <label class="cap">同盟 ※必須</label>
+          <input type="text" id="fAlliance" placeholder="例: EGG" list="allianceList">
+          <datalist id="allianceList"></datalist>
+        </div>
+        <div class="field">
+          <label class="cap">参加</label>
+          <select id="fEntry">
+            <option value="start">最初から参加できる</option>
+            <option value="late">途中参加</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="cap">区分</label>
+          <select id="fGrade">
+            <option>G8</option><option selected>G7</option><option>G6</option><option>G5</option><option>その他</option>
+          </select>
+        </div>
+        <div class="field wide">
+          <label class="cap">印</label>
+          <div class="checks">
+            <label><input type="checkbox" id="fMonthly"> ◯ マンスリー持ち</label>
+            <label><input type="checkbox" id="fLeaveEarly"> △ 途中抜け</label>
+            <label><input type="checkbox" id="fVc"> ◇ VC参加可能</label>
+            <label><input type="checkbox" id="fVivian4"> ◆ ビビアン星4以上</label>
+          </div>
+        </div>
+        <div class="field">
+          <label class="cap">兵種（未選択＝指定なし）</label>
+          <div class="checks">
+            <label><input type="checkbox" class="fTroop" value="歩"> 歩兵</label>
+            <label><input type="checkbox" class="fTroop" value="騎"> 騎兵</label>
+            <label><input type="checkbox" class="fTroop" value="弓"> 弓兵</label>
+          </div>
+        </div>
+        <div class="field">
+          <label class="cap">兵士レベル（T）</label>
+          <input type="number" id="fTier" min="1" max="20" placeholder="例: 11">
+        </div>
+        <div class="field">
+          <label class="cap">参加開始（途中参加の時刻）</label>
+          <input type="text" id="fJoinAt" placeholder="例: 23時">
+        </div>
+        <div class="field">
+          <label class="cap">抜ける時刻</label>
+          <input type="text" id="fLeaveAt" placeholder="例: 22時">
+        </div>
+        <div class="field wide">
+          <label class="cap">備考</label>
+          <input type="text" id="fNote">
+        </div>
+      </div>
+      <div class="row" style="margin-top: 12px;">
+        <button type="button" id="saveBtn">登録</button>
+        <button type="button" class="sub-btn" id="cancelBtn">キャンセル</button>
+      </div>
+      <div class="msg" id="formMsg"></div>
     </div>
-    <textarea id="bulkText" placeholder="AIが返したJSON、または記入済みの募集フォーマットを貼り付け&#10;&#10;EGG(最初から参加できる)&#10;◯:マンスリー持ち&#10;…&#10;G7: あんこ◯△◆(〜22時)(T11)、"></textarea>
-    <div class="row" style="margin-top: 10px;">
-      <label class="hint"><input type="radio" name="importMode" value="merge" checked> 追加・更新</label>
-      <label class="hint"><input type="radio" name="importMode" value="replace"> 全件置き換え</label>
-      <button type="button" id="previewBtn" class="sub-btn">読み取り結果を確認</button>
-      <button type="button" id="bulkBtn">取り込み</button>
-      <span class="hint">または</span>
-      <input type="file" id="fileInput" accept=".txt,.csv,.tsv,.json">
-    </div>
-    <div class="msg" id="bulkMsg"></div>
-    <div id="previewWrap" style="display:none; margin-top: 10px;">
+
+    <!-- 参加者一覧 -->
+    <div class="card">
+      <div class="row" style="justify-content: space-between; margin-bottom: 10px;">
+        <h2 style="margin: 0;"><span class="event-name"></span> の参加者 <span id="countText" class="hint"></span></h2>
+        <div class="row">
+          <select id="filterAlliance"><option value="">すべての同盟</option></select>
+          <input type="search" id="filterInput" placeholder="絞り込み（名前・備考）">
+          <button type="button" class="sub-btn small" id="exportCsvBtn">CSV書き出し</button>
+        </div>
+      </div>
+      <div class="legend">◯:マンスリー持ち　△:途中抜け　◇:VC参加可能(聴き専可)　◆:ビビアン星4以上持ち</div>
       <table>
-        <thead><tr><th class="nosort">同盟</th><th class="nosort">参加</th><th class="nosort">G</th><th class="nosort">名前</th><th class="nosort">印</th><th class="nosort">兵種</th><th class="nosort">時間</th><th class="nosort">備考</th></tr></thead>
-        <tbody id="previewBody"></tbody>
+        <thead>
+          <tr>
+            <th data-key="alliance">同盟</th>
+            <th data-key="entry">参加</th>
+            <th data-key="grade">G</th>
+            <th data-key="name">名前</th>
+            <th class="nosort">印</th>
+            <th data-key="tier">兵種</th>
+            <th class="nosort">時間</th>
+            <th class="nosort">備考</th>
+            <th class="nosort"></th>
+          </tr>
+        </thead>
+        <tbody id="memberBody"></tbody>
       </table>
     </div>
+
+    <!-- フォーマットで書き出し -->
+    <div class="card">
+      <h2>募集フォーマットで書き出し（<span class="event-name"></span>）</h2>
+      <div class="hint">このイベントの参加者を募集フォーマットと同じ形のテキストに戻します（Discordへの貼り付け・確認用）。</div>
+      <div class="row" style="margin: 10px 0;">
+        <button type="button" class="sub-btn small" id="formatBtn">テキストを作成</button>
+        <button type="button" class="sub-btn small" id="copyFormatBtn">コピー</button>
+      </div>
+      <textarea id="formatOut" readonly></textarea>
+    </div>
   </div>
 
-  <!-- 1件ずつ登録・変更 -->
-  <div class="card form-card" id="formCard">
-    <h2 id="formTitle">1人ずつ登録</h2>
-    <div class="edit-banner" id="editBanner"></div>
-    <div class="form-grid">
-      <div class="field">
-        <label class="cap">同盟 ※必須</label>
-        <input type="text" id="fAlliance" placeholder="例: EGG" list="allianceList">
-        <datalist id="allianceList"></datalist>
-      </div>
-      <div class="field">
-        <label class="cap">名前 ※必須</label>
-        <input type="text" id="fName">
-      </div>
-      <div class="field">
-        <label class="cap">参加</label>
-        <select id="fEntry">
-          <option value="start">最初から参加できる</option>
-          <option value="late">途中参加</option>
-        </select>
-      </div>
-      <div class="field">
-        <label class="cap">区分</label>
-        <select id="fGrade">
-          <option>G8</option><option selected>G7</option><option>G6</option><option>G5</option><option>その他</option>
-        </select>
-      </div>
-      <div class="field wide">
-        <label class="cap">印</label>
-        <div class="checks">
-          <label><input type="checkbox" id="fMonthly"> ◯ マンスリー持ち</label>
-          <label><input type="checkbox" id="fLeaveEarly"> △ 途中抜け</label>
-          <label><input type="checkbox" id="fVc"> ◇ VC参加可能</label>
-          <label><input type="checkbox" id="fVivian4"> ◆ ビビアン星4以上</label>
-        </div>
-      </div>
-      <div class="field">
-        <label class="cap">兵種（未選択＝指定なし）</label>
-        <div class="checks">
-          <label><input type="checkbox" class="fTroop" value="歩"> 歩兵</label>
-          <label><input type="checkbox" class="fTroop" value="騎"> 騎兵</label>
-          <label><input type="checkbox" class="fTroop" value="弓"> 弓兵</label>
-        </div>
-      </div>
-      <div class="field">
-        <label class="cap">兵士レベル（T）</label>
-        <input type="number" id="fTier" min="1" max="20" placeholder="例: 11">
-      </div>
-      <div class="field">
-        <label class="cap">参加開始（途中参加の時刻）</label>
-        <input type="text" id="fJoinAt" placeholder="例: 23時">
-      </div>
-      <div class="field">
-        <label class="cap">抜ける時刻</label>
-        <input type="text" id="fLeaveAt" placeholder="例: 22時">
-      </div>
-      <div class="field wide">
-        <label class="cap">備考</label>
-        <input type="text" id="fNote">
-      </div>
-    </div>
-    <div class="row" style="margin-top: 12px;">
-      <button type="button" id="saveBtn">登録</button>
-      <button type="button" class="sub-btn" id="cancelBtn">キャンセル</button>
-    </div>
-    <div class="msg" id="formMsg"></div>
-  </div>
-
-  <!-- 一覧 -->
+  <!-- ユーザー一覧（蓄積） -->
   <div class="card">
     <div class="row" style="justify-content: space-between; margin-bottom: 10px;">
-      <h2 style="margin: 0;">登録メンバー <span id="countText" class="hint"></span></h2>
-      <div class="row">
-        <select id="filterAlliance"><option value="">すべての同盟</option></select>
-        <input type="search" id="filterInput" placeholder="絞り込み（名前・備考）">
-      </div>
+      <h2 style="margin: 0;">🗂️ ユーザー一覧（蓄積） <span id="userCountText" class="hint"></span></h2>
+      <input type="search" id="userFilterInput" placeholder="絞り込み（名前・同盟）">
     </div>
-    <div class="legend">◯:マンスリー持ち　△:途中抜け　◇:VC参加可能(聴き専可)　◆:ビビアン星4以上持ち</div>
-    <table>
-      <thead>
-        <tr>
-          <th data-key="alliance">同盟</th>
-          <th data-key="entry">参加</th>
-          <th data-key="grade">G</th>
-          <th data-key="name">名前</th>
-          <th class="nosort">印</th>
-          <th data-key="tier">兵種</th>
-          <th class="nosort">時間</th>
-          <th class="nosort">備考</th>
-          <th class="nosort"></th>
-        </tr>
-      </thead>
-      <tbody id="memberBody"></tbody>
-    </table>
-  </div>
-
-  <!-- フォーマットで書き出し -->
-  <div class="card">
-    <h2>募集フォーマットで書き出し</h2>
-    <div class="hint">登録内容を募集フォーマットと同じ形のテキストに戻します（Discordへの貼り付け・確認用）。</div>
-    <div class="row" style="margin: 10px 0;">
-      <button type="button" class="sub-btn small" id="formatBtn">テキストを作成</button>
-      <button type="button" class="sub-btn small" id="copyFormatBtn">コピー</button>
+    <div class="hint" style="margin-bottom: 8px;">
+      これまでの全イベントで登録されたユーザーです。名前が変わって別人として登録された場合は「統合」で1人にまとめてください（参加記録は統合先に移ります）。
     </div>
-    <textarea id="formatOut" readonly></textarea>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th data-ukey="name">名前</th>
+            <th data-ukey="alliance">同盟（最新）</th>
+            <th data-ukey="count" class="num">参加回数</th>
+            <th data-ukey="last">最終参加</th>
+            <th class="nosort"></th>
+          </tr>
+        </thead>
+        <tbody id="userBody"></tbody>
+      </table>
+    </div>
+    <div class="msg" id="userMsg"></div>
   </div>
 </div>
 
@@ -288,9 +351,11 @@
   var ADMIN_HASH = "e940b89eba04b1ccd64833f111d60eaac2fecea7be7deb1089a4ed36b3f9eb85";
   var SALT = "kingshot-admin:";
   var AUTH_KEY = "ksAdminAuth";
-  var DRAFT_KEY = "ksMembersDraft";
+  var DRAFT_KEY = "ksMembersDraftV2";
+  var EVENT_KEY = "ksAdminEvent";
   var DATA_URL = "../data/members.json";
 
+  var EVENT_TYPES = ["KVK", "聖剣", "聖剣リーグ", "三盟", "炎龍"];
   var GRADES = ["G8", "G7", "G6", "G5", "その他"];
   var ENTRY_LABEL = { start: "最初から参加できる", late: "途中参加" };
   var ENTRY_SHORT = { start: "最初から", late: "途中参加" };
@@ -390,21 +455,24 @@
   });
 
   // ---------- データ ----------
-  // メンバー1人:
-  // { id, alliance, entry: "start"|"late", grade: "G8".."G5"|"その他", name,
-  //   monthly, leaveEarly, vc, vivian4 (各bool), troops: "歩騎弓"の部分文字列 ("" = 指定なし),
-  //   tier: 数値|null, joinAt, leaveAt (例 "23時"), note }
-  var members = [];
+  // state.users   : 蓄積されるユーザー { id, name, alliance (最新) }。名前で同一人物を判定
+  // state.events  : イベント { id, type: EVENT_TYPES のどれか, date: "YYYY-MM-DD" }
+  // state.entries : イベントごとの参加情報 { id, eventId, userId, alliance (その時点), entry: "start"|"late",
+  //                 grade: "G8".."G5"|"その他", monthly, leaveEarly, vc, vivian4 (各bool),
+  //                 troops: "歩騎弓"の部分文字列 ("" = 指定なし), tier: 数値|null, joinAt, leaveAt (例 "23時"), note }
+  var state = { users: [], events: [], entries: [] };
+  var currentEventId = null;
   var publishedJson = "";
   var editingId = null;
   var sortKey = null, sortDir = 1;
+  var userSortKey = "name", userSortDir = 1;
 
-  function newId() {
-    return "m" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  function newId(prefix) {
+    return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   }
 
-  function memberKey(m) {
-    return m.alliance.trim().toLowerCase() + "\u0000" + m.name.trim().toLowerCase();
+  function nameKey(name) {
+    return String(name).trim().toLowerCase();
   }
 
   function normTroops(s) {
@@ -414,44 +482,79 @@
 
   function str(v) { return String(v == null ? "" : v).trim(); }
   function bool(v) { return v === true || v === 1 || /^(1|true|◯|○|〇|yes|y)$/i.test(str(v)); }
+  function pad2(n) { return (n < 10 ? "0" : "") + n; }
+  function today() {
+    var d = new Date();
+    return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+  }
+
+  // 取り込み・フォーム・保存データ共通の参加情報の正規化（name は取り込み時のみ使う）
+  function normalizeRow(m) {
+    var tier = str(m.tier).replace(/^T/i, "");
+    var grade = str(m.grade).toUpperCase().replace(/\s/g, "");
+    return {
+      alliance: str(m.alliance),
+      entry: m.entry === "late" || /途中/.test(str(m.entry)) ? "late" : "start",
+      grade: GRADES.indexOf(grade) >= 0 ? grade : "その他",
+      name: str(m.name),
+      monthly: bool(m.monthly),
+      leaveEarly: bool(m.leaveEarly),
+      vc: bool(m.vc),
+      vivian4: bool(m.vivian4),
+      troops: normTroops(m.troops),
+      tier: tier && !isNaN(Number(tier)) ? Number(tier) : null,
+      joinAt: str(m.joinAt),
+      leaveAt: str(m.leaveAt),
+      note: str(m.note)
+    };
+  }
 
   function normalize(list) {
-    return (list || []).map(function(m) {
-      var tier = str(m.tier).replace(/^T/i, "");
-      return {
-        id: m.id || newId(),
-        alliance: str(m.alliance),
-        entry: m.entry === "late" || /途中/.test(str(m.entry)) ? "late" : "start",
-        grade: GRADES.indexOf(str(m.grade).toUpperCase().replace(/\s/g, "")) >= 0
-          ? str(m.grade).toUpperCase().replace(/\s/g, "") : "その他",
-        name: str(m.name),
-        monthly: bool(m.monthly),
-        leaveEarly: bool(m.leaveEarly),
-        vc: bool(m.vc),
-        vivian4: bool(m.vivian4),
-        troops: normTroops(m.troops),
-        tier: tier && !isNaN(Number(tier)) ? Number(tier) : null,
-        joinAt: str(m.joinAt),
-        leaveAt: str(m.leaveAt),
-        note: str(m.note)
-      };
-    }).filter(function(m) { return m.name && m.alliance; });
+    return (list || []).map(normalizeRow).filter(function(m) { return m.name && m.alliance; });
+  }
+
+  function normalizeState(data) {
+    data = data || {};
+    var users = (data.users || []).map(function(u) {
+      return { id: u.id || newId("u"), name: str(u.name), alliance: str(u.alliance) };
+    }).filter(function(u) { return u.name; });
+    var events = (data.events || []).map(function(e) {
+      return { id: e.id || newId("e"), type: EVENT_TYPES.indexOf(e.type) >= 0 ? e.type : EVENT_TYPES[0], date: str(e.date) };
+    });
+    var userIds = {}, eventIds = {};
+    users.forEach(function(u) { userIds[u.id] = true; });
+    events.forEach(function(e) { eventIds[e.id] = true; });
+    var entries = (data.entries || []).filter(function(e) {
+      return userIds[e.userId] && eventIds[e.eventId];
+    }).map(function(e) {
+      var r = normalizeRow(e);
+      delete r.name;
+      r.id = e.id || newId("r");
+      r.eventId = e.eventId;
+      r.userId = e.userId;
+      return r;
+    });
+    return { users: users, events: events, entries: entries };
   }
 
   function serialize() {
-    return JSON.stringify(members);
+    return JSON.stringify(state);
   }
 
   function loadData() {
     fetch(DATA_URL, { cache: "no-store" })
-      .then(function(r) { return r.ok ? r.json() : { members: [] }; })
-      .catch(function() { return { members: [] }; })
+      .then(function(r) { return r.ok ? r.json() : {}; })
+      .catch(function() { return {}; })
       .then(function(data) {
-        var published = normalize(data.members);
+        var published = normalizeState(data);
         publishedJson = JSON.stringify(published);
         var draft = null;
-        try { draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null"); } catch (e) {}
-        members = draft ? normalize(draft) : published;
+        try {
+          localStorage.removeItem("ksMembersDraft"); // 旧形式（イベント分け前）の下書き
+          draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
+        } catch (e) {}
+        state = draft ? normalizeState(draft) : published;
+        try { currentEventId = localStorage.getItem(EVENT_KEY); } catch (e) {}
         render();
       });
   }
@@ -468,19 +571,81 @@
     render();
   }
 
-  // 同じ同盟＋名前がいれば更新、いなければ追加。戻り値: "added" | "updated"
-  function upsert(m) {
-    var key = memberKey(m);
-    for (var i = 0; i < members.length; i++) {
-      if (memberKey(members[i]) === key) {
-        m.id = members[i].id;
-        members[i] = m;
-        return "updated";
-      }
+  // ---------- ユーザー・参加情報の操作 ----------
+  function userById(id) {
+    return state.users.find(function(u) { return u.id === id; });
+  }
+
+  function findUserByName(name) {
+    var key = nameKey(name);
+    return state.users.find(function(u) { return nameKey(u.name) === key; });
+  }
+
+  function eventById(id) {
+    return state.events.find(function(e) { return e.id === id; });
+  }
+
+  function eventLabel(ev) {
+    return ev ? ev.type + " " + ev.date : "";
+  }
+
+  // 名前でユーザーを探し、いなければ追加する。同盟は最新の値に更新
+  function ensureUser(name, alliance) {
+    var user = findUserByName(name);
+    if (user) {
+      if (alliance) user.alliance = alliance;
+      return { user: user, created: false };
     }
-    m.id = m.id || newId();
-    members.push(m);
-    return "added";
+    user = { id: newId("u"), name: name, alliance: alliance };
+    state.users.push(user);
+    return { user: user, created: true };
+  }
+
+  function entryOf(eventId, userId) {
+    return state.entries.find(function(x) { return x.eventId === eventId && x.userId === userId; });
+  }
+
+  function toEntry(row, userId, id) {
+    var e = Object.assign({}, row);
+    delete e.name;
+    e.id = id || newId("r");
+    e.eventId = currentEventId;
+    e.userId = userId;
+    return e;
+  }
+
+  // 現在のイベントに参加情報を登録（同じ人がいれば上書き）。戻り値: { result: "added"|"updated", newUser }
+  function upsertEntry(row) {
+    var u = ensureUser(row.name, row.alliance);
+    var existing = entryOf(currentEventId, u.user.id);
+    if (existing) {
+      state.entries[state.entries.indexOf(existing)] = toEntry(row, u.user.id, existing.id);
+      return { result: "updated", newUser: u.created };
+    }
+    state.entries.push(toEntry(row, u.user.id));
+    return { result: "added", newUser: u.created };
+  }
+
+  // 現在のイベントの参加者（表示用に名前を付けたもの）
+  function eventRows() {
+    return state.entries.filter(function(e) { return e.eventId === currentEventId; }).map(function(e) {
+      var u = userById(e.userId);
+      return Object.assign({}, e, { name: u ? u.name : "?" });
+    });
+  }
+
+  // from の参加記録を to に移して from を削除（同じイベントに両方いる場合は to を残す）
+  function mergeUsers(from, to) {
+    var moved = 0, dropped = 0;
+    state.entries = state.entries.filter(function(e) {
+      if (e.userId !== from.id) return true;
+      if (entryOf(e.eventId, to.id)) { dropped++; return false; }
+      e.userId = to.id;
+      moved++;
+      return true;
+    });
+    state.users = state.users.filter(function(u) { return u.id !== from.id; });
+    return { moved: moved, dropped: dropped };
   }
 
   // ---------- 表示用の整形 ----------
@@ -616,7 +781,6 @@
     else data = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1));
     var list = Array.isArray(data) ? data : data.members || [];
     var rows = normalize(list);
-    rows.forEach(function(m) { delete m.id; });
     var skipped = list.length - rows.length;
     return { rows: rows, errors: skipped ? [skipped + "件: 同盟または名前が空のためスキップ"] : [] };
   }
@@ -665,7 +829,7 @@
     return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
   }
 
-  // ---------- 一覧 ----------
+  // ---------- 描画 ----------
   function renderState() {
     var dirty = serialize() !== publishedJson;
     var pill = $("statePill");
@@ -677,6 +841,38 @@
     $("discardBtn").disabled = !dirty;
   }
 
+  function sortedEvents() {
+    return state.events.slice().sort(function(a, b) {
+      return b.date.localeCompare(a.date) || EVENT_TYPES.indexOf(a.type) - EVENT_TYPES.indexOf(b.type);
+    });
+  }
+
+  function renderEvents() {
+    var events = sortedEvents();
+    if (!eventById(currentEventId)) currentEventId = events.length ? events[0].id : null;
+    try {
+      if (currentEventId) localStorage.setItem(EVENT_KEY, currentEventId);
+      else localStorage.removeItem(EVENT_KEY);
+    } catch (e) {}
+
+    $("eventSelect").innerHTML = events.length
+      ? events.map(function(ev) {
+          var n = state.entries.filter(function(x) { return x.eventId === ev.id; }).length;
+          return '<option value="' + ev.id + '"' + (ev.id === currentEventId ? " selected" : "") + '>' +
+            escapeHtml(eventLabel(ev)) + '（' + n + '人）</option>';
+        }).join("")
+      : '<option value="">（イベントがありません）</option>';
+    $("eventSelect").disabled = !events.length;
+    $("deleteEventBtn").disabled = !events.length;
+
+    var has = !!currentEventId;
+    $("eventView").style.display = has ? "block" : "none";
+    $("noEventView").style.display = has ? "none" : "block";
+    document.querySelectorAll(".event-name").forEach(function(el) {
+      el.textContent = eventLabel(eventById(currentEventId));
+    });
+  }
+
   function defaultCompare(a, b) {
     return a.alliance.localeCompare(b.alliance, "ja")
       || (a.entry === b.entry ? 0 : a.entry === "start" ? -1 : 1)
@@ -684,24 +880,22 @@
       || (b.tier || 0) - (a.tier || 0);
   }
 
-  function sortedMembers() {
-    var list = members.slice();
+  function sortRows(list) {
     if (!sortKey) return list.sort(defaultCompare);
-    list.sort(function(a, b) {
+    return list.sort(function(a, b) {
       var r;
       if (sortKey === "grade") r = gradeRank(a.grade) - gradeRank(b.grade);
       else if (sortKey === "tier") r = (b.tier || 0) - (a.tier || 0);
       else r = String(a[sortKey]).localeCompare(String(b[sortKey]), "ja");
       return r * sortDir || defaultCompare(a, b);
     });
-    return list;
   }
 
-  function memberRowHtml(m, withOps) {
+  function memberRowHtml(m, withOps, isNew) {
     return '<td>' + escapeHtml(m.alliance) + '</td>' +
       '<td><span class="tag ' + m.entry + '">' + ENTRY_SHORT[m.entry] + '</span></td>' +
       '<td>' + escapeHtml(m.grade) + '</td>' +
-      '<td>' + escapeHtml(m.name) + '</td>' +
+      '<td>' + escapeHtml(m.name) + (isNew ? ' <span class="tag new">新規ユーザー</span>' : "") + '</td>' +
       '<td class="marks">' + marksOf(m) + '</td>' +
       '<td>' + escapeHtml(troopText(m)) + '</td>' +
       '<td>' + escapeHtml(timeText(m)) + '</td>' +
@@ -712,35 +906,89 @@
         : "");
   }
 
-  function render() {
-    renderState();
+  function renderEntries() {
+    var rows = eventRows();
 
     var alliances = [];
-    members.forEach(function(m) { if (alliances.indexOf(m.alliance) < 0) alliances.push(m.alliance); });
+    rows.forEach(function(m) { if (alliances.indexOf(m.alliance) < 0) alliances.push(m.alliance); });
     var sel = $("filterAlliance"), cur = sel.value;
     sel.innerHTML = '<option value="">すべての同盟</option>' + alliances.map(function(a) {
       return '<option' + (a === cur ? " selected" : "") + '>' + escapeHtml(a) + '</option>';
     }).join("");
-    $("allianceList").innerHTML = alliances.map(function(a) { return '<option value="' + escapeHtml(a) + '">'; }).join("");
 
     var q = $("filterInput").value.trim().toLowerCase();
     var fa = sel.value;
     var html = [], shown = 0;
-    sortedMembers().forEach(function(m) {
+    sortRows(rows).forEach(function(m) {
       if (fa && m.alliance !== fa) return;
       if (q && (m.name + " " + m.note).toLowerCase().indexOf(q) < 0) return;
       shown++;
       html.push('<tr data-id="' + m.id + '"' + (m.id === editingId ? ' class="editing"' : "") + '>' + memberRowHtml(m, true) + '</tr>');
     });
-    if (!members.length) {
-      html.push('<tr><td colspan="9" class="hint" style="text-align:center;">まだ登録がありません</td></tr>');
+    if (!rows.length) {
+      html.push('<tr><td colspan="9" class="hint" style="text-align:center;">このイベントにはまだ参加者が登録されていません</td></tr>');
     }
     $("memberBody").innerHTML = html.join("");
-    $("countText").textContent = (q || fa) ? "（" + shown + " / " + members.length + "人）" : "（" + members.length + "人）";
+    $("countText").textContent = (q || fa) ? "（" + shown + " / " + rows.length + "人）" : "（" + rows.length + "人）";
     document.querySelectorAll("th[data-key]").forEach(function(th) {
       var label = th.textContent.replace(/ [▲▼]$/, "");
       th.textContent = label + (th.dataset.key === sortKey ? (sortDir > 0 ? " ▲" : " ▼") : "");
     });
+  }
+
+  function renderUsers() {
+    var stats = {};
+    state.entries.forEach(function(e) {
+      var s = stats[e.userId] || (stats[e.userId] = { count: 0, last: null });
+      s.count++;
+      var ev = eventById(e.eventId);
+      if (ev && (!s.last || ev.date > s.last.date)) s.last = ev;
+    });
+
+    var allianceSet = {};
+    state.users.forEach(function(u) { if (u.alliance) allianceSet[u.alliance] = true; });
+    $("allianceList").innerHTML = Object.keys(allianceSet).map(function(a) { return '<option value="' + escapeHtml(a) + '">'; }).join("");
+    $("nameList").innerHTML = state.users.map(function(u) {
+      return '<option value="' + escapeHtml(u.name) + '">' + escapeHtml(u.alliance) + '</option>';
+    }).join("");
+
+    var q = $("userFilterInput").value.trim().toLowerCase();
+    var list = state.users.map(function(u) {
+      var s = stats[u.id] || { count: 0, last: null };
+      return { u: u, count: s.count, last: s.last };
+    }).filter(function(r) {
+      return !q || (r.u.name + " " + r.u.alliance).toLowerCase().indexOf(q) >= 0;
+    });
+    list.sort(function(a, b) {
+      var r;
+      if (userSortKey === "count") r = a.count - b.count;
+      else if (userSortKey === "last") r = (a.last ? a.last.date : "").localeCompare(b.last ? b.last.date : "");
+      else r = String(a.u[userSortKey]).localeCompare(String(b.u[userSortKey]), "ja");
+      return r * userSortDir || a.u.name.localeCompare(b.u.name, "ja");
+    });
+
+    $("userBody").innerHTML = list.length ? list.map(function(r) {
+      return '<tr data-uid="' + r.u.id + '">' +
+        '<td>' + escapeHtml(r.u.name) + '</td>' +
+        '<td>' + escapeHtml(r.u.alliance) + '</td>' +
+        '<td class="num">' + r.count + '</td>' +
+        '<td>' + escapeHtml(eventLabel(r.last)) + '</td>' +
+        '<td class="ops"><button class="small sub-btn" data-uact="rename">名前変更</button> ' +
+        '<button class="small sub-btn" data-uact="merge">統合</button> ' +
+        '<button class="small danger" data-uact="delete">削除</button></td></tr>';
+    }).join("") : '<tr><td colspan="5" class="hint" style="text-align:center;">ユーザーはまだいません</td></tr>';
+    $("userCountText").textContent = q ? "（" + list.length + " / " + state.users.length + "人）" : "（" + state.users.length + "人）";
+    document.querySelectorAll("th[data-ukey]").forEach(function(th) {
+      var label = th.textContent.replace(/ [▲▼]$/, "");
+      th.textContent = label + (th.dataset.ukey === userSortKey ? (userSortDir > 0 ? " ▲" : " ▼") : "");
+    });
+  }
+
+  function render() {
+    renderState();
+    renderEvents();
+    if (currentEventId) renderEntries();
+    renderUsers();
   }
 
   document.querySelectorAll("th[data-key]").forEach(function(th) {
@@ -748,18 +996,70 @@
       var key = th.dataset.key;
       if (sortKey === key) sortDir = -sortDir;
       else { sortKey = key; sortDir = 1; }
-      render();
+      renderEntries();
     });
   });
-  $("filterInput").addEventListener("input", render);
-  $("filterAlliance").addEventListener("change", render);
+  document.querySelectorAll("th[data-ukey]").forEach(function(th) {
+    th.addEventListener("click", function() {
+      var key = th.dataset.ukey;
+      if (userSortKey === key) userSortDir = -userSortDir;
+      else { userSortKey = key; userSortDir = key === "count" || key === "last" ? -1 : 1; }
+      renderUsers();
+    });
+  });
+  $("filterInput").addEventListener("input", renderEntries);
+  $("filterAlliance").addEventListener("change", renderEntries);
+  $("userFilterInput").addEventListener("input", renderUsers);
 
-  // ---------- 1人ずつ登録・変更・キャンセル ----------
   function setMsg(el, text, ok) {
     el.textContent = text;
     el.className = "msg " + (ok ? "ok" : "err");
   }
 
+  // ---------- イベント ----------
+  $("newEventType").innerHTML = EVENT_TYPES.map(function(t) { return "<option>" + t + "</option>"; }).join("");
+  $("newEventDate").value = today();
+
+  $("eventSelect").addEventListener("change", function() {
+    currentEventId = this.value;
+    resetForm(false);
+    $("formMsg").textContent = "";
+    $("bulkMsg").textContent = "";
+    $("previewWrap").style.display = "none";
+    $("formatOut").value = "";
+    render();
+  });
+
+  $("createEventBtn").addEventListener("click", function() {
+    var type = $("newEventType").value, date = $("newEventDate").value;
+    if (!date) { setMsg($("eventMsg"), "開催日を選んでください", false); return; }
+    var ev = state.events.find(function(e) { return e.type === type && e.date === date; });
+    if (ev) {
+      setMsg($("eventMsg"), "「" + eventLabel(ev) + "」はすでにあるので選択しました", true);
+    } else {
+      ev = { id: newId("e"), type: type, date: date };
+      state.events.push(ev);
+      setMsg($("eventMsg"), "「" + eventLabel(ev) + "」を作成しました", true);
+    }
+    currentEventId = ev.id;
+    resetForm(false);
+    commit();
+  });
+
+  $("deleteEventBtn").addEventListener("click", function() {
+    var ev = eventById(currentEventId);
+    if (!ev) return;
+    var n = state.entries.filter(function(x) { return x.eventId === ev.id; }).length;
+    if (!confirm("「" + eventLabel(ev) + "」と参加者" + n + "人分の登録を削除します（ユーザー一覧からは消えません）。よろしいですか？")) return;
+    state.entries = state.entries.filter(function(x) { return x.eventId !== ev.id; });
+    state.events = state.events.filter(function(e) { return e.id !== ev.id; });
+    currentEventId = null;
+    resetForm(false);
+    setMsg($("eventMsg"), "「" + eventLabel(ev) + "」を削除しました", true);
+    commit();
+  });
+
+  // ---------- 1人ずつ登録・変更・キャンセル ----------
   function readForm() {
     var troops = "";
     document.querySelectorAll(".fTroop:checked").forEach(function(cb) { troops += cb.value; });
@@ -817,35 +1117,47 @@
     editingId = m.id;
     fillForm(m);
     $("formCard").classList.add("editing");
-    $("formTitle").textContent = "メンバー変更";
-    $("editBanner").textContent = "「" + m.name + "」（" + m.alliance + "）を変更中です。保存しない場合はキャンセルを押してください。";
+    $("formTitle").textContent = "参加情報の変更";
+    $("editBanner").textContent = "「" + m.name + "」（" + m.alliance + "）を変更中です。保存しない場合はキャンセルを押してください。" +
+      "名前そのものの変更（改名）は下の「ユーザー一覧」で行ってください。";
     $("saveBtn").textContent = "変更を保存";
     $("formMsg").textContent = "";
-    render();
+    renderEntries();
     $("formCard").scrollIntoView({ behavior: "smooth", block: "start" });
     $("fName").focus();
   }
+
+  // 登録済みユーザーの名前を選んだら、同盟が空なら最新の同盟を入れる
+  $("fName").addEventListener("change", function() {
+    var u = findUserByName(this.value);
+    if (u && !$("fAlliance").value.trim()) $("fAlliance").value = u.alliance;
+  });
 
   $("saveBtn").addEventListener("click", function() {
     var m = readForm();
     if (!m.alliance || !m.name) { setMsg($("formMsg"), "同盟と名前は必須です", false); return; }
     if (m.tier != null && !(m.tier > 0)) { setMsg($("formMsg"), "兵士レベルは数字で入力してください", false); return; }
-    var dup = members.find(function(x) { return x.id !== editingId && memberKey(x) === memberKey(m); });
+    var user = findUserByName(m.name);
+    var existing = user ? entryOf(currentEventId, user.id) : null;
 
     if (editingId) {
-      if (dup) { setMsg($("formMsg"), m.alliance + "の「" + m.name + "」は別の行にすでに登録されています", false); return; }
-      var idx = members.findIndex(function(x) { return x.id === editingId; });
-      m.id = editingId;
-      members[idx] = m;
+      if (existing && existing.id !== editingId) {
+        setMsg($("formMsg"), "「" + m.name + "」はこのイベントの別の行にすでに登録されています", false);
+        return;
+      }
+      var u = ensureUser(m.name, m.alliance);
+      var idx = state.entries.findIndex(function(x) { return x.id === editingId; });
+      state.entries[idx] = toEntry(m, u.user.id, editingId);
       resetForm(false);
       commit();
-      setMsg($("formMsg"), "「" + m.name + "」を変更しました", true);
+      setMsg($("formMsg"), "「" + m.name + "」を変更しました" + (u.created ? "（新規ユーザーとして登録）" : ""), true);
     } else {
-      if (dup && !confirm(m.alliance + "の「" + m.name + "」はすでに登録済みです。上書きしますか？")) return;
-      var result = upsert(m);
+      if (existing && !confirm("「" + m.name + "」はこのイベントに登録済みです。上書きしますか？")) return;
+      var res = upsertEntry(m);
       resetForm(true);
       commit();
-      setMsg($("formMsg"), "「" + m.name + "」を" + (result === "added" ? "登録" : "更新") + "しました", true);
+      setMsg($("formMsg"), "「" + m.name + "」を" + (res.result === "added" ? "登録" : "更新") + "しました" +
+        (res.newUser ? "（新規ユーザー）" : ""), true);
       $("fName").focus();
     }
   });
@@ -853,30 +1165,72 @@
   $("cancelBtn").addEventListener("click", function() {
     resetForm(false);
     $("formMsg").textContent = "";
-    render();
+    renderEntries();
   });
 
   $("memberBody").addEventListener("click", function(e) {
     var btn = e.target.closest("button[data-act]");
     if (!btn) return;
     var id = btn.closest("tr").dataset.id;
-    var idx = members.findIndex(function(m) { return m.id === id; });
-    if (idx < 0) return;
+    var row = eventRows().find(function(m) { return m.id === id; });
+    if (!row) return;
     if (btn.dataset.act === "edit") {
-      startEdit(members[idx]);
+      startEdit(row);
     } else if (btn.dataset.act === "delete") {
-      if (!confirm("「" + members[idx].name + "」を削除しますか？")) return;
+      if (!confirm("「" + row.name + "」をこのイベントの参加者から外しますか？（ユーザー一覧には残ります）")) return;
       if (editingId === id) resetForm(false);
-      members.splice(idx, 1);
+      state.entries = state.entries.filter(function(x) { return x.id !== id; });
+      commit();
+    }
+  });
+
+  // ---------- ユーザー一覧の操作 ----------
+  $("userBody").addEventListener("click", function(e) {
+    var btn = e.target.closest("button[data-uact]");
+    if (!btn) return;
+    var u = userById(btn.closest("tr").dataset.uid);
+    if (!u) return;
+    var act = btn.dataset.uact;
+    var other, res;
+
+    if (act === "rename") {
+      var newName = (prompt("「" + u.name + "」の新しい名前", u.name) || "").trim();
+      if (!newName || newName === u.name) return;
+      other = findUserByName(newName);
+      if (other && other.id !== u.id) {
+        if (!confirm("「" + newName + "」はすでに登録されています。「" + u.name + "」を「" + newName + "」に統合しますか？")) return;
+        res = mergeUsers(u, other);
+        setMsg($("userMsg"), "「" + u.name + "」を「" + other.name + "」に統合しました（参加記録 " + res.moved + "件を移動）", true);
+      } else {
+        u.name = newName;
+        setMsg($("userMsg"), "名前を「" + newName + "」に変更しました", true);
+      }
+      commit();
+    } else if (act === "merge") {
+      var target = (prompt("「" + u.name + "」を統合する先のユーザー名（同じ人の、残したいほうの名前）") || "").trim();
+      if (!target) return;
+      other = findUserByName(target);
+      if (!other) { alert("「" + target + "」というユーザーは見つかりません"); return; }
+      if (other.id === u.id) return;
+      if (!confirm("「" + u.name + "」の参加記録を「" + other.name + "」に移して、「" + u.name + "」を削除します。よろしいですか？")) return;
+      res = mergeUsers(u, other);
+      setMsg($("userMsg"), "「" + u.name + "」を「" + other.name + "」に統合しました（参加記録 " + res.moved + "件を移動" +
+        (res.dropped ? "・同じイベントで重複していた " + res.dropped + "件は統合先を残しました" : "") + "）", true);
+      commit();
+    } else if (act === "delete") {
+      var n = state.entries.filter(function(x) { return x.userId === u.id; }).length;
+      if (!confirm("「" + u.name + "」を削除します。参加記録 " + n + "件も削除されます。よろしいですか？")) return;
+      state.entries = state.entries.filter(function(x) { return x.userId !== u.id; });
+      state.users = state.users.filter(function(x) { return x.id !== u.id; });
+      if (editingId && !state.entries.some(function(x) { return x.id === editingId; })) resetForm(false);
+      setMsg($("userMsg"), "「" + u.name + "」を削除しました", true);
       commit();
     }
   });
 
   // ---------- まとめて登録 ----------
-  var pending = null; // 確認済みの読み取り結果
-
   function parseBulk(text, filename) {
-    var trimmed = text.replace(/^﻿/, "").trim();
+    var trimmed = text.replace(/^\uFEFF/, "").trim();
     // AIの返答は前後に説明文がつくことがあるので、先頭だけでなく中身でもJSONか判定する
     if ((filename && /\.json$/i.test(filename)) || /^[\[{]/.test(trimmed) || /"(alliance|name)"\s*:/.test(trimmed)) {
       try {
@@ -890,9 +1244,15 @@
   }
 
   function showPreview(parsed) {
-    $("previewBody").innerHTML = parsed.rows.map(function(m) { return "<tr>" + memberRowHtml(m, false) + "</tr>"; }).join("");
+    var newCount = 0;
+    $("previewBody").innerHTML = parsed.rows.map(function(m) {
+      var isNew = !findUserByName(m.name);
+      if (isNew) newCount++;
+      return "<tr>" + memberRowHtml(m, false, isNew) + "</tr>";
+    }).join("");
     $("previewWrap").style.display = parsed.rows.length ? "block" : "none";
-    var text = parsed.rows.length + "人を読み取りました";
+    var text = parsed.rows.length + "人を読み取りました（うち新規ユーザー " + newCount + "人）";
+    if (newCount) text += "\n※ 新規ユーザーの中に、名前が変わっただけの既存ユーザーがいないか確認してください";
     if (parsed.errors.length) text += "\n読み取れなかった行: " + parsed.errors.join(" / ");
     setMsg($("bulkMsg"), text, !parsed.errors.length);
   }
@@ -904,14 +1264,19 @@
       return false;
     }
     if (mode === "replace") {
-      if (!confirm("現在の" + members.length + "人を全て削除して、" + parsed.rows.length + "人で置き換えます。よろしいですか？")) return false;
-      members = [];
+      var n = state.entries.filter(function(x) { return x.eventId === currentEventId; }).length;
+      if (!confirm("このイベントの参加者" + n + "人を外して、" + parsed.rows.length + "人で置き換えます。よろしいですか？（ユーザー一覧は残ります）")) return false;
+      state.entries = state.entries.filter(function(x) { return x.eventId !== currentEventId; });
       resetForm(false);
     }
-    var added = 0, updated = 0;
-    parsed.rows.forEach(function(r) { if (upsert(r) === "added") added++; else updated++; });
+    var added = 0, updated = 0, newUsers = 0;
+    parsed.rows.forEach(function(r) {
+      var res = upsertEntry(r);
+      if (res.result === "added") added++; else updated++;
+      if (res.newUser) newUsers++;
+    });
     commit();
-    var text = "追加 " + added + "人・更新 " + updated + "人";
+    var text = "追加 " + added + "人・更新 " + updated + "人（うち新規ユーザー " + newUsers + "人）";
     if (parsed.errors.length) text += "\n読み取れなかった行: " + parsed.errors.join(" / ");
     setMsg($("bulkMsg"), text, !parsed.errors.length);
     $("previewWrap").style.display = "none";
@@ -934,7 +1299,7 @@
       try {
         var parsed = parseBulk(String(reader.result), file.name);
         showPreview(parsed);
-        if (parsed.rows.length && confirm(file.name + " から" + parsed.rows.length + "人を取り込みますか？")) importRows(parsed);
+        if (parsed.rows.length && confirm(file.name + " から" + parsed.rows.length + "人を「" + eventLabel(eventById(currentEventId)) + "」に取り込みますか？")) importRows(parsed);
       } catch (e) {
         setMsg($("bulkMsg"), "ファイルを読み込めませんでした: " + e.message, false);
       }
@@ -974,12 +1339,13 @@
   }
 
   $("exportJsonBtn").addEventListener("click", function() {
-    var data = { updated: new Date().toISOString(), members: members };
+    var data = { updated: new Date().toISOString(), users: state.users, events: state.events, entries: state.entries };
     download("members.json", JSON.stringify(data, null, 2) + "\n", "application/json");
   });
 
   $("exportCsvBtn").addEventListener("click", function() {
-    var lines = [CSV_COLS.map(function(c) { return c[1]; }).join(",")].concat(sortedMembers().map(function(m) {
+    var ev = eventById(currentEventId);
+    var lines = [CSV_COLS.map(function(c) { return c[1]; }).join(",")].concat(sortRows(eventRows()).map(function(m) {
       return CSV_COLS.map(function(c) {
         var v = m[c[0]];
         if (typeof v === "boolean") v = v ? 1 : "";
@@ -987,7 +1353,7 @@
         return csvCell(v);
       }).join(",");
     }));
-    download("members.csv", "\uFEFF" + lines.join("\r\n") + "\r\n", "text/csv");
+    download("members_" + ev.type + "_" + ev.date + ".csv", "\uFEFF" + lines.join("\r\n") + "\r\n", "text/csv");
   });
 
   function entryText(m) {
@@ -1001,12 +1367,13 @@
   }
 
   function buildFormatText() {
+    var rows = eventRows();
     var blocks = [];
     var alliances = [];
-    members.forEach(function(m) { if (alliances.indexOf(m.alliance) < 0) alliances.push(m.alliance); });
+    rows.forEach(function(m) { if (alliances.indexOf(m.alliance) < 0) alliances.push(m.alliance); });
     alliances.forEach(function(a) {
       ["start", "late"].forEach(function(entry) {
-        var list = members.filter(function(m) { return m.alliance === a && m.entry === entry; });
+        var list = rows.filter(function(m) { return m.alliance === a && m.entry === entry; });
         if (!list.length) return;
         var lines = [a + "(" + ENTRY_LABEL[entry] + ")", LEGEND];
         GRADES.forEach(function(g) {
