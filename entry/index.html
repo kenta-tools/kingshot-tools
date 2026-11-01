@@ -46,6 +46,10 @@
 
   .warn { color: #c0392b; font-weight: bold; font-size: 14px; line-height: 1.6; }
   .howto { background: #eef4ff; border-radius: 10px; padding: 10px 14px; margin: 12px 0 14px; font-size: 14px; line-height: 1.8; }
+  .discord { background: #eef0ff; border: 1px solid #c9cdfb; border-radius: 10px; padding: 10px 14px; margin: 0 0 14px; font-size: 14px; line-height: 1.8; }
+  .discord summary { cursor: pointer; font-weight: bold; color: #4752c4; }
+  .discord .dc-head { font-weight: bold; margin-top: 8px; color: #333; }
+  .discord a.join { display: inline-block; margin: 6px 0 4px; padding: 10px 18px; border-radius: 8px; background: #5865f2; color: #fff; font-weight: bold; text-decoration: none; }
 
   .field { margin-bottom: 16px; }
   .cap { display: block; font-size: 14px; font-weight: bold; margin-bottom: 6px; }
@@ -111,6 +115,23 @@
   <span style="font-size: 13px; color: #555;">変更・取消も、同じ名前を入れて「次へ」でできます。</span>
   <div class="warn" style="margin-top: 6px;">⚠ 登録した参加時間に参加できなそうなときは、必ず連絡してください。</div>
 </div>
+
+<!-- Discordへの案内（招待リンクを変えたら href を差し替える。今のリンクは 2026-11-01 作成・30日で期限切れ） -->
+<details class="discord">
+  <summary>💬 Discordに参加していない人はこちら</summary>
+  <div class="dc-head">Discordのアカウントを持っている人</div>
+  ① 下の「Discordに参加する」を押す<br>
+  ② Discordが開いたら「招待を受ける」（または「参加する」）を押す<br>
+  ③ 参加できたら、このページに戻って登録する<br>
+  <div class="dc-head">Discordのアカウントを持っていない人</div>
+  ① スマホなら、App Store（iPhone）か Google Play（Android）で「Discord」を検索してアプリを入れる（PCならそのまま②へ）<br>
+  ② 下の「Discordに参加する」を押し、「登録」（アカウント作成）を選ぶ<br>
+  ③ メールアドレス（または電話番号）・表示名・ユーザー名・パスワード・生年月日を入れて登録する<br>
+  ④ 届いたメールの「メールアドレスを認証」を押す<br>
+  ⑤ もう一度「Discordに参加する」を押し、「招待を受ける」を押す<br>
+  ⑥ 参加できたら、このページに戻って登録する<br>
+  <a class="join" href="https://discord.gg/NZj5xSpbY" target="_blank" rel="noopener">Discordに参加する</a>
+</details>
 
 <div class="card center" id="loadingView">読み込み中…</div>
 <div class="card center" id="emptyView" style="display: none;">いま受付中のイベントはありません。</div>
