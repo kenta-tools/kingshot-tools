@@ -693,7 +693,7 @@
   function normalizeRow(m) {
     var tier = str(m.tier).replace(/^T/i, "");
     var grade = str(m.grade).toUpperCase().replace(/\s/g, "");
-    return {
+    return fitPartial({
       alliance: str(m.alliance),
       entry: m.entry === "absent" || /不参加/.test(str(m.entry)) ? "absent"
         : m.entry === "late" || /途中/.test(str(m.entry)) ? "late" : "start",
@@ -716,7 +716,22 @@
       rallySpeedPet: petLv(m.rallySpeedPet, "rallySpeedPet"),
       updatedAt: str(m.updatedAt), // 最後に登録・変更した日時（ISO）
       sameAs: str(m.sameAs) // AI変換で登録者が「同一人物」と確認した登録済みユーザー名（取り込み時のみ使う）
-    };
+    });
+  }
+
+  // 個人登録ページの「全部参加／一部参加／不参加」とそろえる（管理画面からの取り込み・入力は △ と途中参加のまま来るため）
+  //   抜ける時刻あり → △（途中抜け）、参加開始の時刻あり → 途中参加、不参加 → 時刻と△は消す
+  //   （△・途中参加で時刻がないものは、個人登録ページでは「一部参加」で時刻を入れてもらう）
+  function fitPartial(r) {
+    if (r.entry === "absent") {
+      r.joinAt = "";
+      r.leaveAt = "";
+      r.leaveEarly = false;
+      return r;
+    }
+    if (r.leaveAt) r.leaveEarly = true;
+    if (r.joinAt) r.entry = "late";
+    return r;
   }
 
   function normalize(list) {
@@ -1285,7 +1300,7 @@
         var m = parseEntry(part, ctx);
         if (!m.name) { errors.push(lineNo + "行目「" + part + "」: 名前が読めません"); return; }
         if (!m.alliance) { errors.push(lineNo + "行目「" + m.name + "」: 同盟名がありません（見出しがない場合は同盟名を入力してください）"); return; }
-        rows.push(m);
+        rows.push(fitPartial(m));
       });
     }
 

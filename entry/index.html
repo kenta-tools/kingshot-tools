@@ -179,6 +179,7 @@
           <input type="text" id="fLeaveAt" maxlength="20" placeholder="例: 22時">
         </div>
         <div style="grid-column: 1 / -1; font-size: 13px; color: #666; margin-top: 4px;">最初から・最後まではそれぞれ空欄でOK</div>
+        <div class="warn" id="partHint" style="grid-column: 1 / -1; font-size: 13px; margin-top: 4px; display: none;"></div>
       </div>
     </div>
 
@@ -691,6 +692,11 @@
   function fillForm(m) {
     $("fAlliance").value = m.alliance || "";
     setRadio("fEntry", m.entry === "absent" ? "absent" : m.entry === "late" || m.leaveEarly || m.joinAt || m.leaveAt ? "part" : "full");
+    // 管理者が募集フォーマットから登録した人は、△（途中抜け）・途中参加だけで時刻がないことがある
+    var noTime = m.entry !== "absent" && !m.joinAt && !m.leaveAt && (m.leaveEarly || m.entry === "late");
+    $("partHint").style.display = noTime ? "block" : "none";
+    $("partHint").textContent = noTime ? (m.leaveEarly ? "途中で抜ける" : "途中から参加する") +
+      "と登録されています。時刻を入れてください。" : "";
     setRadio("fGrade", GRADES.indexOf(m.grade) >= 0 ? m.grade : "その他");
     $("fMonthly").checked = !!m.monthly;
     $("fVc").checked = !!m.vc;
