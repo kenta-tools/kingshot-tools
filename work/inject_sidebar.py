@@ -28,20 +28,29 @@ FOLDER = Path(__file__).resolve().parent.parent
 # サイドバーなし、ページ内に軽い「← TOP」リンクを直書きする方式（inject対象外）。
 HOME = ("index.html", "🏠", "TOP")
 
-NAV_TOOLS = [
-    HOME,
-    ("tools/炎龍の覇者_攻城タイムライン計算.html", "🐉", "炎龍 集結タイムライン計算"),
-    ("tools/KvK同着スタート カウントダウン表.html", "⏲️", "KvK同着スタート カウントダウン表"),
-    ("tools/KvK占領判定.html", "🏳️", "KvK占領戦 勝利判定ツール"),
-    ("tools/周期ウェーブタイマー.html", "🌊", "周期ウェーブタイマー"),
+# ツール内のメニュー（レフトメニュー・tools-index.htmlのカード一覧）は、イベントごとにブロック分けする。
+NAV_EVENT_GROUPS = [
+    ("炎龍の覇者", [
+        ("tools/炎龍の覇者_攻城タイムライン計算.html", "🐉", "炎龍 集結タイムライン計算"),
+        ("tools/周期ウェーブタイマー.html", "🌊", "周期ウェーブタイマー"),
+    ]),
+    ("KvK", [
+        ("tools/KvK同着スタート カウントダウン表.html", "⏲️", "KvK同着スタート カウントダウン表"),
+        ("tools/KvK占領判定.html", "🏳️", "KvK占領戦 勝利判定ツール"),
+        ("kvk-matchup/kvk-matchup-index.html", "⚔️", "KvK相手突合せ まとめ"),
+    ]),
 ]
 # 非表示中（2026-11-01、ユーザー指示でいったん非表示。ファイルは残したまま一覧・サイドバーから外す）:
 #   tools/王城到着同期カウントアップ.html
 #   tools/音声アナウンス付きストップウォッチ.html
 
-# (対象ページの相対パス一覧, そのページで使うナビ項目リスト)
+NAV_TOOLS = [HOME] + [item for _, items in NAV_EVENT_GROUPS for item in items]
+
+# サイドバーを注入する対象ページは、tools/配下の実ツールページだけ
+# （kvk-matchup/kvk-matchup-index.htmlはメニューからリンクはするが、
+#  flame-dragon/holy-sword-leagueと同じ「まとめページ」なのでサイドバー自体は注入しない）
 PAGE_GROUPS = [
-    ([rel_path for rel_path, _, _ in NAV_TOOLS if rel_path != "index.html"] + ["tools/tools-index.html"], NAV_TOOLS),
+    ([rel_path for rel_path, _, _ in NAV_TOOLS if rel_path.startswith("tools/")] + ["tools/tools-index.html"], NAV_EVENT_GROUPS),
 ]
 
 MARK_START = "<!-- ks-sidebar:start -->"
@@ -57,16 +66,20 @@ def rel_href(from_rel_path: str, to_rel_path: str) -> str:
     return href
 
 
-def build_sidebar(current_rel_path, nav_items):
-    links = []
-    for rel_path, icon, label in nav_items:
+def build_sidebar(current_rel_path, event_groups):
+    def link_html(rel_path, icon, label):
         active = rel_path == current_rel_path
         cls = "ks-link ks-active" if active else "ks-link"
         href = rel_href(current_rel_path, rel_path)
-        links.append(
+        return (
             f'<a href="{href}" class="{cls}" title="{label}">'
             f'<span class="ks-icon">{icon}</span><span class="ks-label">{label}</span></a>'
         )
+
+    links = [link_html(*HOME)]
+    for event_name, items in event_groups:
+        links.append(f'<div class="ks-group">{event_name}</div>')
+        links.extend(link_html(*item) for item in items)
 
     sidebar = f'''{MARK_START}
 <style>
@@ -93,6 +106,12 @@ def build_sidebar(current_rel_path, nav_items):
   .ks-sidebar .ks-link .ks-icon {{ flex: 0 0 auto; width: 18px; text-align: center; margin-top: 1px; }}
   .ks-sidebar .ks-link .ks-label {{ white-space: normal; overflow-wrap: break-word; }}
   .ks-sidebar .ks-link.ks-active {{ background: #3a4a63; color: #fff; font-weight: bold; }}
+  .ks-sidebar .ks-group {{
+    color: #6b7993; font-size: 10px; font-weight: bold; letter-spacing: 0.05em;
+    text-transform: uppercase; padding: 10px 10px 4px; white-space: nowrap;
+  }}
+  .ks-sidebar .ks-group:first-of-type {{ padding-top: 0; }}
+  body.ks-collapsed .ks-sidebar .ks-group {{ display: none; }}
 
   .ks-open-btn {{
     display: none; position: fixed; top: 14px; left: 14px; z-index: 100001;
@@ -131,6 +150,7 @@ def build_sidebar(current_rel_path, nav_items):
       padding: 6px 10px; font-size: 12px;
     }}
     .ks-sidebar .ks-label {{ display: inline !important; }}
+    .ks-sidebar .ks-group {{ display: none; }}
     body {{ margin-left: 0 !important; padding-top: 56px !important; }}
     body.ks-collapsed .ks-sidebar {{ transform: translateY(-100%); width: 100% !important; }}
     body.ks-collapsed {{ margin-left: 0 !important; padding-top: 0 !important; }}
