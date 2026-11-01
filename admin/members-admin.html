@@ -992,8 +992,9 @@
     return fetchRemote().then(function(res) {
       var remote = normalizeState(res.data);
       var merged = mergeIntoRemote(normalizeState(JSON.parse(publishedJson)), state, remote);
-      var body = { updated: new Date().toISOString(), users: merged.users, events: merged.events,
-        entries: merged.entries, notSame: merged.notSame };
+      // この画面が扱わない項目（kvkRosters など他ツールの保存分）は最新の保存内容のまま残す
+      var body = Object.assign({}, res.data, { updated: new Date().toISOString(), users: merged.users, events: merged.events,
+        entries: merged.entries, notSame: merged.notSame });
       return remotePut(utf8ToB64(JSON.stringify(body, null, 2) + "\n"), res.sha).then(function(r) {
         if ((r.status === 409 || r.status === 422) && !isRetry) return publish(true); // 直前に他の人が保存した → 取り直してもう一度
         if (!r.ok) throw new Error(r.error && r.status >= 500 ? r.error : ghError(r.status));
