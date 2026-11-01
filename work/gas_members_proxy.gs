@@ -5,6 +5,8 @@
  *   - 管理画面（admin/members-admin.html）: パスワード付きで「取得（get）」「保存（put）」
  *   - 個人登録ページ（entry/index.html）: パスワードなしで「受付中イベントの取得（pubGet）」
  *     「自分の参加登録・変更・取消（selfSave）」。受付中のイベントの、1人分の参加情報しか変えられない
+ *   - KvK同着スタート カウントダウン表（tools/）の「共有用」画面:
+ *     パスワードなしで「名簿の取得（pubGetに同梱）」「名簿の保存（kvkSave）」。イベントID単位で1件（名簿まるごと上書き）
  *
  * スクリプトプロパティ（プロジェクトの設定 → スクリプト プロパティ）:
  *   GITHUB_TOKEN  : kenta-tools の Fine-grained トークン（kingshot-tools のみ・Contents: Read and write）
@@ -42,6 +44,8 @@ function handle_(p) {
     // 個人登録ページ用（パスワード不要）
     if (p.action === "pubGet") return json_(pubGet_(token));
     if (p.action === "selfSave") return json_(selfSave_(token, p));
+    // KvK同着カウントダウン表「共有用」画面用（パスワード不要）
+    if (p.action === "kvkSave") return json_(kvkSave_(token, p));
 
     if (p.password !== password) {
       Utilities.sleep(1000); // 総当たり対策
@@ -99,8 +103,61 @@ function pubGet_(token) {
     ok: true,
     events: events,
     users: (d.users || []).map(function(u) { return { id: u.id, name: u.name, alliance: u.alliance, aliases: u.aliases || [] }; }),
-    entries: (d.entries || []).filter(function(x) { return ids[x.eventId]; })
+    entries: (d.entries || []).filter(function(x) { return ids[x.eventId]; }),
+    kvkRosters: (d.kvkRosters || []).filter(function(r) { return ids[r.eventId]; })
   };
+}
+
+// KvK同着カウントダウン表「共有用」画面の名簿保存。イベントID単位で1件、名簿まるごと上書き。
+// p: { eventId, rows: [{name, march, petLevel, usePet, group, opponentName, opponentSec}, ...] }
+function kvkSave_(token, p) {
+  var cache = CacheService.getScriptCache();
+  var minuteKey = "kvk_" + Math.floor(Date.now() / 60000);
+  var count = Number(cache.get(minuteKey) || 0);
+  if (count >= SELF_LIMIT_PER_MIN) return { ok: false, status: 429, error: "混み合っています。1分ほど待ってからもう一度押してください" };
+  cache.put(minuteKey, String(count + 1), 120);
+
+  if (!p.eventId) return { ok: false, status: 400, error: "イベントが選ばれていません" };
+  var rows = (Array.isArray(p.rows) ? p.rows : []).slice(0, 500).map(function(r) {
+    return {
+      name: clip_(r.name, 30),
+      march: numOrNull_(r.march),
+      petLevel: count_(r.petLevel, 8) || 0,
+      usePet: r.usePet !== false,
+      group: clip_(r.group, 20),
+      opponentName: clip_(r.opponentName, 30),
+      opponentSec: numOrNull_(r.opponentSec)
+    };
+  }).filter(function(r) { return r.name; });
+
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) return { ok: false, status: 503, error: "混み合っています。少し待ってからもう一度押してください" };
+  try {
+    for (var attempt = 0; attempt < 3; attempt++) {
+      var f = readFile_(token);
+      if (!f.ok) return f;
+      var d = f.data;
+      d.kvkRosters = d.kvkRosters || [];
+      var existing = d.kvkRosters.filter(function(x) { return x.eventId === p.eventId; })[0];
+      var record = { eventId: p.eventId, rows: rows, updatedAt: new Date().toISOString() };
+      if (existing) d.kvkRosters[d.kvkRosters.indexOf(existing)] = record;
+      else d.kvkRosters.push(record);
+
+      d.updated = new Date().toISOString();
+      var w = writeFile_(token, d, f.sha, "KvK shared roster saved");
+      if (w.ok) return { ok: true };
+      if (w.status !== 409 && w.status !== 422) return w;
+      // 直前に他の人が保存した → 取り直してもう一度
+    }
+    return { ok: false, status: 409, error: "混み合っています。もう一度押してください" };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function numOrNull_(v) {
+  var n = Number(v);
+  return v !== "" && v != null && isFinite(n) ? n : null;
 }
 
 // 1人分の参加登録・変更・取消。受付中のイベントだけ。

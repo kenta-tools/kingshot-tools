@@ -17,12 +17,20 @@
   table{ border-collapse:collapse; width:100%; }
   th,td{ border:1px solid var(--border); padding:4px 6px; font-size:0.85rem; text-align:center; }
   th{ background:#eef1f7; }
-  input[type=text], input[type=number]{ width:100%; box-sizing:border-box; border:1px solid #ccc; border-radius:4px; padding:2px 4px; font-size:0.85rem; }
+  input[type=text], input[type=number], select{ width:100%; box-sizing:border-box; border:1px solid #ccc; border-radius:4px; padding:2px 4px; font-size:0.85rem; background:#fff; }
   .roster-name{ text-align:left; }
   .btn{ background:var(--accent); color:#fff; border:none; border-radius:5px; padding:6px 14px; font-size:0.85rem; cursor:pointer; }
   .btn.secondary{ background:#888; }
   .btn.small{ padding:2px 8px; font-size:0.78rem; }
   .row-actions{ display:flex; gap:8px; margin-top:10px; }
+  .mode-row{ display:flex; gap:8px; margin-bottom:10px; }
+  .mode-btn.active{ background:var(--accent); }
+  .mode-btn:not(.active){ background:#ccc; color:#444; }
+  .save-note{ font-size:0.78rem; color:var(--sub); }
+  .table-scroll{ overflow-x:auto; }
+  .table-scroll table{ min-width:900px; }
+  .use-col input[type=checkbox]{ width:auto; }
+  td.pet-use{ white-space:nowrap; }
   .result-wrap{ max-height:640px; overflow-y:auto; border:1px solid var(--border); border-radius:6px; }
   .result-wrap table{ width:max-content; min-width:100%; }
   .result-wrap th{ position:sticky; top:0; z-index:1; }
@@ -35,8 +43,9 @@
   .copy-btn{ min-width:60px; }
   textarea{ width:100%; box-sizing:border-box; height:110px; font-family:monospace; font-size:0.8rem; border:1px solid #ccc; border-radius:4px; padding:6px; white-space:pre; }
   .cfg-row{ display:flex; gap:16px; align-items:center; margin-bottom:10px; flex-wrap:wrap; }
-  .cfg-row label{ font-size:0.85rem; }
+  .cfg-row label{ font-size:0.85rem; display:flex; align-items:center; gap:6px; }
   .cfg-row input[type=number]{ width:80px; }
+  .cfg-row select{ width:auto; min-width:180px; }
 </style>
 </head>
 <body>
@@ -123,7 +132,7 @@
     <button type="button" class="ks-toggle-btn" id="ksToggleBtn" onclick="ksToggleSidebar()" aria-label="メニュー開閉">←</button>
   </div>
   <nav>
-    <a href="../index.html?v=20261101204644" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261101204644" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="KvK同着スタート カウントダウン表.html?v=20261101204644" class="ks-link ks-active" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261101204644" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="周期ウェーブタイマー.html?v=20261101204644" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a>
+    <a href="../index.html?v=20261101205341" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261101205341" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="KvK同着スタート カウントダウン表.html?v=20261101205341" class="ks-link ks-active" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261101205341" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="周期ウェーブタイマー.html?v=20261101205341" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -150,22 +159,53 @@
 
 
 <h1>KvK同着スタート カウントダウン表</h1>
-<div class="sub">カウントアップ版と同じ計算（行軍が一番長い人＝すぐ出発、短い人ほど待ってから出発）で、表示だけ「最後に出発する人＝0」になるよう反転させたものです。0から数字が増えるほど、最後の出発より前のタイミングを表します。グループ列は「実際秒数一致」かつ「グループ所属」の両方を満たす人だけを表示。</div>
+<div class="sub">行軍が一番長い人＝すぐ出発、短い人ほど待ってから出発。表示は「最後に出発する人＝0」になるよう反転しています。0から数字が増えるほど、最後の出発より前のタイミングを表します。グループ列は「実際秒数一致」かつ「グループ所属」の両方を満たす人だけを表示。</div>
+
+<div class="panel">
+  <h2>イベント・表示モード</h2>
+  <div class="cfg-row">
+    <label>イベント: <select id="eventSelect"><option value="">（読み込み中…）</option></select></label>
+  </div>
+  <div class="mode-row">
+    <button type="button" class="btn mode-btn active" id="modePersonalBtn">自分用（このブラウザだけ）</button>
+    <button type="button" class="btn mode-btn" id="modeSharedBtn">共有用（みんなで見る）</button>
+  </div>
+  <div class="cfg-row" id="sharedActions" style="display:none;">
+    <button type="button" class="btn secondary small" id="sharedReloadBtn">最新を取得</button>
+    <button type="button" class="btn small" id="sharedSaveBtn">共有に保存</button>
+    <span class="save-note" id="sharedNote"></span>
+  </div>
+  <div class="cfg-row">
+    <button type="button" class="btn secondary small" id="importBtn">選択中イベントの集結参加者を取り込む（名簿を上書き）</button>
+    <span class="save-note">ユーザー登録で「集結の指示があった」に数を入れた人だけを、名前・速度ペットLvつきで取り込みます（到着秒数・グループは未入力のまま）</span>
+  </div>
+</div>
 
 <div class="panel">
   <h2>名簿</h2>
+  <div class="cfg-row">
+    <label>新しいグループ名: <input type="text" id="newGroupInput" style="width:140px;"></label>
+    <button type="button" class="btn secondary small" id="addGroupBtn">+ グループ追加</button>
+  </div>
+  <div class="table-scroll">
   <table id="roster-table">
     <thead>
-      <tr><th style="width:22%">名前</th><th>到着秒数</th><th>到着+</th><th>攻めグループ</th><th>駐屯グループ</th><th></th></tr>
+      <tr>
+        <th style="width:14%">名前</th><th>到着秒数<br>（ペットなし）</th><th>到着+</th>
+        <th>速度ペットLv</th><th>到着秒数<br>（ペットあり）</th><th>採用</th>
+        <th>グループ</th><th>相手の名前</th><th>相手の秒数</th><th></th>
+      </tr>
     </thead>
     <tbody id="roster-body"></tbody>
   </table>
+  </div>
+  <datalist id="regUserList"></datalist>
   <div class="row-actions">
-    <button class="btn secondary small" onclick="addRow()">＋行を追加</button>
+    <button type="button" class="btn secondary small" onclick="addRow()">＋行を追加</button>
   </div>
   <div class="cfg-row" style="margin-top:14px;">
     <label>最大カウント秒（表示上限、最後の出発を超える分は自動でカット）: <input type="number" id="maxSec" value="120" min="1" max="600"></label>
-    <button class="btn" onclick="compute()">計算する</button>
+    <button type="button" class="btn" onclick="compute()">計算する</button>
   </div>
 </div>
 
@@ -179,50 +219,268 @@
 
 <script>
 const SAMPLE = [
-  ["じろ", 36, 0, "じろ", "ー"],
-  ["かむ", 36, -1, "かむ", "かむ"],
-  ["けん", 36, 0, "けん", "けん"],
-  ["はち", 36, 0, "じろ", ""],
-  ["いっちゃん", 43, 0, "", ""],
+  { name: "じろ", march: 36, adj: 0, group: "じろ" },
+  { name: "かむ", march: 36, adj: -1, group: "かむ" },
+  { name: "けん", march: 36, adj: 0, group: "けん" },
+  { name: "はち", march: 36, adj: 0, group: "じろ" },
+  { name: "いっちゃん", march: 43, adj: 0, group: "" },
 ];
 const NO_GROUP = new Set(["", "ー", "未所属", "-", "なし"]);
 
-function addRow(data){
-  const tbody = document.getElementById("roster-body");
-  const tr = document.createElement("tr");
-  const [name, sec, adj, atk, gar] = data || ["", 0, 0, "", ""];
-  tr.innerHTML = `
-    <td class="roster-name"><input type="text" value="${name}"></td>
-    <td><input type="number" value="${sec}"></td>
-    <td><input type="number" value="${adj}"></td>
-    <td><input type="text" value="${atk}"></td>
-    <td><input type="text" value="${gar}"></td>
-    <td><button class="btn secondary small" onclick="this.closest('tr').remove(); saveRosterState();">削除</button></td>
-  `;
-  tbody.appendChild(tr);
-  saveRosterState();
+// --- 速度ペット（恐怖の咆哮）：炎龍 集結タイムライン計算ページと同じ定義・表記 ---
+const MARCH_PET_BONUS = [0, 15, 17, 19, 21, 23, 25, 27, 30];
+function buildPetOptions(selectedLv){
+  let html = `<option value="0"${selectedLv === 0 ? " selected" : ""}>持っていない</option>`;
+  for(let lv = MARCH_PET_BONUS.length - 1; lv >= 1; lv--){
+    html += `<option value="${lv}"${selectedLv === lv ? " selected" : ""}>Lv${lv}（+${MARCH_PET_BONUS[lv]}%）</option>`;
+  }
+  return html;
+}
+function marchWithPet(march, petLevel){
+  const bonus = MARCH_PET_BONUS[petLevel] || 0;
+  if(!bonus) return march;
+  return march / (1 + bonus / 100);
+}
+function effMarch(row){
+  return row.usePet ? marchWithPet(row.march, row.petLevel) : row.march;
+}
+function formatMarchPetDisplay(row){
+  if(!row.petLevel) return "（ペットなし）";
+  return `${Math.round(marchWithPet(row.march, row.petLevel) * 10) / 10}`;
 }
 
-// --- 名簿・最大カウント秒の自動保存（このブラウザのみ） ---
-const ROSTER_STORAGE_KEY = "kvkCountdownRosterState";
+function escapeAttr(str){
+  const div = document.createElement("div");
+  div.textContent = str == null ? "" : str;
+  return div.innerHTML.replace(/"/g, "&quot;");
+}
 
-function getRawRoster(){
-  return [...document.querySelectorAll("#roster-body tr")].map(tr => {
-    const inputs = tr.querySelectorAll("input");
-    return [inputs[0].value, inputs[1].value, inputs[2].value, inputs[3].value, inputs[4].value];
+// --- ユーザー登録データ（entry/index.htmlと同じGAS中継役を読み取り専用で利用） ---
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxu5HW9uLU9pCsUs1r_45xpuofWZmQAyZFDwSLK1C_7GvA7SDXZ4ayBEJTS0sR_8oToAw/exec";
+let regData = { events: [], users: [], entries: [], kvkRosters: [] };
+
+function gasCall(payload){
+  return fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) })
+    .then(r => r.json())
+    .catch(() => { throw new Error("通信できませんでした。電波の良いところでもう一度押してください"); });
+}
+
+function nameKey(s){ return String(s).trim().toLowerCase(); }
+
+function findRegUser(name){
+  const k = nameKey(name);
+  if(!k) return null;
+  return regData.users.find(u => nameKey(u.name) === k)
+    || regData.users.find(u => (u.aliases || []).some(a => nameKey(a) === k))
+    || null;
+}
+
+// 名前が一致する登録者の、一番新しいイベントの速度ペットLvを返す（無ければnull）
+function findRegUserPetLevel(name){
+  const u = findRegUser(name);
+  if(!u) return null;
+  const rows = regData.entries.filter(e => e.userId === u.id && e.rallySpeedPet != null);
+  if(!rows.length) return null;
+  rows.sort((a, b) => {
+    const ea = regData.events.find(ev => ev.id === a.eventId);
+    const eb = regData.events.find(ev => ev.id === b.eventId);
+    return ea && eb ? eb.date.localeCompare(ea.date) : 0;
+  });
+  return rows[0].rallySpeedPet;
+}
+
+function eventLabel(ev){ return ev ? ev.type + " " + ev.date : ""; }
+
+function formatTime(iso){
+  const d = new Date(iso);
+  if(isNaN(d)) return "";
+  const p2 = n => (n < 10 ? "0" : "") + n;
+  return (d.getMonth() + 1) + "/" + p2(d.getDate()) + " " + p2(d.getHours()) + ":" + p2(d.getMinutes());
+}
+
+function refreshEventSelect(){
+  const sel = document.getElementById("eventSelect");
+  const events = regData.events.slice().sort((a, b) => b.date.localeCompare(a.date));
+  const keep = sel.value;
+  sel.innerHTML = events.length
+    ? events.map(ev => `<option value="${escapeAttr(ev.id)}">${escapeAttr(eventLabel(ev))}</option>`).join("")
+    : `<option value="">（受付中のイベントがありません）</option>`;
+  if (events.some(ev => ev.id === keep)) sel.value = keep;
+  currentEventId = sel.value;
+}
+
+function refreshNameList(){
+  document.getElementById("regUserList").innerHTML = regData.users.map(u => `<option value="${escapeAttr(u.name)}">`).join("");
+}
+
+function fetchRegData(){
+  return gasCall({ action: "pubGet" }).then(res => {
+    if(!res.ok) throw new Error(res.error || "読み込めませんでした");
+    regData = { events: res.events || [], users: res.users || [], entries: res.entries || [], kvkRosters: res.kvkRosters || [] };
+    refreshEventSelect();
+    refreshNameList();
+  }).catch(e => {
+    document.getElementById("sharedNote").textContent = "ユーザー登録データを読み込めませんでした: " + e.message;
   });
 }
 
-function saveRosterState(){
+// --- 名簿データ（配列ベース）。自分用／共有用で同じ構造を使う ---
+let rosterRows = []; // {id, name, march, adj, petLevel, usePet, group, opponentName, opponentSec}
+let rowSeq = 0;
+let knownGroups = [];
+let mode = "personal"; // "personal" | "shared"
+let currentEventId = "";
+let sharedDirty = false;
+
+function newRow(data){
+  rowSeq += 1;
+  const d = data || {};
+  return {
+    id: "r" + rowSeq,
+    name: d.name || "",
+    march: d.march != null ? d.march : 0,
+    adj: d.adj != null ? d.adj : 0,
+    petLevel: d.petLevel || 0,
+    usePet: d.usePet !== false,
+    group: d.group || "",
+    opponentName: d.opponentName || "",
+    opponentSec: d.opponentSec != null && d.opponentSec !== "" ? d.opponentSec : "",
+  };
+}
+
+function addRow(data){
+  rosterRows.push(newRow(data));
+  renderRoster();
+}
+
+function removeRow(id){
+  rosterRows = rosterRows.filter(r => r.id !== id);
+  renderRoster();
+  persistState();
+}
+
+function addGroup(name){
+  const g = name.trim();
+  if(!g || knownGroups.includes(g)) return;
+  knownGroups.push(g);
+  renderRoster();
+  persistState();
+}
+
+function groupOptions(selected){
+  let html = `<option value=""${!selected ? " selected" : ""}>（未設定）</option>`;
+  knownGroups.forEach(g => {
+    html += `<option value="${escapeAttr(g)}"${g === selected ? " selected" : ""}>${escapeAttr(g)}</option>`;
+  });
+  return html;
+}
+
+function persistState(){
+  if(mode === "personal") savePersonalState();
+  else sharedDirty = true;
+}
+
+function renderRoster(){
+  const tbody = document.getElementById("roster-body");
+  tbody.innerHTML = "";
+  rosterRows.forEach(row => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="roster-name"><input type="text" data-id="${row.id}" class="f-name" list="regUserList" value="${escapeAttr(row.name)}"></td>
+      <td><input type="number" data-id="${row.id}" class="f-march" value="${row.march}"></td>
+      <td><input type="number" data-id="${row.id}" class="f-adj" value="${row.adj}"></td>
+      <td><select data-id="${row.id}" class="f-pet">${buildPetOptions(row.petLevel)}</select></td>
+      <td><input type="text" class="f-march-pet" data-id="${row.id}" value="${formatMarchPetDisplay(row)}" readonly tabindex="-1" style="background:#f3f3f3;color:#555;"></td>
+      <td class="pet-use"><input type="checkbox" data-id="${row.id}" class="f-use" ${row.usePet ? "checked" : ""}></td>
+      <td><select data-id="${row.id}" class="f-group">${groupOptions(row.group)}</select></td>
+      <td><input type="text" data-id="${row.id}" class="f-oname" value="${escapeAttr(row.opponentName)}"></td>
+      <td><input type="number" data-id="${row.id}" class="f-osec" value="${row.opponentSec}"></td>
+      <td><button type="button" class="btn secondary small" onclick="removeRow('${row.id}')">削除</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  function byId(id){ return rosterRows.find(r => r.id === id); }
+  function updateMarchPetCell(id){
+    const row = byId(id);
+    const cell = tbody.querySelector(`.f-march-pet[data-id="${id}"]`);
+    if(row && cell) cell.value = formatMarchPetDisplay(row);
+  }
+
+  tbody.querySelectorAll(".f-name").forEach(inp => {
+    inp.addEventListener("input", () => {
+      const row = byId(inp.dataset.id);
+      row.name = inp.value;
+      if(!row.petLevel){
+        const lv = findRegUserPetLevel(row.name);
+        if(lv){
+          row.petLevel = lv;
+          const sel = tbody.querySelector(`.f-pet[data-id="${row.id}"]`);
+          if(sel) sel.value = String(lv);
+          updateMarchPetCell(row.id);
+        }
+      }
+      persistState();
+    });
+  });
+  tbody.querySelectorAll(".f-march").forEach(inp => {
+    inp.addEventListener("input", () => {
+      const row = byId(inp.dataset.id);
+      row.march = parseFloat(inp.value) || 0;
+      updateMarchPetCell(row.id);
+      persistState();
+    });
+  });
+  tbody.querySelectorAll(".f-adj").forEach(inp => {
+    inp.addEventListener("input", () => {
+      byId(inp.dataset.id).adj = parseFloat(inp.value) || 0;
+      persistState();
+    });
+  });
+  tbody.querySelectorAll(".f-pet").forEach(sel => {
+    sel.addEventListener("change", () => {
+      const row = byId(sel.dataset.id);
+      row.petLevel = parseInt(sel.value, 10) || 0;
+      updateMarchPetCell(row.id);
+      persistState();
+    });
+  });
+  tbody.querySelectorAll(".f-use").forEach(cb => {
+    cb.addEventListener("change", () => {
+      byId(cb.dataset.id).usePet = cb.checked;
+      persistState();
+    });
+  });
+  tbody.querySelectorAll(".f-group").forEach(sel => {
+    sel.addEventListener("change", () => {
+      byId(sel.dataset.id).group = sel.value;
+      persistState();
+    });
+  });
+  tbody.querySelectorAll(".f-oname").forEach(inp => {
+    inp.addEventListener("input", () => {
+      byId(inp.dataset.id).opponentName = inp.value;
+      persistState();
+    });
+  });
+  tbody.querySelectorAll(".f-osec").forEach(inp => {
+    inp.addEventListener("input", () => {
+      byId(inp.dataset.id).opponentSec = inp.value === "" ? "" : (parseFloat(inp.value) || 0);
+      persistState();
+    });
+  });
+}
+
+// --- 自分用（このブラウザだけ）の保存・読込 ---
+const ROSTER_STORAGE_KEY = "kvkCountdownRosterStateV2";
+
+function savePersonalState(){
   try {
-    localStorage.setItem(ROSTER_STORAGE_KEY, JSON.stringify({
-      roster: getRawRoster(),
-      maxSec: document.getElementById("maxSec").value,
-    }));
+    localStorage.setItem(ROSTER_STORAGE_KEY, JSON.stringify({ rows: rosterRows, knownGroups, rowSeq }));
   } catch(e){}
 }
 
-function loadRosterState(){
+function loadPersonalState(){
   try {
     const raw = localStorage.getItem(ROSTER_STORAGE_KEY);
     return raw ? JSON.parse(raw) : null;
@@ -231,31 +489,129 @@ function loadRosterState(){
   }
 }
 
+function loadPersonalIntoState(){
+  const saved = loadPersonalState();
+  if(saved && Array.isArray(saved.rows) && saved.rows.length){
+    rosterRows = saved.rows.map(r => newRow(r));
+    knownGroups = saved.knownGroups || [];
+  } else {
+    rosterRows = SAMPLE.map(r => newRow(r));
+    knownGroups = Array.from(new Set(SAMPLE.map(r => r.group).filter(Boolean)));
+  }
+  renderRoster();
+  compute();
+}
+
+// --- 共有用（みんなで見る）の読込・保存 ---
+function loadSharedIntoState(){
+  const rec = regData.kvkRosters.find(r => r.eventId === currentEventId);
+  rosterRows = (rec && Array.isArray(rec.rows) ? rec.rows : []).map(r => newRow(r));
+  const fromRows = rosterRows.map(r => r.group).filter(Boolean);
+  knownGroups = Array.from(new Set(knownGroups.concat(fromRows)));
+  sharedDirty = false;
+  renderRoster();
+  compute();
+  document.getElementById("sharedNote").textContent = rec ? ("最終更新: " + formatTime(rec.updatedAt)) : "（まだ共有データがありません。入力して「共有に保存」を押してください）";
+}
+
+function setMode(newMode){
+  if(mode === newMode) return;
+  if(mode === "shared" && sharedDirty){
+    if(!confirm("共有用の保存していない変更があります。保存せずに切り替えますか？")) return;
+  }
+  mode = newMode;
+  sharedDirty = false;
+  document.getElementById("modePersonalBtn").classList.toggle("active", mode === "personal");
+  document.getElementById("modeSharedBtn").classList.toggle("active", mode === "shared");
+  document.getElementById("sharedActions").style.display = mode === "shared" ? "flex" : "none";
+  if(mode === "personal") loadPersonalIntoState();
+  else loadSharedIntoState();
+}
+
+document.getElementById("modePersonalBtn").addEventListener("click", () => setMode("personal"));
+document.getElementById("modeSharedBtn").addEventListener("click", () => setMode("shared"));
+
+document.getElementById("eventSelect").addEventListener("change", function(){
+  currentEventId = this.value;
+  if(mode === "shared") loadSharedIntoState();
+});
+
+document.getElementById("sharedReloadBtn").addEventListener("click", () => {
+  document.getElementById("sharedNote").textContent = "読み込み中…";
+  fetchRegData().then(() => loadSharedIntoState());
+});
+
+document.getElementById("sharedSaveBtn").addEventListener("click", () => {
+  if(!currentEventId){ document.getElementById("sharedNote").textContent = "イベントを選んでください"; return; }
+  document.getElementById("sharedNote").textContent = "保存中…";
+  gasCall({ action: "kvkSave", eventId: currentEventId, rows: rosterRows }).then(res => {
+    if(!res.ok) throw new Error(res.error || "保存できませんでした");
+    sharedDirty = false;
+    const updatedAt = new Date().toISOString();
+    const idx = regData.kvkRosters.findIndex(r => r.eventId === currentEventId);
+    const rec = { eventId: currentEventId, rows: rosterRows, updatedAt };
+    if(idx >= 0) regData.kvkRosters[idx] = rec; else regData.kvkRosters.push(rec);
+    document.getElementById("sharedNote").textContent = "保存しました（最終更新: " + formatTime(updatedAt) + "）";
+  }).catch(e => {
+    document.getElementById("sharedNote").textContent = "保存できませんでした: " + e.message;
+  });
+});
+
+document.getElementById("importBtn").addEventListener("click", () => {
+  if(!currentEventId){ alert("イベントを選んでください"); return; }
+  const targets = regData.entries.filter(e => e.eventId === currentEventId && e.entry !== "absent" && e.rallyCount != null);
+  if(!targets.length){ alert("このイベントで「集結の指示があった」人がユーザー登録に見つかりません"); return; }
+  if(!confirm(`名簿を一旦クリアして、${targets.length}人を取り込みます。よろしいですか？`)) return;
+  rosterRows = targets.map(e => {
+    const u = regData.users.find(x => x.id === e.userId);
+    return newRow({ name: u ? u.name : "?", march: 0, adj: 0, petLevel: e.rallySpeedPet || 0, usePet: true, group: "", opponentName: "", opponentSec: "" });
+  });
+  renderRoster();
+  persistState();
+  compute();
+});
+
+document.getElementById("addGroupBtn").addEventListener("click", () => {
+  const inp = document.getElementById("newGroupInput");
+  addGroup(inp.value);
+  inp.value = "";
+});
+document.getElementById("newGroupInput").addEventListener("keydown", e => {
+  if(e.key === "Enter") document.getElementById("addGroupBtn").click();
+});
+
 function getRoster(){
-  const rows = [...document.querySelectorAll("#roster-body tr")];
-  return rows.map(tr => {
-    const inputs = tr.querySelectorAll("input");
-    const name = inputs[0].value.trim();
-    const sec = parseFloat(inputs[1].value);
-    const adj = parseFloat(inputs[2].value) || 0;
-    const atk = inputs[3].value.trim();
-    const gar = inputs[4].value.trim();
-    if(!name || isNaN(sec)) return null;
-    return { name, actual: sec + adj, atk, gar };
+  return rosterRows.map(row => {
+    const name = row.name.trim();
+    const march = effMarch(row);
+    if(!name || isNaN(march)) return null;
+    return {
+      name,
+      actual: march + (row.adj || 0),
+      group: row.group || "",
+      opponentName: row.opponentName || "",
+      opponentSec: row.opponentSec,
+    };
   }).filter(Boolean);
 }
 
-function distinctGroups(roster, key){
+function distinctGroups(roster){
   const seen = [];
   for(const p of roster){
-    const g = p[key];
-    if(!NO_GROUP.has(g) && !seen.includes(g)) seen.push(g);
+    if(!NO_GROUP.has(p.group) && p.group && !seen.includes(p.group)) seen.push(p.group);
   }
   return seen;
 }
 
-function membersAt(roster, key, groupName, targetActual){
-  return roster.filter(p => p[key] === groupName && p.actual === targetActual).map(p => p.name);
+function membersAt(roster, groupName, targetActual){
+  return roster.filter(p => p.group === groupName && p.actual === targetActual);
+}
+
+function displayName(p){
+  const hasOpp = p.opponentName || (p.opponentSec !== "" && p.opponentSec != null);
+  if(!hasOpp) return p.name;
+  const sec = (p.opponentSec !== "" && p.opponentSec != null) ? p.opponentSec + "秒" : "";
+  return `${p.name}（vs ${p.opponentName || "?"}${sec ? " " + sec : ""}）`;
 }
 
 function compute(){
@@ -271,20 +627,14 @@ function compute(){
     return;
   }
 
-  const atkGroups = distinctGroups(roster, "atk");
-  const garGroups = distinctGroups(roster, "gar");
-  // カウントアップ版と全く同じ基準（行軍最長の人＝カウント0ですぐ出発）で計算し、
-  // 表示ラベルだけ「最後に出発する人が0」になるよう反転させる。
+  const groups = distinctGroups(roster);
+  // 行軍最長の人＝カウント0ですぐ出発という基準で計算し、表示ラベルだけ「最後に出発する人が0」になるよう反転させる。
   const overallBase = Math.max(...roster.map(p => p.actual));
 
   const groupBase = {};
-  for(const g of atkGroups){
-    const vals = roster.filter(p => p.atk === g).map(p => p.actual);
-    groupBase["atk:" + g] = vals.length ? Math.max(...vals) : null;
-  }
-  for(const g of garGroups){
-    const vals = roster.filter(p => p.gar === g).map(p => p.actual);
-    groupBase["gar:" + g] = vals.length ? Math.max(...vals) : null;
+  for(const g of groups){
+    const vals = roster.filter(p => p.group === g).map(p => p.actual);
+    groupBase[g] = vals.length ? Math.max(...vals) : null;
   }
 
   // 「全体」で実際に誰かが出発する一番大きいカウントアップ値（＝最後に出発する人のカウント）を反転の基準にする
@@ -294,14 +644,14 @@ function compute(){
   // header
   const thead = document.createElement("thead");
   const headTr = document.createElement("tr");
-  const headers = ["最後の出発まで", "全体", ...atkGroups.map(g => g + "(攻)"), ...garGroups.map(g => g + "(駐)")];
+  const headers = ["最後の出発まで", "全体", ...groups];
   headers.forEach(h => { const th = document.createElement("th"); th.textContent = h; headTr.appendChild(th); });
   thead.appendChild(headTr);
   table.appendChild(thead);
 
   const tbody = document.createElement("tbody");
   const chatLines = {}; // key -> array of "N秒前：xxx"
-  const chatKeys = ["全体", ...atkGroups.map(g=>g+"(攻)"), ...garGroups.map(g=>g+"(駐)")];
+  const chatKeys = ["全体", ...groups];
   chatKeys.forEach(k => chatLines[k] = []);
 
   for(let c = 0; c <= rowMax; c++){
@@ -314,29 +664,18 @@ function compute(){
 
     const label = `${countdownVal}秒`;
 
-    // overall（カウントアップ版と同じ target = overallBase - c）
+    // overall（同じ target = overallBase - c）
     const overallTarget = overallBase - c;
-    const overallNames = roster.filter(p => p.actual === overallTarget).map(p => p.name);
-    tr.appendChild(makeCell(overallNames));
-    if(overallNames.length) chatLines["全体"].push(`${label}：${overallNames.join("、")}`);
+    const overallPeople = roster.filter(p => p.actual === overallTarget);
+    tr.appendChild(makeCell(overallPeople));
+    if(overallPeople.length) chatLines["全体"].push(`${label}：${overallPeople.map(displayName).join("、")}`);
 
-    for(const g of atkGroups){
-      const base = groupBase["atk:" + g];
-      let names = [];
-      if(base !== null){
-        names = membersAt(roster, "atk", g, base - c);
-      }
-      tr.appendChild(makeCell(names));
-      if(names.length) chatLines[g + "(攻)"].push(`${label}：${names.join("、")}`);
-    }
-    for(const g of garGroups){
-      const base = groupBase["gar:" + g];
-      let names = [];
-      if(base !== null){
-        names = membersAt(roster, "gar", g, base - c);
-      }
-      tr.appendChild(makeCell(names));
-      if(names.length) chatLines[g + "(駐)"].push(`${label}：${names.join("、")}`);
+    for(const g of groups){
+      const base = groupBase[g];
+      let people = [];
+      if(base !== null) people = membersAt(roster, g, base - c);
+      tr.appendChild(makeCell(people));
+      if(people.length) chatLines[g].push(`${label}：${people.map(displayName).join("、")}`);
     }
     tbody.appendChild(tr);
   }
@@ -378,10 +717,10 @@ function copyText(ta, btn){
   });
 }
 
-function makeCell(names){
+function makeCell(people){
   const td = document.createElement("td");
-  if(names.length){
-    td.textContent = names.join("、");
+  if(people.length){
+    td.textContent = people.map(displayName).join("、");
     td.className = "hit";
   } else {
     td.textContent = "なし";
@@ -390,17 +729,19 @@ function makeCell(names){
   return td;
 }
 
-// init
-const savedRosterState = loadRosterState();
-if (savedRosterState && Array.isArray(savedRosterState.roster) && savedRosterState.roster.length) {
-  savedRosterState.roster.forEach(addRow);
-  if (savedRosterState.maxSec) document.getElementById("maxSec").value = savedRosterState.maxSec;
-} else {
-  SAMPLE.forEach(addRow);
-}
-document.getElementById("roster-body").addEventListener("input", saveRosterState);
-document.getElementById("maxSec").addEventListener("input", saveRosterState);
-compute();
+// --- 最大カウント秒（表示設定）はモードに関係なく、このブラウザに保存 ---
+const MAXSEC_KEY = "kvkCountdownMaxSec";
+try {
+  const savedMax = localStorage.getItem(MAXSEC_KEY);
+  if(savedMax) document.getElementById("maxSec").value = savedMax;
+} catch(e){}
+document.getElementById("maxSec").addEventListener("input", () => {
+  try { localStorage.setItem(MAXSEC_KEY, document.getElementById("maxSec").value); } catch(e){}
+});
+
+// init：まずローカルのサンプル/保存データで即座に表示し、裏でユーザー登録データを取得する
+loadPersonalIntoState();
+fetchRegData();
 </script>
 
 </body>
