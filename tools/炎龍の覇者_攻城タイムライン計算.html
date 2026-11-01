@@ -203,7 +203,7 @@
     <button type="button" class="ks-toggle-btn" id="ksToggleBtn" onclick="ksToggleSidebar()" aria-label="メニュー開閉">←</button>
   </div>
   <nav>
-    <a href="../index.html?v=20261101222113" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261101222113" class="ks-link ks-active" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261101222113" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261101222113" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261101222113" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="../kvk-matchup/kvk-matchup-index.html?v=20261101222113" class="ks-link" title="KvK相手突合せ まとめ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ まとめ</span></a>
+    <a href="../index.html?v=20261102011853" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261102011853" class="ks-link ks-active" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261102011853" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261102011853" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261102011853" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="../kvk-matchup/kvk-matchup-index.html?v=20261102011853" class="ks-link" title="KvK相手突合せ まとめ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ まとめ</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -232,7 +232,8 @@
 <h1>炎龍 集結タイムライン計算</h1>
 <div class="sub">
 「メイン合わせ集結」作戦（削り→メイン→増援の階段状着弾、帰還ベースのクールダウン）でタイムラインを自動計算します。<br>
-削り・増援はパターンごとに使う／使わないを選べます。メインは全パターン共通で使い回されます。
+削り・増援はパターンごとに使う／使わないを選べます。メインは全パターン共通で使い回されます。<br>
+※行軍秒数（ペットあり）は一旦四捨五入して表示・計算しています。
 </div>
 
 <div class="card">
@@ -265,7 +266,7 @@
   </div>
   <table id="memberTable">
     <thead>
-      <tr><th>役割</th><th>ラベル／名前</th><th>行軍秒数（ペットなし）</th><th>速度ペットLv</th><th>行軍秒数（ペットあり）</th><th>ペットあり採用</th><th></th></tr>
+      <tr><th>ラベル／名前</th><th>役割</th><th>行軍秒数（ペットなし）</th><th>速度ペットLv</th><th>行軍秒数（ペットあり）</th><th>採用</th><th></th></tr>
     </thead>
     <tbody id="memberBody"></tbody>
   </table>
@@ -393,6 +394,7 @@ function renderMembers() {
   members.forEach(m => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
+      <td class="label-col"><input type="text" data-id="${m.id}" class="label-input" list="regUserList" value="${escapeAttr(m.label)}"></td>
       <td class="role-col">
         <select data-id="${m.id}" class="role-select">
           <option value="メイン" ${m.role === "メイン" ? "selected" : ""}>メイン</option>
@@ -400,7 +402,6 @@ function renderMembers() {
           <option value="削り" ${m.role === "削り" ? "selected" : ""}>削り</option>
         </select>
       </td>
-      <td class="label-col"><input type="text" data-id="${m.id}" class="label-input" list="regUserList" value="${escapeAttr(m.label)}"></td>
       <td class="march-col"><input type="number" data-id="${m.id}" class="march-input" value="${m.march}" min="0"></td>
       <td class="pet-col">
         <select data-id="${m.id}" class="pet-select">${buildPetOptions(m.petLevel)}</select>
@@ -485,7 +486,7 @@ petSameValueCheckbox.addEventListener("change", () => {
 function formatMarchPetDisplay(m) {
   if (!m.petLevel) return "（ペットなし）";
   const val = marchWithPet(m.march, m.petLevel);
-  return `${Math.round(val * 10) / 10}`;
+  return `${Math.round(val)}`;
 }
 
 function updateMarchPetCell(id) {
@@ -685,7 +686,8 @@ function runCalculation() {
   }
 
   function effMarch(m) {
-    return m.usePet ? marchWithPet(m.march, m.petLevel) : m.march;
+    // ペット適用後の秒数は四捨五入して使う（小数のままだと発起・帰還時刻が中途半端になるため）
+    return m.usePet ? Math.round(marchWithPet(m.march, m.petLevel)) : m.march;
   }
 
   function computeMinT(instance) {

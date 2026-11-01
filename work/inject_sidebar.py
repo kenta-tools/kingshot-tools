@@ -46,11 +46,27 @@ NAV_EVENT_GROUPS = [
 
 NAV_TOOLS = [HOME] + [item for _, items in NAV_EVENT_GROUPS for item in items]
 
-# サイドバーを注入する対象ページは、tools/配下の実ツールページだけ
-# （kvk-matchup/kvk-matchup-index.htmlはメニューからリンクはするが、
-#  flame-dragon/holy-sword-leagueと同じ「まとめページ」なのでサイドバー自体は注入しない）
+# サイドバーを注入する対象ページ：tools/配下の実ツールページ＋kvk-matchup/配下の全ページ。
+# kvk-matchup/は「ツール一覧の中」に入れた経緯があるので、flame-dragon/holy-sword-leagueとは異なり
+# 他のtoolsページと同じレフトメニューを表示する（個別の突合せレポートもKvKごとに増えるので、
+# 固定リストではなくglobで拾う）。
+def kvk_matchup_pages():
+    kvk_dir = FOLDER / "kvk-matchup"
+    if not kvk_dir.exists():
+        return []
+    return sorted(
+        str(p.relative_to(FOLDER)).replace("\\", "/")
+        for p in kvk_dir.glob("*.html")
+    )
+
+
 PAGE_GROUPS = [
-    ([rel_path for rel_path, _, _ in NAV_TOOLS if rel_path.startswith("tools/")] + ["tools/tools-index.html"], NAV_EVENT_GROUPS),
+    (
+        [rel_path for rel_path, _, _ in NAV_TOOLS if rel_path.startswith("tools/")]
+        + ["tools/tools-index.html"]
+        + kvk_matchup_pages(),
+        NAV_EVENT_GROUPS,
+    ),
 ]
 
 MARK_START = "<!-- ks-sidebar:start -->"
