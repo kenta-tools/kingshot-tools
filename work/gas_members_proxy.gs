@@ -186,7 +186,7 @@ function cleanEntry_(m) {
   var troopsIn = String(m.troops || "");
   var r = {
     alliance: clip_(m.alliance, 20),
-    entry: m.entry === "late" ? "late" : "start",
+    entry: m.entry === "late" || m.entry === "absent" ? m.entry : "start",
     grade: GRADES.indexOf(grade) >= 0 ? grade : "その他",
     monthly: m.monthly === true,
     leaveEarly: m.leaveEarly === true,

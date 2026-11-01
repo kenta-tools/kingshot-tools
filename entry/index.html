@@ -123,14 +123,29 @@
   <div class="card" id="formCard" style="display: none;">
     <div class="event-title" id="formEvent"></div>
     <div class="who" id="whoText"></div>
-    <div class="banner" id="registeredBanner" style="display: none;">登録済みです。直して「変更を保存する」か、いちばん下の「参加を取り消す」を押してください。</div>
+    <div class="banner" id="registeredBanner" style="display: none;">登録済みです。直して「変更を保存する」か、いちばん下の「登録を取り消す」を押してください。</div>
 
     <div class="field">
-      <span class="cap">同盟<span class="req">必須</span></span>
-      <input type="text" id="fAlliance" maxlength="20" list="allianceList">
+      <span class="cap">同盟（英字3文字）<span class="req">必須</span></span>
+      <input type="text" id="fAlliance" maxlength="3" list="allianceList" autocapitalize="characters" placeholder="例: EGG" style="max-width: 160px;">
       <datalist id="allianceList"></datalist>
     </div>
 
+    <div class="field">
+      <span class="cap">参加</span>
+      <div class="chips">
+        <label class="chip"><input type="radio" name="fEntry" value="start"><span>最初から</span></label>
+        <label class="chip"><input type="radio" name="fEntry" value="late"><span>途中から</span></label>
+        <label class="chip"><input type="radio" name="fEntry" value="absent"><span>不参加</span></label>
+      </div>
+      <div class="sub-field" id="joinAtField">
+        <span class="cap">何時から？</span>
+        <input type="text" id="fJoinAt" maxlength="20" placeholder="例: 23時">
+      </div>
+    </div>
+
+    <!-- 不参加のときは隠す -->
+    <div id="joinFields">
     <div class="field">
       <span class="cap">区分</span>
       <div class="chips">
@@ -142,17 +157,6 @@
       </div>
     </div>
 
-    <div class="field">
-      <span class="cap">参加</span>
-      <div class="chips">
-        <label class="chip"><input type="radio" name="fEntry" value="start"><span>最初から</span></label>
-        <label class="chip"><input type="radio" name="fEntry" value="late"><span>途中から</span></label>
-      </div>
-      <div class="sub-field" id="joinAtField">
-        <span class="cap">何時から？</span>
-        <input type="text" id="fJoinAt" maxlength="20" placeholder="例: 23時">
-      </div>
-    </div>
 
     <div class="field">
       <span class="cap">当てはまるものを押す</span>
@@ -169,17 +173,12 @@
     </div>
 
     <div class="field">
-      <span class="cap">兵種（出せるものを全部押す）</span>
+      <span class="cap">T11の兵種を選ぶ（なければ押さない）</span>
       <div class="chips">
         <label class="chip"><input type="checkbox" class="fTroop" value="歩"><span>歩兵</span></label>
         <label class="chip"><input type="checkbox" class="fTroop" value="騎"><span>騎兵</span></label>
         <label class="chip"><input type="checkbox" class="fTroop" value="弓"><span>弓兵</span></label>
       </div>
-    </div>
-
-    <div class="field">
-      <span class="cap">兵士レベル（T）</span>
-      <input type="number" id="fTier" min="1" max="30" inputmode="numeric" placeholder="例: 11" style="max-width: 160px;">
     </div>
 
     <div class="two">
@@ -208,6 +207,7 @@
         </div>
       </div>
     </div>
+    </div>
 
     <div class="field">
       <span class="cap">ひとこと（なくてOK）</span>
@@ -218,7 +218,7 @@
     <div class="msg" id="formMsg"></div>
     <div class="row" style="margin-top: 14px; justify-content: space-between;">
       <button type="button" class="sub-btn" id="backBtn">← 戻る</button>
-      <button type="button" class="danger" id="cancelEntryBtn" style="display: none;">参加を取り消す</button>
+      <button type="button" class="danger" id="cancelEntryBtn" style="display: none;">登録を取り消す</button>
     </div>
   </div>
 
@@ -390,13 +390,14 @@
       var u = userById(e.userId);
       return Object.assign({}, e, { name: u ? u.name : "?" });
     }).sort(function(a, b) {
-      return a.alliance.localeCompare(b.alliance) || GRADES.indexOf(a.grade) - GRADES.indexOf(b.grade) || a.name.localeCompare(b.name);
+      return (a.entry === "absent") - (b.entry === "absent") || a.alliance.localeCompare(b.alliance) || GRADES.indexOf(a.grade) - GRADES.indexOf(b.grade) || a.name.localeCompare(b.name);
     });
-    $("listCount").textContent = "（" + rows.length + "人）";
+    var absent = rows.filter(function(m) { return m.entry === "absent"; }).length;
+    $("listCount").textContent = "（参加" + (rows.length - absent) + "人" + (absent ? "・不参加" + absent + "人" : "") + "）";
     $("listBody").innerHTML = rows.length ? rows.map(function(m) {
       var mine = me && me.userId === m.userId;
       return '<tr' + (mine ? ' class="me"' : "") + "><td>" + escapeHtml(m.alliance) + "</td><td>" + escapeHtml(m.grade) +
-        "</td><td>" + escapeHtml(m.name) + '</td><td class="marks">' + marksOf(m) + "</td></tr>";
+        "</td><td>" + escapeHtml(m.name) + '</td><td class="marks">' + (m.entry === "absent" ? "不参加" : marksOf(m)) + "</td></tr>";
     }).join("") : '<tr><td colspan="4" style="color: #777;">まだ誰も登録していません</td></tr>';
   }
 
@@ -495,6 +496,7 @@
     $("joinAtField").style.display = radioValue("fEntry") === "late" ? "block" : "none";
     $("leaveAtField").style.display = $("fLeaveEarly").checked ? "block" : "none";
     $("rallyFields").style.display = $("fRallyOn").checked ? "grid" : "none";
+    $("joinFields").style.display = radioValue("fEntry") === "absent" ? "none" : "block";
   }
   document.querySelectorAll("input[name=fEntry], #fLeaveEarly, #fRallyOn").forEach(function(el) {
     el.addEventListener("change", syncSubFields);
@@ -503,17 +505,24 @@
   function readForm() {
     var troops = "";
     document.querySelectorAll(".fTroop:checked").forEach(function(cb) { troops += cb.value; });
-    var late = radioValue("fEntry") === "late", leave = $("fLeaveEarly").checked, rally = $("fRallyOn").checked;
+    var entry = radioValue("fEntry") || "start";
+    var alliance = str($("fAlliance").value).normalize("NFKC");
+    if (entry === "absent") {
+      return { alliance: alliance, entry: entry, grade: radioValue("fGrade") || "その他", monthly: false, leaveEarly: false,
+        vc: false, vivian4: false, troops: "", tier: null, joinAt: "", leaveAt: "", note: str($("fNote").value),
+        marchCount: null, marchPet: null, rallyCount: null, rallyPet: null };
+    }
+    var late = entry === "late", leave = $("fLeaveEarly").checked, rally = $("fRallyOn").checked;
     return {
-      alliance: str($("fAlliance").value),
-      entry: late ? "late" : "start",
+      alliance: alliance,
+      entry: entry,
       grade: radioValue("fGrade") || "その他",
       monthly: $("fMonthly").checked,
       leaveEarly: leave,
       vc: $("fVc").checked,
       vivian4: $("fVivian4").checked,
       troops: troops,
-      tier: numValue("fTier"),
+      tier: troops ? 11 : null, // 選んだ兵種は T11
       joinAt: late ? str($("fJoinAt").value) : "",
       leaveAt: leave ? str($("fLeaveAt").value) : "",
       note: str($("fNote").value),
@@ -526,14 +535,13 @@
 
   function fillForm(m) {
     $("fAlliance").value = m.alliance || "";
-    setRadio("fEntry", m.entry === "late" ? "late" : "start");
+    setRadio("fEntry", m.entry === "late" || m.entry === "absent" ? m.entry : "start");
     setRadio("fGrade", GRADES.indexOf(m.grade) >= 0 ? m.grade : "その他");
     $("fMonthly").checked = !!m.monthly;
     $("fLeaveEarly").checked = !!m.leaveEarly;
     $("fVc").checked = !!m.vc;
     $("fVivian4").checked = !!m.vivian4;
     document.querySelectorAll(".fTroop").forEach(function(cb) { cb.checked = (m.troops || "").indexOf(cb.value) >= 0; });
-    setNum("fTier", m.tier);
     $("fJoinAt").value = m.joinAt || "";
     $("fLeaveAt").value = m.leaveAt || "";
     $("fNote").value = m.note || "";
@@ -548,12 +556,12 @@
   // 入力の確認。問題があればメッセージを返す
   function checkForm(m) {
     function bad(v) { return v != null && !(v >= 0 && Math.floor(v) === v); }
-    if (!m.alliance) return "同盟を入れてください";
+    if (!/^[A-Za-z]{3}$/.test(m.alliance)) return "同盟は英字3文字で入れてください（例: EGG）";
+    if (m.entry === "absent") return "";
     if (m.marchCount == null) return "出征部隊数を入れてください";
     if (m.marchPet == null) return "出征容量ペットLvを入れてください";
     if (bad(m.marchCount) || bad(m.marchPet) || bad(m.rallyCount) || bad(m.rallyPet)) return "部隊数・ペットLvは数字で入れてください";
     if ($("fRallyOn").checked && m.rallyCount == null && m.rallyPet == null) return "集結部隊数・集結容量ペットLvを入れてください";
-    if (m.tier != null && !(m.tier >= 1 && m.tier <= 30)) return "兵士レベルは1〜30の数字で入れてください";
     return "";
   }
 
@@ -575,7 +583,8 @@
       me.userId = res.userId;
       me.oldName = "";
       return load().then(function() {
-        $("doneTitle").textContent = res.result === "canceled" ? "参加を取り消しました"
+        $("doneTitle").textContent = res.result === "canceled" ? "登録を取り消しました"
+          : m.entry === "absent" ? "✅ 不参加で登録しました"
           : res.result === "updated" ? "✅ 変更しました" : "✅ 登録しました";
         $("doneEvent").textContent = eventLabel(eventById(currentEventId)) + "　" + me.name;
         $("editAgainBtn").textContent = cancel ? "もう一度登録する" : "内容を直す";
@@ -592,7 +601,7 @@
 
   $("saveBtn").addEventListener("click", function() { send(false); });
   $("cancelEntryBtn").addEventListener("click", function() {
-    if (confirm("参加を取り消します。よろしいですか？")) send(true);
+    if (confirm("登録を取り消します。よろしいですか？")) send(true);
   });
   $("backBtn").addEventListener("click", function() {
     show("name");

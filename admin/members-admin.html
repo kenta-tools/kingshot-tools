@@ -108,6 +108,7 @@
   .tag { display: inline-block; padding: 1px 7px; border-radius: 4px; font-size: 11px; font-weight: bold; }
   .tag.start { background: #e3f4e8; color: #1e7d3a; }
   .tag.late { background: #e8eefc; color: #2c5cc5; }
+  .tag.absent { background: #eee; color: #777; }
   .tag.new { background: #fff1d6; color: #a86a00; }
   .legend { font-size: 12px; color: #555; margin-bottom: 8px; }
   .ai-steps { background: #f0f5ff; border: 1px solid #d5e1fb; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px; }
@@ -305,6 +306,7 @@
           <select id="fEntry">
             <option value="start">最初から参加できる</option>
             <option value="late">途中参加</option>
+            <option value="absent">不参加</option>
           </select>
         </div>
         <div class="field">
@@ -472,8 +474,9 @@
 
   var EVENT_TYPES = ["KVK", "聖剣", "聖剣リーグ", "三盟", "炎龍"];
   var GRADES = ["G8", "G7", "G6", "G5", "その他"];
-  var ENTRY_LABEL = { start: "最初から参加できる", late: "途中参加" };
-  var ENTRY_SHORT = { start: "最初から", late: "途中参加" };
+  var ENTRY_LABEL = { start: "最初から参加できる", late: "途中参加", absent: "不参加" };
+  var ENTRY_SHORT = { start: "最初から", late: "途中参加", absent: "不参加" };
+  var ENTRY_ORDER = ["start", "late", "absent"];
   var TROOP_ORDER = "歩騎弓";
   // 数値の登録項目（出征＝全員、集結＝指示があった人だけ）
   var NUM_FIELDS = [
@@ -654,7 +657,8 @@
     var grade = str(m.grade).toUpperCase().replace(/\s/g, "");
     return {
       alliance: str(m.alliance),
-      entry: m.entry === "late" || /途中/.test(str(m.entry)) ? "late" : "start",
+      entry: m.entry === "absent" || /不参加/.test(str(m.entry)) ? "absent"
+        : m.entry === "late" || /途中/.test(str(m.entry)) ? "late" : "start",
       grade: GRADES.indexOf(grade) >= 0 ? grade : "その他",
       name: str(m.name),
       monthly: bool(m.monthly),
@@ -1499,7 +1503,7 @@
 
     $("eventSelect").innerHTML = events.length
       ? events.map(function(ev) {
-          var n = state.entries.filter(function(x) { return x.eventId === ev.id; }).length;
+          var n = state.entries.filter(function(x) { return x.eventId === ev.id && x.entry !== "absent"; }).length;
           return '<option value="' + ev.id + '"' + (ev.id === currentEventId ? " selected" : "") + '>' +
             escapeHtml(eventLabel(ev)) + '（' + n + '人）' + (ev.open ? '【受付中】' : '') + '</option>';
         }).join("")
@@ -1522,7 +1526,7 @@
 
   function defaultCompare(a, b) {
     return a.alliance.localeCompare(b.alliance, "ja")
-      || (a.entry === b.entry ? 0 : a.entry === "start" ? -1 : 1)
+      || ENTRY_ORDER.indexOf(a.entry) - ENTRY_ORDER.indexOf(b.entry)
       || gradeRank(a.grade) - gradeRank(b.grade)
       || (b.tier || 0) - (a.tier || 0);
   }
@@ -2206,7 +2210,7 @@
   // ---------- AIに渡す用 ----------
   // 上の参加者一覧と同じ並び。絞り込み指定時は一覧の同盟・検索の絞り込みも反映する
   function aiRows() {
-    var rows = sortRows(eventRows());
+    var rows = sortRows(eventRows()).filter(function(m) { return m.entry !== "absent"; }); // 不参加の人はチーム分けに不要
     if (!$("aiFilteredOnly").checked) return rows;
     var q = $("filterInput").value.trim().toLowerCase(), fa = $("filterAlliance").value;
     return rows.filter(function(m) {
@@ -2232,7 +2236,7 @@
       "",
       "## 列の意味",
       "- 同盟・名前: プレイヤーの所属同盟と名前",
-      "- 参加: 最初から（開始時から参加）／途中参加",
+      "- 参加: 最初から（開始時から参加）／途中参加（不参加と答えた人は含めていません）",
       "- 区分: G8・G7・G6・G5・その他（募集フォーマットでの区分）",
       format === "csv"
         ? "- マンスリー・途中抜け・VC・ビビアン星4以上: ◯なら該当（VC＝ボイスチャット参加可能・聴き専含む）"
