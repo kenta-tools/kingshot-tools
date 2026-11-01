@@ -22,9 +22,10 @@ from pathlib import Path
 FOLDER = Path(__file__).resolve().parent.parent
 
 # tools / flame-dragon / holy-sword-league は互いに独立したカテゴリとして扱う。
-# カテゴリ間の行き来はTOP（index.html）のカード選択のみで行い、
-# 各カテゴリ内のページのサイドバーには「TOP」に戻るリンク＋そのカテゴリ自身の項目だけを出す
-# （他カテゴリの項目は出さない）。
+# カテゴリ間の行き来はTOP（index.html）のカード選択のみで行う。
+# サイドバー（固定メニュー）があるのはtools配下のページだけ。
+# index.html（TOP）・flame-dragon-index.html・holy-sword-league-index.htmlは
+# サイドバーなし、ページ内に軽い「← TOP」リンクを直書きする方式（inject対象外）。
 HOME = ("index.html", "🏠", "TOP")
 
 NAV_TOOLS = [
@@ -36,14 +37,10 @@ NAV_TOOLS = [
     ("tools/周期ウェーブタイマー.html", "🌊", "周期ウェーブタイマー"),
     ("tools/音声アナウンス付きストップウォッチ.html", "🔊", "音声ストップウォッチ（工事中）"),
 ]
-NAV_FLAME_DRAGON = [HOME]
-NAV_HOLY_SWORD_LEAGUE = [HOME]
 
 # (対象ページの相対パス一覧, そのページで使うナビ項目リスト)
 PAGE_GROUPS = [
     ([rel_path for rel_path, _, _ in NAV_TOOLS if rel_path != "index.html"] + ["tools/tools-index.html"], NAV_TOOLS),
-    (["flame-dragon/flame-dragon-index.html"], NAV_FLAME_DRAGON),
-    (["holy-sword-league/holy-sword-league-index.html"], NAV_HOLY_SWORD_LEAGUE),
 ]
 
 MARK_START = "<!-- ks-sidebar:start -->"

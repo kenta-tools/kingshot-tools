@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>メンバー管理（管理者）</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+    background: #f4f5f7;
+    color: #222;
+    max-width: 1100px;
+    margin: 30px auto;
+    padding: 0 16px;
+  }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 0 0 12px; }
+  .sub { color: #666; font-size: 13px; margin-bottom: 20px; line-height: 1.6; }
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    margin-bottom: 16px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  input[type=text], input[type=password], input[type=search], input[type=number], textarea, select {
+    font: inherit; font-size: 14px; padding: 7px 9px;
+    border: 1px solid #ccd2db; border-radius: 6px; background: #fff;
+  }
+  textarea { width: 100%; min-height: 200px; font-family: Consolas, "MS Gothic", monospace; font-size: 13px; }
+  button {
+    font: inherit; font-size: 13px; padding: 7px 14px; border-radius: 6px;
+    border: 1px solid #3a4a63; background: #1a2332; color: #fff; cursor: pointer;
+  }
+  button.sub-btn { background: #fff; color: #1a2332; }
+  button.danger { background: #fff; color: #c0392b; border-color: #c0392b; }
+  button.small { padding: 4px 9px; font-size: 12px; }
+  button:hover { opacity: 0.85; }
+  button:disabled { opacity: 0.4; cursor: default; }
+  .hint { font-size: 12px; color: #777; line-height: 1.6; }
+  .msg { font-size: 13px; margin-top: 8px; min-height: 1em; white-space: pre-wrap; }
+  .msg.ok { color: #1e7d3a; }
+  .msg.err { color: #c0392b; }
+
+  .status-bar {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between;
+    font-size: 13px;
+  }
+  .pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: bold; }
+  .pill.saved { background: #e3f4e8; color: #1e7d3a; }
+  .pill.dirty { background: #fff1d6; color: #a86a00; }
+
+  /* 1件登録フォーム */
+  .form-grid {
+    display: grid; gap: 10px 14px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .field label.cap { display: block; font-size: 12px; color: #555; margin-bottom: 3px; font-weight: bold; }
+  .field input[type=text], .field input[type=number], .field select { width: 100%; }
+  .field.wide { grid-column: span 2; }
+  .checks { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; padding-top: 6px; }
+  .checks label { white-space: nowrap; cursor: pointer; }
+  .form-card.editing { outline: 2px solid #f0ad4e; }
+  .edit-banner { display: none; background: #fff1d6; color: #a86a00; font-size: 13px; font-weight: bold;
+    padding: 6px 10px; border-radius: 6px; margin-bottom: 10px; }
+  .form-card.editing .edit-banner { display: block; }
+
+  /* 一覧 */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 7px 8px; border-bottom: 1px solid #e6e9ee; text-align: left; vertical-align: middle; }
+  th { background: #f0f2f5; cursor: pointer; user-select: none; white-space: nowrap; }
+  th.nosort { cursor: default; }
+  td.ops { white-space: nowrap; text-align: right; }
+  td.marks { letter-spacing: 2px; white-space: nowrap; }
+  tr.editing td { background: #fffbe8; }
+  .tag { display: inline-block; padding: 1px 7px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+  .tag.start { background: #e3f4e8; color: #1e7d3a; }
+  .tag.late { background: #e8eefc; color: #2c5cc5; }
+  .legend { font-size: 12px; color: #555; margin-bottom: 8px; }
+
+  /* ログイン画面 */
+  #loginView { max-width: 360px; margin: 80px auto; text-align: center; }
+  #loginView input { width: 100%; margin: 12px 0; }
+  #loginView button { width: 100%; }
+  #appView { display: none; }
+
+  @media (max-width: 760px) {
+    .form-grid { grid-template-columns: 1fr 1fr; }
+    .field.wide { grid-column: 1 / -1; }
+    table { display: block; overflow-x: auto; }
+  }
+</style>
+</head>
+<body>
+
+<div id="loginView" class="card">
+  <h2>🔒 管理者ログイン</h2>
+  <div class="hint">メンバー管理画面を開くにはパスワードを入力してください。</div>
+  <input type="password" id="pwInput" placeholder="パスワード" autocomplete="current-password">
+  <button type="button" id="loginBtn">ログイン</button>
+  <div class="msg err" id="loginMsg"></div>
+</div>
+
+<div id="appView">
+  <div class="row" style="justify-content: space-between;">
+    <h1>👥 メンバー管理（管理者）</h1>
+    <button type="button" class="sub-btn small" id="logoutBtn">ログアウト</button>
+  </div>
+  <div class="sub">イベントのチーム分けに使うメンバーを登録します。登録した内容は「members.json を書き出し」で保存し、リポジトリの <code>data/members.json</code> を置き換えて公開してください。</div>
+
+  <!-- 保存状態 -->
+  <div class="card status-bar">
+    <div>
+      <span class="pill" id="statePill"></span>
+      <span id="stateText" class="hint"></span>
+    </div>
+    <div class="row">
+      <button type="button" id="exportJsonBtn">members.json を書き出し</button>
+      <button type="button" class="sub-btn" id="exportCsvBtn">CSV書き出し</button>
+      <button type="button" class="danger" id="discardBtn">変更を破棄</button>
+    </div>
+  </div>
+
+  <!-- テンプレート貼り付け・ファイル取り込み -->
+  <div class="card">
+    <h2>まとめて登録（募集フォーマットの貼り付け・ファイル）</h2>
+    <div class="hint">
+      募集フォーマットに記入されたテキストをそのまま貼り付けてください。複数の同盟・「最初から参加できる」「途中参加」の見出しが混ざっていても読み取ります。<br>
+      名前の後ろの <b>◯△◇◆</b> と括弧（<b>(〜22時)</b>＝抜ける時刻、<b>(23時〜)</b>＝参加開始、<b>(T11)</b>＝3兵種T11、<b>(歩弓T11)</b>・<b>(歩弓)</b>＝兵種指定）を自動で振り分けます。それ以外の括弧は備考に入ります。<br>
+      同じ同盟に同じ名前のメンバーがいる場合は上書き更新します。ファイルは .txt（このフォーマット）／.csv（CSV書き出しと同じ列）／.json に対応しています。
+    </div>
+    <div class="row" style="margin: 10px 0;">
+      <button type="button" class="sub-btn small" id="copyBlankBtn">空のフォーマットをコピー</button>
+      <button type="button" class="sub-btn small" id="sampleBtn">記入例を貼り付け</button>
+      <span class="hint">見出しがないときの同盟名:</span>
+      <input type="text" id="defaultAlliance" placeholder="例: EGG" style="width: 120px;">
+    </div>
+    <textarea id="bulkText" placeholder="EGG(最初から参加できる)&#10;◯:マンスリー持ち&#10;…&#10;G7: あんこ◯△◆(〜22時)(T11)、"></textarea>
+    <div class="row" style="margin-top: 10px;">
+      <label class="hint"><input type="radio" name="importMode" value="merge" checked> 追加・更新</label>
+      <label class="hint"><input type="radio" name="importMode" value="replace"> 全件置き換え</label>
+      <button type="button" id="previewBtn" class="sub-btn">読み取り結果を確認</button>
+      <button type="button" id="bulkBtn">取り込み</button>
+      <span class="hint">または</span>
+      <input type="file" id="fileInput" accept=".txt,.csv,.tsv,.json">
+    </div>
+    <div class="msg" id="bulkMsg"></div>
+    <div id="previewWrap" style="display:none; margin-top: 10px;">
+      <table>
+        <thead><tr><th class="nosort">同盟</th><th class="nosort">参加</th><th class="nosort">G</th><th class="nosort">名前</th><th class="nosort">印</th><th class="nosort">兵種</th><th class="nosort">時間</th><th class="nosort">備考</th></tr></thead>
+        <tbody id="previewBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 1件ずつ登録・変更 -->
+  <div class="card form-card" id="formCard">
+    <h2 id="formTitle">1人ずつ登録</h2>
+    <div class="edit-banner" id="editBanner"></div>
+    <div class="form-grid">
+      <div class="field">
+        <label class="cap">同盟 ※必須</label>
+        <input type="text" id="fAlliance" placeholder="例: EGG" list="allianceList">
+        <datalist id="allianceList"></datalist>
+      </div>
+      <div class="field">
+        <label class="cap">名前 ※必須</label>
+        <input type="text" id="fName">
+      </div>
+      <div class="field">
+        <label class="cap">参加</label>
+        <select id="fEntry">
+          <option value="start">最初から参加できる</option>
+          <option value="late">途中参加</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="cap">区分</label>
+        <select id="fGrade">
+          <option>G8</option><option selected>G7</option><option>G6</option><option>G5</option><option>その他</option>
+        </select>
+      </div>
+      <div class="field wide">
+        <label class="cap">印</label>
+        <div class="checks">
+          <label><input type="checkbox" id="fMonthly"> ◯ マンスリー持ち</label>
+          <label><input type="checkbox" id="fLeaveEarly"> △ 途中抜け</label>
+          <label><input type="checkbox" id="fVc"> ◇ VC参加可能</label>
+          <label><input type="checkbox" id="fVivian4"> ◆ ビビアン星4以上</label>
+        </div>
+      </div>
+      <div class="field">
+        <label class="cap">兵種（未選択＝指定なし）</label>
+        <div class="checks">
+          <label><input type="checkbox" class="fTroop" value="歩"> 歩兵</label>
+          <label><input type="checkbox" class="fTroop" value="騎"> 騎兵</label>
+          <label><input type="checkbox" class="fTroop" value="弓"> 弓兵</label>
+        </div>
+      </div>
+      <div class="field">
+        <label class="cap">兵士レベル（T）</label>
+        <input type="number" id="fTier" min="1" max="20" placeholder="例: 11">
+      </div>
+      <div class="field">
+        <label class="cap">参加開始（途中参加の時刻）</label>
+        <input type="text" id="fJoinAt" placeholder="例: 23時">
+      </div>
+      <div class="field">
+        <label class="cap">抜ける時刻</label>
+        <input type="text" id="fLeaveAt" placeholder="例: 22時">
+      </div>
+      <div class="field wide">
+        <label class="cap">備考</label>
+        <input type="text" id="fNote">
+      </div>
+    </div>
+    <div class="row" style="margin-top: 12px;">
+      <button type="button" id="saveBtn">登録</button>
+      <button type="button" class="sub-btn" id="cancelBtn">キャンセル</button>
+    </div>
+    <div class="msg" id="formMsg"></div>
+  </div>
+
+  <!-- 一覧 -->
+  <div class="card">
+    <div class="row" style="justify-content: space-between; margin-bottom: 10px;">
+      <h2 style="margin: 0;">登録メンバー <span id="countText" class="hint"></span></h2>
+      <div class="row">
+        <select id="filterAlliance"><option value="">すべての同盟</option></select>
+        <input type="search" id="filterInput" placeholder="絞り込み（名前・備考）">
+      </div>
+    </div>
+    <div class="legend">◯:マンスリー持ち　△:途中抜け　◇:VC参加可能(聴き専可)　◆:ビビアン星4以上持ち</div>
+    <table>
+      <thead>
+        <tr>
+          <th data-key="alliance">同盟</th>
+          <th data-key="entry">参加</th>
+          <th data-key="grade">G</th>
+          <th data-key="name">名前</th>
+          <th class="nosort">印</th>
+          <th data-key="tier">兵種</th>
+          <th class="nosort">時間</th>
+          <th class="nosort">備考</th>
+          <th class="nosort"></th>
+        </tr>
+      </thead>
+      <tbody id="memberBody"></tbody>
+    </table>
+  </div>
+
+  <!-- フォーマットで書き出し -->
+  <div class="card">
+    <h2>募集フォーマットで書き出し</h2>
+    <div class="hint">登録内容を募集フォーマットと同じ形のテキストに戻します（Discordへの貼り付け・確認用）。</div>
+    <div class="row" style="margin: 10px 0;">
+      <button type="button" class="sub-btn small" id="formatBtn">テキストを作成</button>
+      <button type="button" class="sub-btn small" id="copyFormatBtn">コピー</button>
+    </div>
+    <textarea id="formatOut" readonly></textarea>
+  </div>
+</div>
+
+<script>
+(function() {
+  // 管理者パスワードのSHA-256ハッシュ（SALT + パスワード）。
+  // 変更は work/set_admin_password.py で行う（パスワード本体はファイルに残さない）。
+  // ※ 静的サイトでの簡易認証のため、ソースを読めば回避できる「目隠し」レベルの保護。
+  var ADMIN_HASH = "e940b89eba04b1ccd64833f111d60eaac2fecea7be7deb1089a4ed36b3f9eb85";
+  var SALT = "kingshot-admin:";
+  var AUTH_KEY = "ksAdminAuth";
+  var DRAFT_KEY = "ksMembersDraft";
+  var DATA_URL = "../data/members.json";
+
+  var GRADES = ["G8", "G7", "G6", "G5", "その他"];
+  var ENTRY_LABEL = { start: "最初から参加できる", late: "途中参加" };
+  var ENTRY_SHORT = { start: "最初から", late: "途中参加" };
+  var TROOP_ORDER = "歩騎弓";
+  var LEGEND = "◯:マンスリー持ち\n△:途中抜け\n◇:VC参加可能(聴き専可)\n◆:ビビアン星4以上持ち";
+  var SAMPLE = [
+    "EGG(最初から参加できる)", LEGEND,
+    "G8:", "G7: あんこ◯△◆(〜22時)(T11)、", "G6: おもち◯◇(歩弓T11)、", "G5:ささき◯、", "その他:", "",
+    "EGG(途中参加)", LEGEND,
+    "G8:", "G7: かけ◯◇(23時〜)(歩弓)、", "G6: ", "G5:", "その他:"
+  ].join("\n");
+  var BLANK = ["同盟名:", LEGEND, "G8:", "G7:", "G6:", "G5:", "その他:"].join("\n");
+
+  var $ = function(id) { return document.getElementById(id); };
+
+  // ---------- 認証 ----------
+  function sha256Hex(text) {
+    return crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)).then(function(buf) {
+      return Array.prototype.map.call(new Uint8Array(buf), function(b) {
+        return b.toString(16).padStart(2, "0");
+      }).join("");
+    });
+  }
+
+  function isAuthed() {
+    try { return sessionStorage.getItem(AUTH_KEY) === ADMIN_HASH; } catch (e) { return false; }
+  }
+
+  function showApp() {
+    $("loginView").style.display = "none";
+    $("appView").style.display = "block";
+    loadData();
+  }
+
+  function tryLogin() {
+    var pw = $("pwInput").value;
+    if (!pw) return;
+    sha256Hex(SALT + pw).then(function(hash) {
+      if (hash === ADMIN_HASH) {
+        try { sessionStorage.setItem(AUTH_KEY, hash); } catch (e) {}
+        showApp();
+      } else {
+        $("loginMsg").textContent = "パスワードが違います";
+        $("pwInput").select();
+      }
+    });
+  }
+
+  $("loginBtn").addEventListener("click", tryLogin);
+  $("pwInput").addEventListener("keydown", function(e) { if (e.key === "Enter") tryLogin(); });
+  $("logoutBtn").addEventListener("click", function() {
+    try { sessionStorage.removeItem(AUTH_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  // ---------- データ ----------
+  // メンバー1人:
+  // { id, alliance, entry: "start"|"late", grade: "G8".."G5"|"その他", name,
+  //   monthly, leaveEarly, vc, vivian4 (各bool), troops: "歩騎弓"の部分文字列 ("" = 指定なし),
+  //   tier: 数値|null, joinAt, leaveAt (例 "23時"), note }
+  var members = [];
+  var publishedJson = "";
+  var editingId = null;
+  var sortKey = null, sortDir = 1;
+
+  function newId() {
+    return "m" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+
+  function memberKey(m) {
+    return m.alliance.trim().toLowerCase() + "\u0000" + m.name.trim().toLowerCase();
+  }
+
+  function normTroops(s) {
+    s = String(s || "");
+    return TROOP_ORDER.split("").filter(function(t) { return s.indexOf(t) >= 0; }).join("");
+  }
+
+  function str(v) { return String(v == null ? "" : v).trim(); }
+  function bool(v) { return v === true || v === 1 || /^(1|true|◯|○|〇|yes|y)$/i.test(str(v)); }
+
+  function normalize(list) {
+    return (list || []).map(function(m) {
+      var tier = str(m.tier).replace(/^T/i, "");
+      return {
+        id: m.id || newId(),
+        alliance: str(m.alliance),
+        entry: m.entry === "late" || /途中/.test(str(m.entry)) ? "late" : "start",
+        grade: GRADES.indexOf(str(m.grade).toUpperCase().replace(/\s/g, "")) >= 0
+          ? str(m.grade).toUpperCase().replace(/\s/g, "") : "その他",
+        name: str(m.name),
+        monthly: bool(m.monthly),
+        leaveEarly: bool(m.leaveEarly),
+        vc: bool(m.vc),
+        vivian4: bool(m.vivian4),
+        troops: normTroops(m.troops),
+        tier: tier && !isNaN(Number(tier)) ? Number(tier) : null,
+        joinAt: str(m.joinAt),
+        leaveAt: str(m.leaveAt),
+        note: str(m.note)
+      };
+    }).filter(function(m) { return m.name && m.alliance; });
+  }
+
+  function serialize() {
+    return JSON.stringify(members);
+  }
+
+  function loadData() {
+    fetch(DATA_URL, { cache: "no-store" })
+      .then(function(r) { return r.ok ? r.json() : { members: [] }; })
+      .catch(function() { return { members: [] }; })
+      .then(function(data) {
+        var published = normalize(data.members);
+        publishedJson = JSON.stringify(published);
+        var draft = null;
+        try { draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null"); } catch (e) {}
+        members = draft ? normalize(draft) : published;
+        render();
+      });
+  }
+
+  function saveDraft() {
+    try {
+      if (serialize() === publishedJson) localStorage.removeItem(DRAFT_KEY);
+      else localStorage.setItem(DRAFT_KEY, serialize());
+    } catch (e) {}
+  }
+
+  function commit() {
+    saveDraft();
+    render();
+  }
+
+  // 同じ同盟＋名前がいれば更新、いなければ追加。戻り値: "added" | "updated"
+  function upsert(m) {
+    var key = memberKey(m);
+    for (var i = 0; i < members.length; i++) {
+      if (memberKey(members[i]) === key) {
+        m.id = members[i].id;
+        members[i] = m;
+        return "updated";
+      }
+    }
+    m.id = m.id || newId();
+    members.push(m);
+    return "added";
+  }
+
+  // ---------- 表示用の整形 ----------
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function(c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function marksOf(m) {
+    return (m.monthly ? "◯" : "") + (m.leaveEarly ? "△" : "") + (m.vc ? "◇" : "") + (m.vivian4 ? "◆" : "");
+  }
+
+  // 「T11」「歩弓T11」「歩弓」 — 3兵種すべて or 指定なし＋Tありは「T11」だけ
+  function troopText(m) {
+    var troops = m.troops === TROOP_ORDER ? "" : m.troops;
+    if (m.tier != null) return troops + "T" + m.tier;
+    return troops;
+  }
+
+  // 「23時〜」「〜22時」「21時〜23時」
+  function timeText(m) {
+    if (!m.joinAt && !m.leaveAt) return "";
+    return (m.joinAt || "") + "〜" + (m.leaveAt || "");
+  }
+
+  function gradeRank(g) {
+    var i = GRADES.indexOf(g);
+    return i < 0 ? GRADES.length : i;
+  }
+
+  // ---------- 募集フォーマットの読み取り ----------
+  var MARK_CHARS = /[◯○〇△◇◆]/g;
+
+  function parseEntry(text, ctx) {
+    var parens = [];
+    var rest = text.replace(/[(（]([^)）]*)[)）]/g, function(_, p) { parens.push(p.replace(/\s/g, "")); return ""; });
+    var marks = (rest.match(MARK_CHARS) || []).join("");
+    var name = rest.replace(MARK_CHARS, "").trim();
+    var m = {
+      alliance: ctx.alliance, entry: ctx.entry, grade: ctx.grade, name: name,
+      monthly: /[◯○〇]/.test(marks), leaveEarly: /△/.test(marks), vc: /◇/.test(marks), vivian4: /◆/.test(marks),
+      troops: "", tier: null, joinAt: "", leaveAt: "", note: ""
+    };
+    var notes = [];
+    parens.forEach(function(p) {
+      var tm;
+      if (/[〜~～]/.test(p) && /(時|\d:\d)/.test(p)) {
+        var parts = p.split(/[〜~～]/);
+        if (parts[0]) m.joinAt = parts[0];
+        if (parts[1]) m.leaveAt = parts[1];
+      } else if ((tm = p.match(/^([歩騎弓]*)T(\d+)$/i))) {
+        m.troops = tm[1] ? normTroops(tm[1]) : TROOP_ORDER;
+        m.tier = Number(tm[2]);
+      } else if (/^[歩騎弓]+$/.test(p)) {
+        m.troops = normTroops(p);
+      } else if (p) {
+        notes.push(p);
+      }
+    });
+    if (m.leaveAt) m.leaveEarly = true;
+    m.note = notes.join(" / ");
+    return m;
+  }
+
+  function parseFormatText(text, defaultAlliance) {
+    var ctx = { alliance: defaultAlliance || "", entry: "start", grade: "その他" };
+    var rows = [], errors = [];
+    text.replace(/^\uFEFF/, "").split(/\r?\n/).forEach(function(raw, i) {
+      var line = raw.trim();
+      if (!line) return;
+      if (/^[◯○〇△◇◆]\s*[:：]/.test(line)) return; // 凡例
+
+      var gm = line.match(/^(G\s*\d+|その他)\s*[:：]\s*(.*)$/i);
+      if (gm) {
+        ctx.grade = gm[1].replace(/\s/g, "").toUpperCase().replace("その他".toUpperCase(), "その他");
+        gm[2].split(/[、,，]/).forEach(function(part) {
+          part = part.trim();
+          if (!part) return;
+          var m = parseEntry(part, ctx);
+          if (!m.name) { errors.push((i + 1) + "行目「" + part + "」: 名前が読めません"); return; }
+          if (!m.alliance) { errors.push((i + 1) + "行目「" + m.name + "」: 同盟名がありません（見出しがない場合は同盟名を入力してください）"); return; }
+          rows.push(m);
+        });
+        return;
+      }
+
+      // 見出し: 「EGG(最初から参加できる)」「EGG(途中参加)」「EGG:」
+      var hm = line.match(/^(.+?)\s*[(（]([^)）]*参加[^)）]*)[)）]\s*[:：]?\s*$/);
+      if (hm) {
+        ctx.alliance = hm[1].trim();
+        ctx.entry = /途中/.test(hm[2]) ? "late" : "start";
+        return;
+      }
+      var hm2 = line.match(/^([^:：\s]{1,20})\s*[:：]\s*$/);
+      if (hm2 && hm2[1] !== "同盟名") {
+        ctx.alliance = hm2[1];
+        ctx.entry = "start";
+      }
+      // それ以外（挨拶文など）は無視
+    });
+    return { rows: rows, errors: errors };
+  }
+
+  // ---------- CSV ----------
+  var CSV_COLS = [
+    ["alliance", "同盟"], ["entry", "参加"], ["grade", "区分"], ["name", "名前"],
+    ["monthly", "マンスリー"], ["leaveEarly", "途中抜け"], ["vc", "VC"], ["vivian4", "ビビアン星4"],
+    ["troops", "兵種"], ["tier", "T"], ["joinAt", "参加開始"], ["leaveAt", "抜ける時刻"], ["note", "備考"]
+  ];
+
+  function splitCsvLine(line) {
+    if (line.indexOf("\t") >= 0) return line.split("\t");
+    var out = [], cur = "", inQ = false;
+    for (var i = 0; i < line.length; i++) {
+      var c = line[i];
+      if (inQ) {
+        if (c === '"' && line[i + 1] === '"') { cur += '"'; i++; }
+        else if (c === '"') inQ = false;
+        else cur += c;
+      } else if (c === '"') inQ = true;
+      else if (c === ",") { out.push(cur); cur = ""; }
+      else cur += c;
+    }
+    out.push(cur);
+    return out;
+  }
+
+  function parseCsv(text) {
+    var lines = text.replace(/^\uFEFF/, "").split(/\r?\n/).filter(function(l) { return l.trim(); });
+    var list = [];
+    lines.forEach(function(line, i) {
+      var c = splitCsvLine(line);
+      if (i === 0 && c[0].trim() === "同盟") return;
+      var o = {};
+      CSV_COLS.forEach(function(col, j) { o[col[0]] = c[j]; });
+      list.push(o);
+    });
+    var rows = normalize(list);
+    var skipped = list.length - rows.length;
+    return { rows: rows, errors: skipped ? [skipped + "行: 同盟または名前が空のためスキップ"] : [] };
+  }
+
+  function csvCell(v) {
+    var s = v == null ? "" : String(v);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+
+  // ---------- 一覧 ----------
+  function renderState() {
+    var dirty = serialize() !== publishedJson;
+    var pill = $("statePill");
+    pill.className = "pill " + (dirty ? "dirty" : "saved");
+    pill.textContent = dirty ? "未公開の変更あり" : "公開版と同じ";
+    $("stateText").textContent = dirty
+      ? "このブラウザに下書き保存中。書き出して data/members.json を置き換えると公開されます。"
+      : "";
+    $("discardBtn").disabled = !dirty;
+  }
+
+  function defaultCompare(a, b) {
+    return a.alliance.localeCompare(b.alliance, "ja")
+      || (a.entry === b.entry ? 0 : a.entry === "start" ? -1 : 1)
+      || gradeRank(a.grade) - gradeRank(b.grade)
+      || (b.tier || 0) - (a.tier || 0);
+  }
+
+  function sortedMembers() {
+    var list = members.slice();
+    if (!sortKey) return list.sort(defaultCompare);
+    list.sort(function(a, b) {
+      var r;
+      if (sortKey === "grade") r = gradeRank(a.grade) - gradeRank(b.grade);
+      else if (sortKey === "tier") r = (b.tier || 0) - (a.tier || 0);
+      else r = String(a[sortKey]).localeCompare(String(b[sortKey]), "ja");
+      return r * sortDir || defaultCompare(a, b);
+    });
+    return list;
+  }
+
+  function memberRowHtml(m, withOps) {
+    return '<td>' + escapeHtml(m.alliance) + '</td>' +
+      '<td><span class="tag ' + m.entry + '">' + ENTRY_SHORT[m.entry] + '</span></td>' +
+      '<td>' + escapeHtml(m.grade) + '</td>' +
+      '<td>' + escapeHtml(m.name) + '</td>' +
+      '<td class="marks">' + marksOf(m) + '</td>' +
+      '<td>' + escapeHtml(troopText(m)) + '</td>' +
+      '<td>' + escapeHtml(timeText(m)) + '</td>' +
+      '<td>' + escapeHtml(m.note) + '</td>' +
+      (withOps
+        ? '<td class="ops"><button class="small sub-btn" data-act="edit">変更</button> ' +
+          '<button class="small danger" data-act="delete">削除</button></td>'
+        : "");
+  }
+
+  function render() {
+    renderState();
+
+    var alliances = [];
+    members.forEach(function(m) { if (alliances.indexOf(m.alliance) < 0) alliances.push(m.alliance); });
+    var sel = $("filterAlliance"), cur = sel.value;
+    sel.innerHTML = '<option value="">すべての同盟</option>' + alliances.map(function(a) {
+      return '<option' + (a === cur ? " selected" : "") + '>' + escapeHtml(a) + '</option>';
+    }).join("");
+    $("allianceList").innerHTML = alliances.map(function(a) { return '<option value="' + escapeHtml(a) + '">'; }).join("");
+
+    var q = $("filterInput").value.trim().toLowerCase();
+    var fa = sel.value;
+    var html = [], shown = 0;
+    sortedMembers().forEach(function(m) {
+      if (fa && m.alliance !== fa) return;
+      if (q && (m.name + " " + m.note).toLowerCase().indexOf(q) < 0) return;
+      shown++;
+      html.push('<tr data-id="' + m.id + '"' + (m.id === editingId ? ' class="editing"' : "") + '>' + memberRowHtml(m, true) + '</tr>');
+    });
+    if (!members.length) {
+      html.push('<tr><td colspan="9" class="hint" style="text-align:center;">まだ登録がありません</td></tr>');
+    }
+    $("memberBody").innerHTML = html.join("");
+    $("countText").textContent = (q || fa) ? "（" + shown + " / " + members.length + "人）" : "（" + members.length + "人）";
+    document.querySelectorAll("th[data-key]").forEach(function(th) {
+      var label = th.textContent.replace(/ [▲▼]$/, "");
+      th.textContent = label + (th.dataset.key === sortKey ? (sortDir > 0 ? " ▲" : " ▼") : "");
+    });
+  }
+
+  document.querySelectorAll("th[data-key]").forEach(function(th) {
+    th.addEventListener("click", function() {
+      var key = th.dataset.key;
+      if (sortKey === key) sortDir = -sortDir;
+      else { sortKey = key; sortDir = 1; }
+      render();
+    });
+  });
+  $("filterInput").addEventListener("input", render);
+  $("filterAlliance").addEventListener("change", render);
+
+  // ---------- 1人ずつ登録・変更・キャンセル ----------
+  function setMsg(el, text, ok) {
+    el.textContent = text;
+    el.className = "msg " + (ok ? "ok" : "err");
+  }
+
+  function readForm() {
+    var troops = "";
+    document.querySelectorAll(".fTroop:checked").forEach(function(cb) { troops += cb.value; });
+    var tier = $("fTier").value.trim();
+    var m = {
+      alliance: $("fAlliance").value.trim(),
+      entry: $("fEntry").value,
+      grade: $("fGrade").value,
+      name: $("fName").value.trim(),
+      monthly: $("fMonthly").checked,
+      leaveEarly: $("fLeaveEarly").checked,
+      vc: $("fVc").checked,
+      vivian4: $("fVivian4").checked,
+      troops: normTroops(troops),
+      tier: tier ? Number(tier) : null,
+      joinAt: $("fJoinAt").value.trim(),
+      leaveAt: $("fLeaveAt").value.trim(),
+      note: $("fNote").value.trim()
+    };
+    if (m.leaveAt) m.leaveEarly = true;
+    return m;
+  }
+
+  function fillForm(m) {
+    $("fAlliance").value = m.alliance;
+    $("fEntry").value = m.entry;
+    $("fGrade").value = m.grade;
+    $("fName").value = m.name;
+    $("fMonthly").checked = m.monthly;
+    $("fLeaveEarly").checked = m.leaveEarly;
+    $("fVc").checked = m.vc;
+    $("fVivian4").checked = m.vivian4;
+    document.querySelectorAll(".fTroop").forEach(function(cb) { cb.checked = m.troops.indexOf(cb.value) >= 0; });
+    $("fTier").value = m.tier == null ? "" : m.tier;
+    $("fJoinAt").value = m.joinAt;
+    $("fLeaveAt").value = m.leaveAt;
+    $("fNote").value = m.note;
+  }
+
+  // キャンセル／登録後のリセット。同盟・参加・区分は連続入力しやすいよう残す
+  function resetForm(keepContext) {
+    var ctx = { alliance: $("fAlliance").value, entry: $("fEntry").value, grade: $("fGrade").value };
+    fillForm({ alliance: "", entry: "start", grade: "G7", name: "", monthly: false, leaveEarly: false, vc: false,
+      vivian4: false, troops: "", tier: null, joinAt: "", leaveAt: "", note: "" });
+    if (keepContext) {
+      $("fAlliance").value = ctx.alliance; $("fEntry").value = ctx.entry; $("fGrade").value = ctx.grade;
+    }
+    editingId = null;
+    $("formCard").classList.remove("editing");
+    $("formTitle").textContent = "1人ずつ登録";
+    $("saveBtn").textContent = "登録";
+  }
+
+  function startEdit(m) {
+    editingId = m.id;
+    fillForm(m);
+    $("formCard").classList.add("editing");
+    $("formTitle").textContent = "メンバー変更";
+    $("editBanner").textContent = "「" + m.name + "」（" + m.alliance + "）を変更中です。保存しない場合はキャンセルを押してください。";
+    $("saveBtn").textContent = "変更を保存";
+    $("formMsg").textContent = "";
+    render();
+    $("formCard").scrollIntoView({ behavior: "smooth", block: "start" });
+    $("fName").focus();
+  }
+
+  $("saveBtn").addEventListener("click", function() {
+    var m = readForm();
+    if (!m.alliance || !m.name) { setMsg($("formMsg"), "同盟と名前は必須です", false); return; }
+    if (m.tier != null && !(m.tier > 0)) { setMsg($("formMsg"), "兵士レベルは数字で入力してください", false); return; }
+    var dup = members.find(function(x) { return x.id !== editingId && memberKey(x) === memberKey(m); });
+
+    if (editingId) {
+      if (dup) { setMsg($("formMsg"), m.alliance + "の「" + m.name + "」は別の行にすでに登録されています", false); return; }
+      var idx = members.findIndex(function(x) { return x.id === editingId; });
+      m.id = editingId;
+      members[idx] = m;
+      resetForm(false);
+      commit();
+      setMsg($("formMsg"), "「" + m.name + "」を変更しました", true);
+    } else {
+      if (dup && !confirm(m.alliance + "の「" + m.name + "」はすでに登録済みです。上書きしますか？")) return;
+      var result = upsert(m);
+      resetForm(true);
+      commit();
+      setMsg($("formMsg"), "「" + m.name + "」を" + (result === "added" ? "登録" : "更新") + "しました", true);
+      $("fName").focus();
+    }
+  });
+
+  $("cancelBtn").addEventListener("click", function() {
+    resetForm(false);
+    $("formMsg").textContent = "";
+    render();
+  });
+
+  $("memberBody").addEventListener("click", function(e) {
+    var btn = e.target.closest("button[data-act]");
+    if (!btn) return;
+    var id = btn.closest("tr").dataset.id;
+    var idx = members.findIndex(function(m) { return m.id === id; });
+    if (idx < 0) return;
+    if (btn.dataset.act === "edit") {
+      startEdit(members[idx]);
+    } else if (btn.dataset.act === "delete") {
+      if (!confirm("「" + members[idx].name + "」を削除しますか？")) return;
+      if (editingId === id) resetForm(false);
+      members.splice(idx, 1);
+      commit();
+    }
+  });
+
+  // ---------- まとめて登録 ----------
+  var pending = null; // 確認済みの読み取り結果
+
+  function parseBulk(text, filename) {
+    if (filename && /\.json$/i.test(filename)) {
+      var data = JSON.parse(text);
+      var rows = normalize(Array.isArray(data) ? data : data.members);
+      rows.forEach(function(m) { delete m.id; });
+      return { rows: rows, errors: [] };
+    }
+    if (/^\uFEFF?同盟[,\t]/.test(text) || (filename && /\.(csv|tsv)$/i.test(filename))) return parseCsv(text);
+    return parseFormatText(text, $("defaultAlliance").value.trim());
+  }
+
+  function showPreview(parsed) {
+    $("previewBody").innerHTML = parsed.rows.map(function(m) { return "<tr>" + memberRowHtml(m, false) + "</tr>"; }).join("");
+    $("previewWrap").style.display = parsed.rows.length ? "block" : "none";
+    var text = parsed.rows.length + "人を読み取りました";
+    if (parsed.errors.length) text += "\n読み取れなかった行: " + parsed.errors.join(" / ");
+    setMsg($("bulkMsg"), text, !parsed.errors.length);
+  }
+
+  function importRows(parsed) {
+    var mode = document.querySelector("input[name=importMode]:checked").value;
+    if (!parsed.rows.length) {
+      setMsg($("bulkMsg"), "取り込めるデータがありません" + (parsed.errors.length ? "\n" + parsed.errors.join(" / ") : ""), false);
+      return false;
+    }
+    if (mode === "replace") {
+      if (!confirm("現在の" + members.length + "人を全て削除して、" + parsed.rows.length + "人で置き換えます。よろしいですか？")) return false;
+      members = [];
+      resetForm(false);
+    }
+    var added = 0, updated = 0;
+    parsed.rows.forEach(function(r) { if (upsert(r) === "added") added++; else updated++; });
+    commit();
+    var text = "追加 " + added + "人・更新 " + updated + "人";
+    if (parsed.errors.length) text += "\n読み取れなかった行: " + parsed.errors.join(" / ");
+    setMsg($("bulkMsg"), text, !parsed.errors.length);
+    $("previewWrap").style.display = "none";
+    return true;
+  }
+
+  $("previewBtn").addEventListener("click", function() {
+    showPreview(parseBulk($("bulkText").value));
+  });
+
+  $("bulkBtn").addEventListener("click", function() {
+    if (importRows(parseBulk($("bulkText").value))) $("bulkText").value = "";
+  });
+
+  $("fileInput").addEventListener("change", function() {
+    var file = this.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function() {
+      try {
+        var parsed = parseBulk(String(reader.result), file.name);
+        showPreview(parsed);
+        if (parsed.rows.length && confirm(file.name + " から" + parsed.rows.length + "人を取り込みますか？")) importRows(parsed);
+      } catch (e) {
+        setMsg($("bulkMsg"), "ファイルを読み込めませんでした: " + e.message, false);
+      }
+      $("fileInput").value = "";
+    };
+    reader.readAsText(file, "utf-8");
+  });
+
+  function copyText(text, btn) {
+    var done = function() {
+      var orig = btn.textContent;
+      btn.textContent = "コピーしました";
+      setTimeout(function() { btn.textContent = orig; }, 1500);
+    };
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(done);
+    else {
+      var ta = document.createElement("textarea");
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      document.execCommand("copy"); ta.remove(); done();
+    }
+  }
+
+  $("copyBlankBtn").addEventListener("click", function() { copyText(BLANK, this); });
+  $("sampleBtn").addEventListener("click", function() { $("bulkText").value = SAMPLE; });
+
+  // ---------- 書き出し ----------
+  function download(filename, content, type) {
+    var blob = new Blob([content], { type: type });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function() { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+  }
+
+  $("exportJsonBtn").addEventListener("click", function() {
+    var data = { updated: new Date().toISOString(), members: members };
+    download("members.json", JSON.stringify(data, null, 2) + "\n", "application/json");
+  });
+
+  $("exportCsvBtn").addEventListener("click", function() {
+    var lines = [CSV_COLS.map(function(c) { return c[1]; }).join(",")].concat(sortedMembers().map(function(m) {
+      return CSV_COLS.map(function(c) {
+        var v = m[c[0]];
+        if (typeof v === "boolean") v = v ? 1 : "";
+        if (c[0] === "entry") v = ENTRY_SHORT[v];
+        return csvCell(v);
+      }).join(",");
+    }));
+    download("members.csv", "\uFEFF" + lines.join("\r\n") + "\r\n", "text/csv");
+  });
+
+  function entryText(m) {
+    var s = m.name + marksOf(m);
+    var t = timeText(m), tr = troopText(m);
+    if (t) s += "(" + t + ")";
+    if (tr) s += "(" + tr + ")";
+    // 備考内の括弧は読み取り時に別項目と誤認されるので［］に置き換える
+    if (m.note) s += "(" + m.note.replace(/[(（]/g, "［").replace(/[)）]/g, "］") + ")";
+    return s;
+  }
+
+  function buildFormatText() {
+    var blocks = [];
+    var alliances = [];
+    members.forEach(function(m) { if (alliances.indexOf(m.alliance) < 0) alliances.push(m.alliance); });
+    alliances.forEach(function(a) {
+      ["start", "late"].forEach(function(entry) {
+        var list = members.filter(function(m) { return m.alliance === a && m.entry === entry; });
+        if (!list.length) return;
+        var lines = [a + "(" + ENTRY_LABEL[entry] + ")", LEGEND];
+        GRADES.forEach(function(g) {
+          var names = list.filter(function(m) { return m.grade === g; }).map(entryText);
+          lines.push(g + ": " + names.map(function(n) { return n + "、"; }).join(""));
+        });
+        blocks.push(lines.join("\n"));
+      });
+    });
+    return blocks.join("\n\n");
+  }
+
+  $("formatBtn").addEventListener("click", function() { $("formatOut").value = buildFormatText(); });
+  $("copyFormatBtn").addEventListener("click", function() {
+    if (!$("formatOut").value) $("formatOut").value = buildFormatText();
+    copyText($("formatOut").value, this);
+  });
+
+  $("discardBtn").addEventListener("click", function() {
+    if (!confirm("このブラウザに保存されている未公開の変更を破棄して、公開版に戻しますか？")) return;
+    try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
+    resetForm(false);
+    loadData();
+  });
+
+  // ---------- 起動 ----------
+  if (isAuthed()) showApp();
+  else $("pwInput").focus();
+})();
+</script>
+</body>
+</html>
