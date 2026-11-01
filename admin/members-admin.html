@@ -213,11 +213,22 @@
       </div>
       <span class="sep"></span>
       <div class="group">
+        <span class="hint">個人登録:</span>
+        <span class="pill" id="openState"></span>
+        <button type="button" class="sub-btn small" id="toggleOpenBtn"></button>
+        <button type="button" class="sub-btn small" id="copyEntryUrlBtn">個人登録ページのURLをコピー</button>
+      </div>
+      <span class="sep"></span>
+      <div class="group">
         <span class="hint">新しいイベント:</span>
         <select id="newEventType"></select>
         <input type="date" id="newEventDate">
         <button type="button" id="createEventBtn">作成</button>
       </div>
+    </div>
+    <div class="hint" style="margin-top: 8px;">
+      「受付中」にしたイベントは、<b>個人登録ページ</b>（パスワードなし）から各自が自分の参加情報を登録・変更・取消できます。URLをDiscordなどで案内してください。締め切ったら「受付を締め切る」を押して保存してください（受付中／締切の切り替えも「💾 保存する」で反映されます）。
+      個人登録された内容はすぐGitHubに保存されるので、この画面には「その他の操作・設定」→「他の人が保存した内容を読み込む」で反映されます。
     </div>
     <div class="msg" id="eventMsg"></div>
   </div>
@@ -644,7 +655,8 @@
         aliases: (u.aliases || []).map(str).filter(Boolean) };
     }).filter(function(u) { return u.name; });
     var events = (data.events || []).map(function(e) {
-      return { id: e.id || newId("e"), type: EVENT_TYPES.indexOf(e.type) >= 0 ? e.type : EVENT_TYPES[0], date: str(e.date) };
+      return { id: e.id || newId("e"), type: EVENT_TYPES.indexOf(e.type) >= 0 ? e.type : EVENT_TYPES[0], date: str(e.date),
+        open: e.open === true }; // open: 個人登録ページ（entry/）で受付中
     });
     var userIds = {}, eventIds = {};
     users.forEach(function(u) { userIds[u.id] = true; });
@@ -819,7 +831,11 @@
     local.events.forEach(function(v) {
       var o = out.events.find(function(x) { return x.id === v.id; })
         || (!bV[v.id] && out.events.find(function(x) { return x.type === v.type && x.date === v.date; }));
-      if (o) { eventMap[v.id] = o.id; return; }
+      if (o) {
+        if (bV[v.id] && bV[v.id].open !== v.open) o.open = v.open; // 自分が受付中／締切を切り替えた
+        eventMap[v.id] = o.id;
+        return;
+      }
       if (bV[v.id]) return; // 他の人が削除したイベント
       out.events.push(clone(v));
       eventMap[v.id] = v.id;
@@ -1446,11 +1462,16 @@
       ? events.map(function(ev) {
           var n = state.entries.filter(function(x) { return x.eventId === ev.id; }).length;
           return '<option value="' + ev.id + '"' + (ev.id === currentEventId ? " selected" : "") + '>' +
-            escapeHtml(eventLabel(ev)) + '（' + n + '人）</option>';
+            escapeHtml(eventLabel(ev)) + '（' + n + '人）' + (ev.open ? '【受付中】' : '') + '</option>';
         }).join("")
       : '<option value="">（イベントがありません）</option>';
     $("eventSelect").disabled = !events.length;
     $("deleteEventBtn").disabled = !events.length;
+    var cur = eventById(currentEventId);
+    $("toggleOpenBtn").disabled = !cur;
+    $("openState").textContent = cur && cur.open ? "受付中" : "締切";
+    $("openState").className = "pill " + (cur && cur.open ? "saved" : "dirty");
+    $("toggleOpenBtn").textContent = cur && cur.open ? "受付を締め切る" : "受付を始める";
 
     var has = !!currentEventId;
     $("eventView").style.display = has ? "block" : "none";
@@ -1664,6 +1685,19 @@
     resetForm(false);
     setMsg($("eventMsg"), "「" + eventLabel(ev) + "」を削除しました", true);
     commit();
+  });
+
+  $("toggleOpenBtn").addEventListener("click", function() {
+    var ev = eventById(currentEventId);
+    if (!ev) return;
+    ev.open = !ev.open;
+    setMsg($("eventMsg"), "「" + eventLabel(ev) + "」の個人登録を" + (ev.open ? "受付中" : "締切") +
+      "にしました。「💾 保存する」を押すと個人登録ページに反映されます", true);
+    commit();
+  });
+
+  $("copyEntryUrlBtn").addEventListener("click", function() {
+    copyText(new URL("../entry/", location.href).href, this);
   });
 
   // ---------- 1人ずつ登録・変更・キャンセル ----------
