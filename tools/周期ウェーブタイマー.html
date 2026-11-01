@@ -151,12 +151,10 @@
   .upcoming-launch .remain { font-variant-numeric: tabular-nums; }
   .upcoming-item { margin-bottom: 6px; }
   .upcoming-item:last-child { margin-bottom: 0; }
-  .alt-rally { font-size: 12px; font-weight: normal; color: #8a6d00; margin-top: 2px; }
-  .alt-rally .alt-original { font-weight: bold; text-decoration: underline; }
 
   .missed-launch {
     background: #f1f1f1; border: 1px solid #ddd; border-radius: 10px;
-    padding: 10px 16px; margin-top: 14px; font-size: 13px; color: #555;
+    padding: 10px 16px; margin: 14px 0; font-size: 13px; color: #555;
   }
   .missed-item { margin-bottom: 8px; }
   .missed-item:last-child { margin-bottom: 0; }
@@ -288,7 +286,7 @@
     <button type="button" class="ks-toggle-btn" id="ksToggleBtn" onclick="ksToggleSidebar()" aria-label="メニュー開閉">←</button>
   </div>
   <nav>
-    <a href="../index.html?v=20261102025836" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261102025836" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261102025836" class="ks-link ks-active" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261102025836" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261102025836" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="../kvk-matchup/kvk-matchup-index.html?v=20261102025836" class="ks-link" title="KvK相手突合せ まとめ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ まとめ</span></a>
+    <a href="../index.html?v=20261102031001" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261102031001" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261102031001" class="ks-link ks-active" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261102031001" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261102031001" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="../kvk-matchup/kvk-matchup-index.html?v=20261102031001" class="ks-link" title="KvK相手突合せ まとめ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ まとめ</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -355,10 +353,8 @@
 <div class="layout">
 <div class="col-main">
 
-<div class="upcoming-launch" id="upcomingLaunchBox" style="display:none;"></div>
 <div class="stack" id="itemStack"></div>
 <div class="empty" id="emptyMsg">まだ予定がありません</div>
-<div class="missed-launch" id="missedLaunchBox" style="display:none;"></div>
 
 </div>
 
@@ -543,9 +539,18 @@ function loopRender() {
   items.forEach(it => {
     it.remaining = maxLife - (now - it.start) / 1000;
   });
-  items = items.filter(it => it.remaining > -extraDisplaySec);
+  const keptNums = new Set();
+  items = items.filter(it => {
+    const keep = it.remaining > -extraDisplaySec;
+    if (keep) keptNums.add(it.num);
+    return keep;
+  });
+  // スタックから消えた項目の時短オーバーライドは掃除しておく
+  Object.keys(rallyOverrides).forEach(key => {
+    const num = parseInt(key.split("|")[0], 10);
+    if (!keptNums.has(num)) delete rallyOverrides[key];
+  });
 
-  renderTimelineStatus();
   renderStack();
 
   if (running) {
@@ -555,60 +560,29 @@ function loopRender() {
   }
 }
 
-function renderUpcomingLaunch() {
-  const box = document.getElementById("upcomingLaunchBox");
-  if (!upcomingLaunch || !upcomingLaunch.length) {
-    box.style.display = "none";
-    return;
-  }
-  box.style.display = "block";
-  box.innerHTML = upcomingLaunch.map(g => {
-    const altsHtml = g.alts.length > 1
-      ? `<div class="alt-rally">出せなかったら時短：${g.alts.map(a =>
-          `<span class="${a.isOriginal ? "alt-original" : ""}">${a.min}分集結なら${a.remain}秒後</span>`
-        ).join(" ／ ")}</div>`
-      : "";
-    return `<div class="upcoming-item">⏱ <span class="remain">${g.remain}秒後</span>：${g.names.join("、")}${altsHtml}</div>`;
-  }).join("");
-}
-
-function renderMissedLaunches() {
-  const box = document.getElementById("missedLaunchBox");
-  if (!missedLaunches || !missedLaunches.length) {
-    box.style.display = "none";
-    box.innerHTML = "";
-    return;
-  }
-  box.style.display = "block";
-  box.innerHTML = missedLaunches.map((g, i) => {
-    const btnsHtml = g.alts.length
-      ? `<div class="alt-btn-row">${g.alts.map(a =>
-          `<button type="button" class="alt-btn" data-group="${i}" data-min="${a.min}">${a.min}分集結で出す（${a.remain}秒後）</button>`
-        ).join("")}</div>`
-      : "";
-    return `<div class="missed-item"><div class="missed-label">⚠ ${g.elapsedSince}秒前に発起予定だった：${g.names.join("、")}</div>${btnsHtml}</div>`;
-  }).join("");
-  box.querySelectorAll(".alt-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const g = missedLaunches[parseInt(btn.dataset.group, 10)];
-      applyRallyOverride(g.keys, parseInt(btn.dataset.min, 10));
-    });
-  });
-}
-
 function renderStack() {
-  renderUpcomingLaunch();
-  renderMissedLaunches();
+  const now = getRefNow();
   const sorted = [...items].sort((a, b) => a.num - b.num);
   itemStack.innerHTML = "";
   emptyMsg.style.display = sorted.length ? "none" : "block";
   sorted.forEach((it, index) => {
-    const div = document.createElement("div");
+    const status = computeItemStatus(it, now);
     const numText = formatElapsed(maxLife - it.remaining);
+
+    if (status.upcoming.length) {
+      const upcomingDiv = document.createElement("div");
+      upcomingDiv.className = "upcoming-launch";
+      upcomingDiv.innerHTML = status.upcoming
+        .map(g => `<div class="upcoming-item">⏱ <span class="remain">${g.remain}秒後</span>：${g.names.join("、")}</div>`)
+        .join("");
+      itemStack.appendChild(upcomingDiv);
+    }
+
+    const div = document.createElement("div");
     if (index === 0) {
       div.className = "item-card with-timeline";
-      const patternsHtml = activePatternHeaders.length
-        ? activePatternHeaders.map(h => `<div class="pattern-block-item">${h}</div>`).join("")
+      const patternsHtml = status.active.length
+        ? status.active.map(h => `<div class="pattern-block-item">${h}</div>`).join("")
         : (timelineBlocks.length ? "" : `<div class="empty-note">タイムラインのテキストが貼り付けられていません</div>`);
       div.innerHTML = `
         <div class="item-label">${index + 1}個目</div>
@@ -623,20 +597,27 @@ function renderStack() {
       `;
     }
     itemStack.appendChild(div);
-  });
 
-  if (waitingPatterns.length > 0) {
-    const minRemain = Math.min(...waitingPatterns.map(w => w.remain));
-    const listHtml = waitingPatterns.map(w => `<div class="pattern-block-item">${w.header}</div>`).join("");
-    const div = document.createElement("div");
-    div.className = "item-card with-timeline";
-    div.innerHTML = `
-      <div class="item-label">2周目</div>
-      <div class="item-num-wrap"><div class="item-num">${formatElapsed(-minRemain)}</div></div>
-      <div class="item-timeline">${listHtml}</div>
-    `;
-    itemStack.appendChild(div);
-  }
+    if (status.missed.length) {
+      const missedDiv = document.createElement("div");
+      missedDiv.className = "missed-launch";
+      missedDiv.innerHTML = status.missed.map((g, gi) => {
+        const btnsHtml = g.alts.length
+          ? `<div class="alt-btn-row">${g.alts.map(a =>
+              `<button type="button" class="alt-btn" data-group="${gi}" data-min="${a.min}">${a.min}分集結で出す（${a.remain}秒後）</button>`
+            ).join("")}</div>`
+          : "";
+        return `<div class="missed-item"><div class="missed-label">⚠ ${g.elapsedSince}秒前に発起予定だった：${g.names.join("、")}</div>${btnsHtml}</div>`;
+      }).join("");
+      itemStack.appendChild(missedDiv);
+      missedDiv.querySelectorAll(".alt-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const g = status.missed[parseInt(btn.dataset.group, 10)];
+          applyRallyOverride(g.keys, parseInt(btn.dataset.min, 10));
+        });
+      });
+    }
+  });
 }
 
 function readMinSec(minInput, secInput) {
@@ -705,7 +686,6 @@ stopBtn.addEventListener("click", () => {
   startBtn.disabled = false;
   stopBtn.disabled = true;
   setInputsDisabled(false);
-  renderTimelineStatus();
   renderStack();
 });
 
@@ -721,7 +701,6 @@ function resetTimerState() {
   startBtn.disabled = false;
   stopBtn.disabled = true;
   setInputsDisabled(false);
-  renderTimelineStatus();
   renderStack();
 }
 
@@ -830,28 +809,16 @@ window.addEventListener("storage", (e) => {
   if (e.key === SIEGE_DATA_KEY) autoSyncSiegeData();
 });
 
-// --- タイムライン進行状況：貼り付けたテキスト（1週分）を無限ループとして扱う。
-//     ①②③...の最後のパターンが終わったら、また最初のパターンから繰り返す。
-//     進行中は未終了のパターンだけ表示。全部終わった瞬間（ループの境目）だけ全パターンを表示。 ---
+// --- タイムライン進行状況：貼り付けたテキスト（1週分）を、スタック内の項目（1個目・2個目…）ごとに
+//     それぞれ独立した「自分の経過時間」で判定する。1個目が終われば自然にスタックから消え、
+//     2個目が繰り上がって1個目になる（周回のラップ計算は不要）。 ---
 let timelineBlocks = []; // [{header, startSec, endSec}]
-let timelineLines = []; // [{symbol, label, launchSec}] パターンでまとめず、1行＝1人の発起時刻のまま持つ
-let activePatternHeaders = [];
-let waitingPatterns = []; // [{header, numText}] 次の周を待っているパターン（大きな時計カードで表示）
-let upcomingLaunch = null; // [{remain, names}] 1分以内に発起する人がいるときだけ、早い順にセットする
-let missedLaunches = null; // [{key, names, rallyMin, alts}] 発起時刻を過ぎてから1分以内の人
-let currentCycleIndex = 0; // 今が何周目か（0始まり）。時短オプションのボタンを押したときに使う
-// 「出せなかったので時短で出す」を選んだ記録。キー=symbol+label、値={cycleIndex, rallyMin}。
-// 周回（cycleIndex）が変わると自動的に効かなくなる（次の周では元の集結時間に戻る）。
+let timelineLines = []; // [{symbol, label, launchSec, rallyMin}] パターンでまとめず、1行＝1人の発起時刻のまま持つ
+// 「出せなかったので時短で出す」を選んだ記録。キー=項目番号+symbol+label、値={rallyMin}。
+// その項目がスタックから消えれば（＝items配列から外れれば）自然に使われなくなる。
 let rallyOverrides = {};
-let parsedCycleLen = null; // テキスト内の「周期：」の行から読み取った、本当の1周の長さ（秒）
 const UPCOMING_LAUNCH_WINDOW_SEC = 60;
 const ALT_RALLY_MINUTES = [1, 3, 5]; // 出せなかったときの時間短縮オプション（集結時間の候補）
-
-function parseCycleLength(text) {
-  const m = text.match(/周期[：:]\s*(\d{1,3})分(\d{1,2})秒/) || text.match(/周期[：:]\s*(\d{1,3}):(\d{2})/);
-  if (!m) return null;
-  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
-}
 
 // 「0分0秒 → ①A（5分集結）※行軍40秒（5分40秒着、6分20秒帰還）」のように、
 // 発起時刻が早い順に並んだ1行1アクション形式（炎龍 集結タイムライン計算の出力）をパースする。
@@ -927,112 +894,82 @@ function parseTimelineLines(text) {
 function reparseTimeline() {
   timelineBlocks = parseTimeline(pasteBox.value);
   timelineLines = parseTimelineLines(pasteBox.value);
-  parsedCycleLen = parseCycleLength(pasteBox.value);
-  renderTimelineStatus();
   renderStack();
 }
 
-function renderTimelineStatus() {
-  const elapsedSec = hasStarted ? (getRefNow() - baseTime) / 1000 : 0;
-  activePatternHeaders = [];
-  waitingPatterns = [];
-  upcomingLaunch = null;
-  missedLaunches = null;
-  if (timelineBlocks.length === 0) return;
+// 1つの項目（1個目・2個目…）について、その項目自身の経過時間を基準に
+// 「今アクティブなパターン」「1分以内に発起する人」「発起時刻を過ぎて1分以内の人」を計算する。
+// 項目ごとに経過時間がゼロから独立して進むので、周回のラップ計算は不要。
+function computeItemStatus(item, now) {
+  const itemElapsed = (now - item.start) / 1000;
+  const status = { active: [], upcoming: [], missed: [] };
+  if (!timelineBlocks.length) return status;
 
-  const firstStart = Math.min(...timelineBlocks.map(b => b.startSec));
-  const lastEnd = Math.max(...timelineBlocks.map(b => b.endSec));
-  if (elapsedSec < firstStart) return; // まだ1周目も始まっていない
-
-  // 「周期：」の行があればそれを優先（行軍・帰還・クールダウンを含む本当の1周の長さ）。
-  // 無ければ発起時刻の範囲から簡易計算（フォールバック）。
-  const cycleLen = Math.max(1, parsedCycleLen !== null ? parsedCycleLen : (lastEnd - firstStart));
-  const cyclePos = firstStart + ((elapsedSec - firstStart) % cycleLen);
-
-  // パターンごとに独立して判定：今の周でまだ終わっていなければ小さいリストに、
-  // すでに終わっていれば次の周でまた始まるまでのマイナスカウントダウンを
-  // 大きな時計表示の専用カードで見せる（waitingPatterns）。
   timelineBlocks.forEach(b => {
-    if (cyclePos < b.endSec) {
-      activePatternHeaders.push(b.header);
-    } else {
-      const remain = (b.startSec + cycleLen) - cyclePos;
-      waitingPatterns.push({ header: b.header, remain });
-    }
+    if (itemElapsed < b.endSec) status.active.push(b.header);
   });
 
-  // 1分以内に発起する人・発起時刻を過ぎてから1分以内の人（出せなかった可能性がある人）を仕分けする
-  if (timelineLines.length) {
-    function remainOf(sec) {
-      return sec >= cyclePos ? sec - cyclePos : (sec + cycleLen) - cyclePos;
-    }
-    currentCycleIndex = Math.floor((elapsedSec - firstStart) / cycleLen);
+  if (!timelineLines.length) return status;
 
-    function overrideFor(line) {
-      const o = rallyOverrides[line.symbol + "|" + line.label];
-      return (o && o.cycleIndex === currentCycleIndex) ? o : null;
-    }
-    // 「時短で出す」を選んだ人は、その選んだ集結時間ぶん発起時刻が後ろにずれたものとして扱う
-    function effectiveLaunchAndRally(line) {
-      const o = overrideFor(line);
-      if (o && line.rallyMin != null) {
-        return { launchSec: line.launchSec + (line.rallyMin - o.rallyMin) * 60, rallyMin: o.rallyMin };
-      }
-      return { launchSec: line.launchSec, rallyMin: line.rallyMin };
-    }
-    // 本来の集結時間より短縮できる時間（1,3,5分のうち本来以下のもの）の、今から見た発起までの秒数
-    function buildAlts(launchSec, rallyMin) {
-      if (rallyMin == null) return [];
-      return ALT_RALLY_MINUTES
-        .filter(min => min <= rallyMin)
-        .sort((a, b) => b - a)
-        .map(min => ({
-          min,
-          remain: Math.round(remainOf(launchSec + (rallyMin - min) * 60)),
-          isOriginal: min === rallyMin,
-        }));
-    }
-
-    // 1分以内に発起する人（「時短で出す」を選んだ人はその新しい時刻で判定）
-    const upcomingGroups = new Map(); // 秒数（丸め）-> {names, rallyMin, launchSec}
-    timelineLines.forEach(line => {
-      const eff = effectiveLaunchAndRally(line);
-      const remain = remainOf(eff.launchSec);
-      if (remain > UPCOMING_LAUNCH_WINDOW_SEC) return;
-      const key = Math.round(remain);
-      if (!upcomingGroups.has(key)) upcomingGroups.set(key, { names: [], rallyMin: eff.rallyMin, launchSec: eff.launchSec });
-      upcomingGroups.get(key).names.push(`${line.symbol}${line.label}`);
-    });
-    if (upcomingGroups.size) {
-      upcomingLaunch = Array.from(upcomingGroups.entries())
-        .sort((a, b) => a[0] - b[0])
-        .map(([remain, g]) => ({ remain, names: g.names, rallyMin: g.rallyMin, alts: buildAlts(g.launchSec, g.rallyMin) }));
-    }
-
-    // 本来の発起時刻を過ぎてから1分以内の人（「時短で出す」を選んで対応済みの人は除く）
-    const missedGroups = new Map(); // 経過秒数（丸め）-> {names, keys, rallyMin, launchSec}
-    timelineLines.forEach(line => {
-      if (overrideFor(line)) return;
-      const remain = remainOf(line.launchSec);
-      const elapsedSince = cycleLen - remain;
-      if (remain <= UPCOMING_LAUNCH_WINDOW_SEC || elapsedSince > UPCOMING_LAUNCH_WINDOW_SEC) return;
-      const key = Math.round(elapsedSince);
-      if (!missedGroups.has(key)) missedGroups.set(key, { names: [], keys: [], rallyMin: line.rallyMin, launchSec: line.launchSec });
-      const g = missedGroups.get(key);
-      g.names.push(`${line.symbol}${line.label}`);
-      g.keys.push(line.symbol + "|" + line.label);
-    });
-    if (missedGroups.size) {
-      missedLaunches = Array.from(missedGroups.entries())
-        .sort((a, b) => a[0] - b[0])
-        .map(([elapsedSince, g]) => ({ elapsedSince, names: g.names, keys: g.keys, alts: buildAlts(g.launchSec, g.rallyMin) }));
-    }
+  function overrideFor(line) {
+    return rallyOverrides[item.num + "|" + line.symbol + "|" + line.label] || null;
   }
+  // 「時短で出す」を選んだ人は、その選んだ集結時間ぶん発起時刻が後ろにずれたものとして扱う
+  function effectiveLaunchAndRally(line) {
+    const o = overrideFor(line);
+    if (o && line.rallyMin != null) {
+      return { launchSec: line.launchSec + (line.rallyMin - o.rallyMin) * 60, rallyMin: o.rallyMin };
+    }
+    return { launchSec: line.launchSec, rallyMin: line.rallyMin };
+  }
+  // 本来の集結時間より短縮できる時間（1,3,5分のうち本来以下のもの）の、今から見た発起までの秒数
+  function buildAlts(launchSec, rallyMin) {
+    if (rallyMin == null) return [];
+    return ALT_RALLY_MINUTES
+      .filter(min => min <= rallyMin)
+      .sort((a, b) => b - a)
+      .map(min => ({
+        min,
+        remain: Math.round((launchSec + (rallyMin - min) * 60) - itemElapsed),
+        isOriginal: min === rallyMin,
+      }));
+  }
+
+  // 1分以内に発起する人（「時短で出す」を選んだ人はその新しい時刻で判定）
+  const upcomingGroups = new Map(); // 秒数（丸め）-> {names, rallyMin, launchSec}
+  timelineLines.forEach(line => {
+    const eff = effectiveLaunchAndRally(line);
+    const remain = eff.launchSec - itemElapsed;
+    if (remain < 0 || remain > UPCOMING_LAUNCH_WINDOW_SEC) return;
+    const key = Math.round(remain);
+    if (!upcomingGroups.has(key)) upcomingGroups.set(key, { names: [], rallyMin: eff.rallyMin, launchSec: eff.launchSec });
+    upcomingGroups.get(key).names.push(`${line.symbol}${line.label}`);
+  });
+  status.upcoming = Array.from(upcomingGroups.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([remain, g]) => ({ remain, names: g.names }));
+
+  // 本来の発起時刻を過ぎてから1分以内の人（「時短で出す」を選んで対応済みの人は除く）
+  const missedGroups = new Map(); // 経過秒数（丸め）-> {names, keys, rallyMin, launchSec}
+  timelineLines.forEach(line => {
+    if (overrideFor(line)) return;
+    const elapsedSince = itemElapsed - line.launchSec;
+    if (elapsedSince < 0 || elapsedSince > UPCOMING_LAUNCH_WINDOW_SEC) return;
+    const key = Math.round(elapsedSince);
+    if (!missedGroups.has(key)) missedGroups.set(key, { names: [], keys: [], rallyMin: line.rallyMin, launchSec: line.launchSec });
+    const g = missedGroups.get(key);
+    g.names.push(`${line.symbol}${line.label}`);
+    g.keys.push(item.num + "|" + line.symbol + "|" + line.label);
+  });
+  status.missed = Array.from(missedGroups.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([elapsedSince, g]) => ({ elapsedSince, names: g.names, keys: g.keys, alts: buildAlts(g.launchSec, g.rallyMin) }));
+
+  return status;
 }
 
 function applyRallyOverride(keys, min) {
-  keys.forEach(key => { rallyOverrides[key] = { cycleIndex: currentCycleIndex, rallyMin: min }; });
-  renderTimelineStatus();
+  keys.forEach(key => { rallyOverrides[key] = { rallyMin: min }; });
   renderStack();
 }
 
