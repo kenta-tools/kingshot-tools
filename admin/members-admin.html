@@ -630,7 +630,7 @@
   // このブラウザにトークンが保存されていれば、中継役を通さず直接 GitHub API を使う（GitHubオーナー用）。
   var GH = { owner: "kenta-tools", repo: "kingshot-tools", path: "data/members.json", branch: "main" };
   var TOKEN_KEY = "ksGhToken";
-  var GAS_URL = ""; // 中継役のウェブアプリURL（https://script.google.com/macros/s/.../exec）
+  var GAS_URL = "https://script.google.com/macros/s/AKfycbxu5HW9uLU9pCsUs1r_45xpuofWZmQAyZFDwSLK1C_7GvA7SDXZ4ayBEJTS0sR_8oToAw/exec"; // 中継役のウェブアプリURL
 
   function adminPassword() {
     try { return sessionStorage.getItem(PW_KEY) || ""; } catch (e) { return ""; }
