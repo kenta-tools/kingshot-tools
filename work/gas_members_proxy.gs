@@ -209,6 +209,7 @@ function selfSave_(token, p) {
         var old = user.name;
         user.aliases = (user.aliases || []).filter(function(a) { return key_(a) !== key_(name); });
         if (!user.aliases.some(function(a) { return key_(a) === key_(old); })) user.aliases.push(old);
+        user.nameHistory = (user.nameHistory || []).concat([{ name: old, until: new Date().toISOString() }]); // いつまでその名前だったか
         user.name = name;
       }
       if (!user) user = findUser_(d.users, name);

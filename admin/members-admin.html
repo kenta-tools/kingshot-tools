@@ -478,6 +478,17 @@
       <div class="hint">同一人物ならどちらの名前を残すか、別人なら「別人」を選んでください。「別人」にした組は次から表示しません。</div>
       <div id="simPairs"></div>
     </details>
+    <details id="notSameDetails">
+      <summary>🙅 別人リスト <span id="notSameCount"></span></summary>
+      <div class="hint">似ていても別人の組です（例: イチア と イッチー）。ここにある組は「似た名前の候補」やAI変換で同一人物か聞かれなくなります。</div>
+      <div class="row" style="margin: 8px 0;">
+        <input type="text" id="notSameA" list="nameList" placeholder="名前1" autocomplete="off">
+        <span>と</span>
+        <input type="text" id="notSameB" list="nameList" placeholder="名前2" autocomplete="off">
+        <button type="button" class="small" id="notSameAddBtn">別人として追加</button>
+      </div>
+      <div id="notSameList"></div>
+    </details>
     <div class="scroll">
       <table>
         <thead>
@@ -526,6 +537,14 @@
   ].join("\n");
   var BLANK = ["同盟名:", LEGEND, "G8:", "G7:", "G6:", "G5:", "その他:"].join("\n");
   var FENCE = "```";
+  // 別人リストの各組（「- 名前A と 名前B」）
+  function notSameLines() {
+    return state.notSame.map(function(p) {
+      var ids = p.split("|"), a = userById(ids[0]), b = userById(ids[1]);
+      return a && b ? "- " + a.name + " と " + b.name : "";
+    }).filter(Boolean);
+  }
+
   // AI変換用プロンプト。選択中のイベント名と登録済みユーザー一覧を埋め込むので、イベント・ユーザーが変わるたびに作り直す
   function buildPrompt() {
     var ev = eventById(currentEventId);
@@ -592,7 +611,11 @@
       "",
       "## 登録済みユーザー一覧（" + state.users.length + "人）",
       userLines.length ? userLines.join("\n") : "（まだいません。同一人物の確認は、今回送られた中での重複だけ行ってください）"
-    ].join("\n");
+    ].concat(notSameLines().length ? [
+      "",
+      "## 別人と確認済みの組（似ていても別人です。同一人物か質問しないでください）",
+      notSameLines().join("\n")
+    ] : []).join("\n");
   }
 
   var $ = function(id) { return document.getElementById(id); };
@@ -742,7 +765,10 @@
     data = data || {};
     var users = (data.users || []).map(function(u) {
       return { id: u.id || newId("u"), name: str(u.name), alliance: str(u.alliance),
-        aliases: (u.aliases || []).map(str).filter(Boolean) };
+        aliases: (u.aliases || []).map(str).filter(Boolean),
+        // 名前の履歴: 以前の名前と、いつまでその名前だったか（改名・統合のたびに追加）
+        nameHistory: (u.nameHistory || []).map(function(h) { return { name: str(h.name), until: str(h.until) }; })
+          .filter(function(h) { return h.name; }) };
     }).filter(function(u) { return u.name; });
     var events = (data.events || []).map(function(e) {
       return { id: e.id || newId("e"), type: EVENT_TYPES.indexOf(e.type) >= 0 ? e.type : EVENT_TYPES[0], date: str(e.date),
@@ -863,7 +889,11 @@
       var changed = !b || JSON.stringify(b) !== JSON.stringify(u);
       var o = out.users.find(function(x) { return x.id === u.id; });
       if (o) {
-        if (changed) { o.name = u.name; o.alliance = u.alliance; u.aliases.forEach(function(a) { addAlias(o, a); }); }
+        if (changed) {
+          o.name = u.name; o.alliance = u.alliance;
+          u.aliases.forEach(function(a) { addAlias(o, a); });
+          o.nameHistory = unionHistory(o.nameHistory, u.nameHistory);
+        }
         userMap[u.id] = o.id;
         return;
       }
@@ -875,6 +905,7 @@
       if (same) {
         if (u.alliance) same.alliance = u.alliance;
         u.aliases.forEach(function(a) { addAlias(same, a); });
+        same.nameHistory = unionHistory(same.nameHistory, u.nameHistory);
         userMap[u.id] = same.id;
       } else {
         out.users.push(clone(u));
@@ -911,6 +942,10 @@
     });
 
     // 「別人」の記録は追加分だけ反映
+    // 自分が解除した「別人」の組は消す
+    base.notSame.forEach(function(p) {
+      if (local.notSame.indexOf(p) < 0) out.notSame = out.notSame.filter(function(x) { return x !== p; });
+    });
     local.notSame.forEach(function(p) {
       if (base.notSame.indexOf(p) >= 0) return;
       var ids = p.split("|");
@@ -1039,8 +1074,24 @@
     u.aliases.push(name);
   }
 
+  function addHistory(u, names) {
+    var now = new Date().toISOString();
+    u.nameHistory = (u.nameHistory || []).concat(names.map(function(n) { return { name: n, until: now }; }));
+  }
+
+  // 名前の履歴を重複なくまとめる（同時に保存した管理者どうしの分を合わせるとき）
+  function unionHistory(a, b) {
+    var seen = {}, out = [];
+    (a || []).concat(b || []).forEach(function(h) {
+      var k = h.name + "|" + h.until;
+      if (!seen[k]) { seen[k] = true; out.push({ name: h.name, until: h.until }); }
+    });
+    return out.sort(function(x, y) { return x.until.localeCompare(y.until); });
+  }
+
   function renameUser(u, newName) {
     var old = u.name;
+    if (nameKey(old) !== nameKey(newName)) addHistory(u, [old]);
     u.name = newName;
     u.aliases = (u.aliases || []).filter(function(a) { return nameKey(a) !== nameKey(newName); });
     addAlias(u, old);
@@ -1134,7 +1185,7 @@
       if (alliance) user.alliance = alliance;
       return { user: user, created: false };
     }
-    user = { id: newId("u"), name: name, alliance: alliance, aliases: [] };
+    user = { id: newId("u"), name: name, alliance: alliance, aliases: [], nameHistory: [] };
     state.users.push(user);
     return { user: user, created: true };
   }
@@ -1197,6 +1248,8 @@
       return true;
     });
     userNames(from).forEach(function(n) { addAlias(to, n); });
+    to.nameHistory = unionHistory(to.nameHistory, from.nameHistory);
+    addHistory(to, [from.name]);
     state.users = state.users.filter(function(u) { return u.id !== from.id; });
     state.notSame = state.notSame.filter(function(p) { return p.split("|").indexOf(from.id) < 0; });
     return { moved: moved, dropped: dropped };
@@ -1607,6 +1660,17 @@
     });
   }
 
+  // ユーザー一覧の名前の下に出す「名前の履歴（いつまで）」と、履歴にない旧名・別表記
+  function historyHtml(u) {
+    var hist = u.nameHistory || [], inHist = {};
+    hist.forEach(function(h) { inHist[nameKey(h.name)] = true; });
+    var others = (u.aliases || []).filter(function(a) { return !inHist[nameKey(a)]; });
+    return (hist.length ? '<div class="alias">名前の履歴: ' + hist.map(function(h) {
+        return escapeHtml(h.name) + (h.until ? "（〜" + escapeHtml(formatTime(h.until)) + "）" : "");
+      }).join(" → ") + " → " + escapeHtml(u.name) + '</div>' : "") +
+      (others.length ? '<div class="alias">旧名・別表記: ' + escapeHtml(others.join("、")) + '</div>' : "");
+  }
+
   function renderUsers() {
     var stats = {};
     state.entries.forEach(function(e) {
@@ -1638,6 +1702,15 @@
         '<button class="small sub-btn" data-sact="notSame">別人</button></div>';
     }).join("") : '<div class="hint" style="padding: 8px 0;">似た名前のユーザーはいません</div>';
 
+    // 別人リスト
+    $("notSameCount").textContent = "（" + state.notSame.length + "組）";
+    $("notSameList").innerHTML = state.notSame.map(function(p) {
+      var ids = p.split("|"), a = userById(ids[0]), b = userById(ids[1]);
+      if (!a || !b) return "";
+      return '<div class="sim-pair"><span class="names">' + userLabel(a) + ' と ' + userLabel(b) + '</span>' +
+        '<button class="small sub-btn" data-unpair="' + escapeHtml(p) + '">解除</button></div>';
+    }).join("") || '<div class="hint" style="padding: 8px 0;">まだありません</div>';
+
     var q = $("userFilterInput").value.trim().toLowerCase();
     var list = state.users.map(function(u) {
       var s = stats[u.id] || { count: 0, last: null };
@@ -1656,7 +1729,7 @@
     $("userBody").innerHTML = list.length ? list.map(function(r) {
       return '<tr data-uid="' + r.u.id + '">' +
         '<td>' + escapeHtml(r.u.name) +
-        (r.u.aliases.length ? '<div class="alias">旧名・別表記: ' + escapeHtml(r.u.aliases.join("、")) + '</div>' : "") + '</td>' +
+        historyHtml(r.u) + '</td>' +
         '<td>' + escapeHtml(r.u.alliance) + '</td>' +
         '<td class="num">' + r.count + '</td>' +
         '<td>' + escapeHtml(eventLabel(r.last)) + '</td>' +
@@ -2019,6 +2092,28 @@
         (res.dropped ? "・同じイベントで重複していた " + res.dropped + "件は「" + keep.name + "」側を残しました" : "") + "）", true);
     }
     $("simDetails").open = true;
+    commit();
+  });
+
+  $("notSameAddBtn").addEventListener("click", function() {
+    var a = findUserByName($("notSameA").value.trim()), b = findUserByName($("notSameB").value.trim());
+    if (!a || !b) { setMsg($("userMsg"), "2人とも登録済みユーザーの名前を入れてください（候補から選べます）", false); return; }
+    if (a.id === b.id) { setMsg($("userMsg"), "同じ人です（旧名も含めて同じユーザーになっています）", false); return; }
+    var key = pairKey(a.id, b.id);
+    if (state.notSame.indexOf(key) >= 0) { setMsg($("userMsg"), "「" + a.name + "」と「" + b.name + "」はすでに別人リストにあります", false); return; }
+    state.notSame.push(key);
+    $("notSameA").value = ""; $("notSameB").value = "";
+    $("notSameDetails").open = true;
+    setMsg($("userMsg"), "「" + a.name + "」と「" + b.name + "」を別人リストに追加しました", true);
+    commit();
+  });
+
+  $("notSameList").addEventListener("click", function(e) {
+    var btn = e.target.closest("button[data-unpair]");
+    if (!btn) return;
+    state.notSame = state.notSame.filter(function(p) { return p !== btn.dataset.unpair; });
+    $("notSameDetails").open = true;
+    setMsg($("userMsg"), "別人リストから外しました（似た名前の候補にまた出るようになります）", true);
     commit();
   });
 
