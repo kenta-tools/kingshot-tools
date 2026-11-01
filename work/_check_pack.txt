@@ -1,0 +1,13 @@
+<body>
+<!-- ks-sidebar:start -->
+<div style="position:fixed;top:0;left:0;width:220px;height:100vh;background:#1a2332;
+  padding:20px 14px;box-sizing:border-box;overflow-y:auto;
+  font-family:'Segoe UI','Hiragino Kaku Gothic ProN',Meiryo,sans-serif;z-index:99999;">
+  <div style="color:#fff;font-weight:bold;font-size:14px;margin-bottom:14px;">
+    ⚔️ キングショット
+  </div>
+  <nav style="display:flex;flex-direction:column;">
+    <a href="index.html" style="display:block;padding:8px 10px;border-radius:6px
+---
+file size: 72068
+sidebar count: 1

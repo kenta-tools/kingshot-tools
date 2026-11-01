@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<title>KvK同着スタート カウントアップ表</title>
+<style>
+  :root{
+    --bg:#f5f6f8; --card:#ffffff; --ink:#222; --sub:#666;
+    --border:#ddd; --accent:#2f6fed; --hit:#fff3cd; --none:#999;
+  }
+  body{ font-family:"Meiryo UI","Yu Gothic UI",sans-serif; background:var(--bg); color:var(--ink); margin:0; padding:24px; }
+  h1{ font-size:1.3rem; margin:0 0 4px; }
+  .sub{ color:var(--sub); font-size:0.85rem; margin-bottom:20px; }
+  .panel{ background:var(--card); border:1px solid var(--border); border-radius:8px; padding:16px; margin-bottom:20px; }
+  .panel h2{ font-size:1rem; margin:0 0 10px; }
+  table{ border-collapse:collapse; width:100%; }
+  th,td{ border:1px solid var(--border); padding:4px 6px; font-size:0.85rem; text-align:center; }
+  th{ background:#eef1f7; }
+  input[type=text], input[type=number]{ width:100%; box-sizing:border-box; border:1px solid #ccc; border-radius:4px; padding:2px 4px; font-size:0.85rem; }
+  .roster-name{ text-align:left; }
+  .btn{ background:var(--accent); color:#fff; border:none; border-radius:5px; padding:6px 14px; font-size:0.85rem; cursor:pointer; }
+  .btn.secondary{ background:#888; }
+  .btn.small{ padding:2px 8px; font-size:0.78rem; }
+  .row-actions{ display:flex; gap:8px; margin-top:10px; }
+  .result-wrap{ max-height:640px; overflow-y:auto; border:1px solid var(--border); border-radius:6px; }
+  .result-wrap table{ width:max-content; min-width:100%; }
+  .result-wrap th{ position:sticky; top:0; z-index:1; }
+  td.hit{ background:var(--hit); font-weight:bold; }
+  td.none{ color:var(--none); }
+  .chat-box{ margin-top:16px; }
+  .chat-box h3{ font-size:0.9rem; margin:0; }
+  .chat-title-row{ display:flex; align-items:center; justify-content:space-between; margin:14px 0 4px; }
+  .copy-btn{ min-width:60px; }
+  textarea{ width:100%; box-sizing:border-box; height:110px; font-family:monospace; font-size:0.8rem; border:1px solid #ccc; border-radius:4px; padding:6px; white-space:pre; }
+  .cfg-row{ display:flex; gap:16px; align-items:center; margin-bottom:10px; flex-wrap:wrap; }
+  .cfg-row label{ font-size:0.85rem; }
+  .cfg-row input[type=number]{ width:80px; }
+</style>
+</head>
+<body>
+<!-- ks-sidebar:start -->
+<style>
+  .ks-sidebar {
+    position: fixed; top: 0; left: 0; width: 220px; height: 100vh;
+    background: #1a2332; padding: 20px 14px; box-sizing: border-box;
+    overflow-y: auto; overflow-x: hidden;
+    font-family: 'Segoe UI','Hiragino Kaku Gothic ProN',Meiryo,sans-serif;
+    z-index: 99999;
+    transition: width 0.2s ease;
+  }
+  .ks-title-row { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+  .ks-sidebar .ks-title { color: #fff; font-weight: bold; font-size: 14px; white-space: nowrap; flex: 1; overflow: hidden; }
+  .ks-toggle-btn {
+    background: transparent; border: 1px solid #3a4a63; color: #c7d0dd; border-radius: 5px;
+    width: 24px; height: 24px; font-size: 13px; line-height: 1; cursor: pointer; flex: 0 0 auto;
+  }
+  .ks-toggle-btn:hover { background: #2a374d; }
+  .ks-sidebar nav { display: flex; flex-direction: column; }
+  .ks-sidebar .ks-link {
+    display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: 6px; margin-bottom: 2px;
+    text-decoration: none; font-size: 12px; line-height: 1.35; color: #c7d0dd;
+  }
+  .ks-sidebar .ks-link .ks-icon { flex: 0 0 auto; width: 18px; text-align: center; margin-top: 1px; }
+  .ks-sidebar .ks-link .ks-label { white-space: normal; overflow-wrap: break-word; }
+  .ks-sidebar .ks-link.ks-active { background: #3a4a63; color: #fff; font-weight: bold; }
+
+  .ks-open-btn {
+    display: none; position: fixed; top: 14px; left: 14px; z-index: 100001;
+    width: 34px; height: 34px; border-radius: 8px; border: none;
+    background: #1a2332; color: #fff; font-size: 16px; cursor: pointer;
+    align-items: center; justify-content: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+  }
+
+  body { margin-left: 240px !important; transition: margin-left 0.2s ease; }
+
+  /* --- 折りたたみ：デスクトップではアイコンだけの細いレールにする --- */
+  body.ks-collapsed .ks-sidebar { width: 56px; padding-left: 8px; padding-right: 8px; }
+  body.ks-collapsed .ks-sidebar .ks-title { display: none; }
+  body.ks-collapsed .ks-title-row { justify-content: center; }
+  body.ks-collapsed .ks-sidebar .ks-label { display: none; }
+  body.ks-collapsed .ks-sidebar .ks-link { justify-content: center; padding: 8px 0; }
+  body.ks-collapsed { margin-left: 76px !important; }
+
+  /* --- モバイル対応：サイドバーを上部の横スクロールバーに変形 --- */
+  @media (max-width: 760px) {
+    .ks-sidebar {
+      width: 100% !important; height: auto; max-height: none; top: 0; left: 0;
+      padding: 8px 10px !important; overflow-y: hidden;
+      display: flex; align-items: center; gap: 8px;
+      transition: transform 0.2s ease;
+    }
+    .ks-title-row { margin-bottom: 0; }
+    .ks-sidebar .ks-title { font-size: 12px; flex: 0 0 auto; }
+    .ks-sidebar nav {
+      flex-direction: row; flex-wrap: nowrap; overflow-x: auto;
+      -webkit-overflow-scrolling: touch; gap: 4px;
+    }
+    .ks-sidebar .ks-link {
+      flex: 0 0 auto; white-space: nowrap; margin-bottom: 0;
+      padding: 6px 10px; font-size: 12px;
+    }
+    .ks-sidebar .ks-label { display: inline !important; }
+    body { margin-left: 0 !important; padding-top: 56px !important; }
+    body.ks-collapsed .ks-sidebar { transform: translateY(-100%); width: 100% !important; }
+    body.ks-collapsed { margin-left: 0 !important; padding-top: 0 !important; }
+    body.ks-collapsed .ks-open-btn { display: flex; }
+    .ks-open-btn { top: 8px; left: 8px; }
+  }
+
+  /* --- テーブル等の横はみ出し対策（モバイル幅のみ） --- */
+  @media (max-width: 760px) {
+    table { display: block; overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; }
+    .card, .panel, .result-wrap { overflow-x: auto; }
+    img, pre, textarea { max-width: 100%; }
+  }
+</style>
+<div class="ks-sidebar">
+  <div class="ks-title-row">
+    <span class="ks-title">⚔️ キングショット</span>
+    <button type="button" class="ks-toggle-btn" id="ksToggleBtn" onclick="ksToggleSidebar()" aria-label="メニュー開閉">←</button>
+  </div>
+  <nav>
+    <a href="index.html" class="ks-link" title="メニュー"><span class="ks-icon">🏠</span><span class="ks-label">メニュー</span></a><a href="炎龍の覇者_攻城タイムライン計算.html" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="王城到着同期カウントアップ.html" class="ks-link ks-active" title="KvK同着スタート カウントアップ表"><span class="ks-icon">⏱️</span><span class="ks-label">KvK同着スタート カウントアップ表</span></a><a href="KvK同着スタート カウントダウン表.html" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="周期ウェーブタイマー.html" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><a href="音声アナウンス付きストップウォッチ.html" class="ks-link" title="音声ストップウォッチ（工事中）"><span class="ks-icon">🔊</span><span class="ks-label">音声ストップウォッチ（工事中）</span></a>
+  </nav>
+</div>
+<button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
+<script>
+(function() {
+  var collapsed = false;
+  try { collapsed = localStorage.getItem("ksSidebarCollapsed") === "1"; } catch (e) {}
+  function applyBtn() {
+    var btn = document.getElementById("ksToggleBtn");
+    if (btn) btn.textContent = document.body.classList.contains("ks-collapsed") ? "→" : "←";
+  }
+  if (collapsed) document.body.classList.add("ks-collapsed");
+  document.addEventListener("DOMContentLoaded", applyBtn);
+  applyBtn();
+  window.ksToggleSidebar = function() {
+    var next = !document.body.classList.contains("ks-collapsed");
+    document.body.classList.toggle("ks-collapsed", next);
+    try { localStorage.setItem("ksSidebarCollapsed", next ? "1" : "0"); } catch (e) {}
+    applyBtn();
+  };
+})();
+</script>
+<!-- ks-sidebar:end -->
+
+
+<h1>KvK同着スタート カウントアップ表</h1>
+<div class="sub">Excelなしで動く版。全員が同じタイミングで到着できるよう、各自の出発カウントを計算します。カウント0＝行軍が一番長い人（すぐ出発）、カウントが増えるほど行軍が短い人が待ってから出発。グループ列は「実際秒数一致」かつ「グループ所属」の両方を満たす人だけを表示（未所属だけの場合はきちんと「なし」になります）。</div>
+
+<div class="panel">
+  <h2>名簿</h2>
+  <table id="roster-table">
+    <thead>
+      <tr><th style="width:22%">名前</th><th>到着秒数</th><th>到着+</th><th>攻めグループ</th><th>駐屯グループ</th><th></th></tr>
+    </thead>
+    <tbody id="roster-body"></tbody>
+  </table>
+  <div class="row-actions">
+    <button class="btn secondary small" onclick="addRow()">＋行を追加</button>
+  </div>
+  <div class="cfg-row" style="margin-top:14px;">
+    <label>最大カウント秒: <input type="number" id="maxSec" value="120" min="1" max="600"></label>
+    <button class="btn" onclick="compute()">計算する</button>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>チャット用テキスト</h2>
+  <div class="chat-box" id="chat-box"></div>
+
+  <h2 style="margin-top:20px;">一覧</h2>
+  <div class="result-wrap"><table id="result-table"></table></div>
+</div>
+
+<script>
+const SAMPLE = [
+  ["じろ", 36, 0, "じろ", "ー"],
+  ["かむ", 36, -1, "かむ", "かむ"],
+  ["けん", 36, 0, "けん", "けん"],
+  ["はち", 36, 0, "じろ", ""],
+  ["いっちゃん", 43, 0, "", ""],
+];
+const NO_GROUP = new Set(["", "ー", "未所属", "-", "なし"]);
+
+function addRow(data){
+  const tbody = document.getElementById("roster-body");
+  const tr = document.createElement("tr");
+  const [name, sec, adj, atk, gar] = data || ["", 0, 0, "", ""];
+  tr.innerHTML = `
+    <td class="roster-name"><input type="text" value="${name}"></td>
+    <td><input type="number" value="${sec}"></td>
+    <td><input type="number" value="${adj}"></td>
+    <td><input type="text" value="${atk}"></td>
+    <td><input type="text" value="${gar}"></td>
+    <td><button class="btn secondary small" onclick="this.closest('tr').remove(); saveRosterState();">削除</button></td>
+  `;
+  tbody.appendChild(tr);
+  saveRosterState();
+}
+
+// --- 名簿・最大カウント秒の自動保存（このブラウザのみ） ---
+const ROSTER_STORAGE_KEY = "kvkCountupRosterState";
+
+function getRawRoster(){
+  return [...document.querySelectorAll("#roster-body tr")].map(tr => {
+    const inputs = tr.querySelectorAll("input");
+    return [inputs[0].value, inputs[1].value, inputs[2].value, inputs[3].value, inputs[4].value];
+  });
+}
+
+function saveRosterState(){
+  try {
+    localStorage.setItem(ROSTER_STORAGE_KEY, JSON.stringify({
+      roster: getRawRoster(),
+      maxSec: document.getElementById("maxSec").value,
+    }));
+  } catch(e){}
+}
+
+function loadRosterState(){
+  try {
+    const raw = localStorage.getItem(ROSTER_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e){
+    return null;
+  }
+}
+
+function getRoster(){
+  const rows = [...document.querySelectorAll("#roster-body tr")];
+  return rows.map(tr => {
+    const inputs = tr.querySelectorAll("input");
+    const name = inputs[0].value.trim();
+    const sec = parseFloat(inputs[1].value);
+    const adj = parseFloat(inputs[2].value) || 0;
+    const atk = inputs[3].value.trim();
+    const gar = inputs[4].value.trim();
+    if(!name || isNaN(sec)) return null;
+    return { name, actual: sec + adj, atk, gar };
+  }).filter(Boolean);
+}
+
+function distinctGroups(roster, key){
+  const seen = [];
+  for(const p of roster){
+    const g = p[key];
+    if(!NO_GROUP.has(g) && !seen.includes(g)) seen.push(g);
+  }
+  return seen;
+}
+
+function membersAt(roster, key, groupName, targetActual){
+  return roster.filter(p => p[key] === groupName && p.actual === targetActual).map(p => p.name);
+}
+
+function compute(){
+  const roster = getRoster();
+  const maxSec = parseInt(document.getElementById("maxSec").value, 10) || 120;
+  const table = document.getElementById("result-table");
+  const chatBox = document.getElementById("chat-box");
+  table.innerHTML = "";
+  chatBox.innerHTML = "";
+
+  if(roster.length === 0){
+    table.innerHTML = "<tr><td>名簿を入力してください</td></tr>";
+    return;
+  }
+
+  const atkGroups = distinctGroups(roster, "atk");
+  const garGroups = distinctGroups(roster, "gar");
+  const overallBase = Math.max(...roster.map(p => p.actual));
+
+  const groupBase = {};
+  for(const g of atkGroups){
+    const vals = roster.filter(p => p.atk === g).map(p => p.actual);
+    groupBase["atk:" + g] = vals.length ? Math.max(...vals) : null;
+  }
+  for(const g of garGroups){
+    const vals = roster.filter(p => p.gar === g).map(p => p.actual);
+    groupBase["gar:" + g] = vals.length ? Math.max(...vals) : null;
+  }
+
+  // header
+  const thead = document.createElement("thead");
+  const headTr = document.createElement("tr");
+  const headers = ["秒", "全体", ...atkGroups.map(g => g + "(攻)"), ...garGroups.map(g => g + "(駐)")];
+  headers.forEach(h => { const th = document.createElement("th"); th.textContent = h; headTr.appendChild(th); });
+  thead.appendChild(headTr);
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  const chatLines = {}; // key -> array of "N秒：xxx"
+  const chatKeys = ["全体", ...atkGroups.map(g=>g+"(攻)"), ...garGroups.map(g=>g+"(駐)")];
+  chatKeys.forEach(k => chatLines[k] = []);
+
+  for(let c = 0; c <= maxSec; c++){
+    const tr = document.createElement("tr");
+    const tdSec = document.createElement("td");
+    tdSec.textContent = c;
+    tr.appendChild(tdSec);
+
+    // overall
+    const overallTarget = overallBase - c;
+    const overallNames = roster.filter(p => p.actual === overallTarget).map(p => p.name);
+    tr.appendChild(makeCell(overallNames));
+    if(overallNames.length) chatLines["全体"].push(`${c}秒：${overallNames.join("、")}`);
+
+    for(const g of atkGroups){
+      const base = groupBase["atk:" + g];
+      let names = [];
+      if(base !== null){
+        names = membersAt(roster, "atk", g, base - c);
+      }
+      tr.appendChild(makeCell(names));
+      if(names.length) chatLines[g + "(攻)"].push(`${c}秒：${names.join("、")}`);
+    }
+    for(const g of garGroups){
+      const base = groupBase["gar:" + g];
+      let names = [];
+      if(base !== null){
+        names = membersAt(roster, "gar", g, base - c);
+      }
+      tr.appendChild(makeCell(names));
+      if(names.length) chatLines[g + "(駐)"].push(`${c}秒：${names.join("、")}`);
+    }
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
+
+  // chat text boxes
+  for(const key of chatKeys){
+    const titleRow = document.createElement("div");
+    titleRow.className = "chat-title-row";
+    const h3 = document.createElement("h3");
+    h3.textContent = "チャット用テキスト：" + key;
+    const copyBtn = document.createElement("button");
+    copyBtn.className = "btn small copy-btn";
+    copyBtn.textContent = "コピー";
+    const ta = document.createElement("textarea");
+    const body = chatLines[key].length
+      ? "ーー\n" + chatLines[key].join("\n") + "\nーー"
+      : "（到着者なし）";
+    ta.value = body;
+    copyBtn.onclick = () => copyText(ta, copyBtn);
+    titleRow.appendChild(h3);
+    titleRow.appendChild(copyBtn);
+    chatBox.appendChild(titleRow);
+    chatBox.appendChild(ta);
+  }
+}
+
+function copyText(ta, btn){
+  navigator.clipboard.writeText(ta.value).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = "コピーしました";
+    setTimeout(() => { btn.textContent = orig; }, 1200);
+  }).catch(() => {
+    ta.select();
+    document.execCommand("copy");
+    const orig = btn.textContent;
+    btn.textContent = "コピーしました";
+    setTimeout(() => { btn.textContent = orig; }, 1200);
+  });
+}
+
+function makeCell(names){
+  const td = document.createElement("td");
+  if(names.length){
+    td.textContent = names.join("、");
+    td.className = "hit";
+  } else {
+    td.textContent = "なし";
+    td.className = "none";
+  }
+  return td;
+}
+
+// init
+const savedRosterState = loadRosterState();
+if (savedRosterState && Array.isArray(savedRosterState.roster) && savedRosterState.roster.length) {
+  savedRosterState.roster.forEach(addRow);
+  if (savedRosterState.maxSec) document.getElementById("maxSec").value = savedRosterState.maxSec;
+} else {
+  SAMPLE.forEach(addRow);
+}
+document.getElementById("roster-body").addEventListener("input", saveRosterState);
+document.getElementById("maxSec").addEventListener("input", saveRosterState);
+compute();
+</script>
+
+</body>
+</html>

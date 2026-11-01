@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>周期ウェーブタイマー</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+    background: #f4f5f7;
+    color: #222;
+    max-width: 1080px;
+    margin: 40px auto;
+    padding: 0 20px;
+  }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .sub { color: #666; font-size: 13px; margin-bottom: 24px; }
+
+  .layout { display: flex; gap: 24px; align-items: flex-start; }
+  .col-main { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
+  .col-side {
+    flex: 1 1 0; min-width: 0; display: flex; flex-direction: column;
+    position: sticky; top: 20px; height: calc(100vh - 40px);
+  }
+  .col-side .card { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  @media (max-width: 900px) {
+    .layout { flex-direction: column; }
+    .col-main { width: 100%; }
+    .col-side { display: none; }
+  }
+
+  .paste-box {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-family: "Consolas", "MS Gothic", monospace;
+    font-size: 16px;
+    white-space: pre-wrap;
+    overflow: hidden;
+    resize: none;
+  }
+  .save-status { font-size: 12px; color: #999; margin-top: 6px; }
+
+  .item-timeline {
+    text-align: left;
+    font-size: 13px;
+    color: #333;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .item-timeline .empty-note { color: #999; }
+
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    margin-bottom: 20px;
+  }
+  .card h2 { font-size: 15px; margin: 0 0 12px; }
+
+  .settings-row {
+    display: flex;
+    gap: 14px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 12px; color: #666; }
+  input[type="number"] {
+    width: 80px;
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+  select {
+    padding: 8px 8px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    background: #fff;
+  }
+  .unit-row { display: flex; gap: 6px; align-items: center; }
+  .unit-row span { font-size: 12px; color: #888; }
+  .unit-row input[type="number"] { width: 64px; }
+
+  .controls { display: flex; gap: 10px; }
+  button {
+    font-size: 14px;
+    padding: 9px 18px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    background: #4a6cf7;
+    color: #fff;
+  }
+  button:hover { opacity: 0.9; }
+  button.secondary { background: #999; }
+  button.danger { background: #e2483d; }
+  button:disabled { background: #ccc; cursor: not-allowed; }
+
+  .stack {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .item-card {
+    position: relative;
+    background: #fff;
+    border-radius: 12px;
+    padding: 22px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    text-align: center;
+    transition: background 0.2s, color 0.2s;
+  }
+  .item-card.with-timeline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    text-align: left;
+    flex-wrap: wrap;
+  }
+  .item-card.with-timeline .item-num-wrap { text-align: center; flex: 0 0 auto; }
+  .item-card .item-label {
+    position: absolute;
+    top: 12px;
+    left: 16px;
+    font-size: 12px;
+    color: #999;
+  }
+  .item-card .item-num {
+    font-size: 56px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 1px;
+  }
+  .empty { color: #999; font-size: 13px; padding: 8px 0; text-align: center; }
+</style>
+</head>
+<body>
+<!-- ks-sidebar:start -->
+<style>
+  .ks-sidebar {
+    position: fixed; top: 0; left: 0; width: 220px; height: 100vh;
+    background: #1a2332; padding: 20px 14px; box-sizing: border-box;
+    overflow-y: auto; overflow-x: hidden;
+    font-family: 'Segoe UI','Hiragino Kaku Gothic ProN',Meiryo,sans-serif;
+    z-index: 99999;
+    transition: width 0.2s ease;
+  }
+  .ks-title-row { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+  .ks-sidebar .ks-title { color: #fff; font-weight: bold; font-size: 14px; white-space: nowrap; flex: 1; overflow: hidden; }
+  .ks-toggle-btn {
+    background: transparent; border: 1px solid #3a4a63; color: #c7d0dd; border-radius: 5px;
+    width: 24px; height: 24px; font-size: 13px; line-height: 1; cursor: pointer; flex: 0 0 auto;
+  }
+  .ks-toggle-btn:hover { background: #2a374d; }
+  .ks-sidebar nav { display: flex; flex-direction: column; }
+  .ks-sidebar .ks-link {
+    display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: 6px; margin-bottom: 2px;
+    text-decoration: none; font-size: 12px; line-height: 1.35; color: #c7d0dd;
+  }
+  .ks-sidebar .ks-link .ks-icon { flex: 0 0 auto; width: 18px; text-align: center; margin-top: 1px; }
+  .ks-sidebar .ks-link .ks-label { white-space: normal; overflow-wrap: break-word; }
+  .ks-sidebar .ks-link.ks-active { background: #3a4a63; color: #fff; font-weight: bold; }
+
+  .ks-open-btn {
+    display: none; position: fixed; top: 14px; left: 14px; z-index: 100001;
+    width: 34px; height: 34px; border-radius: 8px; border: none;
+    background: #1a2332; color: #fff; font-size: 16px; cursor: pointer;
+    align-items: center; justify-content: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+  }
+
+  body { margin-left: 240px !important; transition: margin-left 0.2s ease; }
+
+  /* --- 折りたたみ：デスクトップではアイコンだけの細いレールにする --- */
+  body.ks-collapsed .ks-sidebar { width: 56px; padding-left: 8px; padding-right: 8px; }
+  body.ks-collapsed .ks-sidebar .ks-title { display: none; }
+  body.ks-collapsed .ks-title-row { justify-content: center; }
+  body.ks-collapsed .ks-sidebar .ks-label { display: none; }
+  body.ks-collapsed .ks-sidebar .ks-link { justify-content: center; padding: 8px 0; }
+  body.ks-collapsed { margin-left: 76px !important; }
+
+  /* --- モバイル対応：サイドバーを上部の横スクロールバーに変形 --- */
+  @media (max-width: 760px) {
+    .ks-sidebar {
+      width: 100% !important; height: auto; max-height: none; top: 0; left: 0;
+      padding: 8px 10px !important; overflow-y: hidden;
+      display: flex; align-items: center; gap: 8px;
+      transition: transform 0.2s ease;
+    }
+    .ks-title-row { margin-bottom: 0; }
+    .ks-sidebar .ks-title { font-size: 12px; flex: 0 0 auto; }
+    .ks-sidebar nav {
+      flex-direction: row; flex-wrap: nowrap; overflow-x: auto;
+      -webkit-overflow-scrolling: touch; gap: 4px;
+    }
+    .ks-sidebar .ks-link {
+      flex: 0 0 auto; white-space: nowrap; margin-bottom: 0;
+      padding: 6px 10px; font-size: 12px;
+    }
+    .ks-sidebar .ks-label { display: inline !important; }
+    body { margin-left: 0 !important; padding-top: 56px !important; }
+    body.ks-collapsed .ks-sidebar { transform: translateY(-100%); width: 100% !important; }
+    body.ks-collapsed { margin-left: 0 !important; padding-top: 0 !important; }
+    body.ks-collapsed .ks-open-btn { display: flex; }
+    .ks-open-btn { top: 8px; left: 8px; }
+  }
+
+  /* --- テーブル等の横はみ出し対策（モバイル幅のみ） --- */
+  @media (max-width: 760px) {
+    table { display: block; overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; }
+    .card, .panel, .result-wrap { overflow-x: auto; }
+    img, pre, textarea { max-width: 100%; }
+  }
+</style>
+<div class="ks-sidebar">
+  <div class="ks-title-row">
+    <span class="ks-title">⚔️ キングショット</span>
+    <button type="button" class="ks-toggle-btn" id="ksToggleBtn" onclick="ksToggleSidebar()" aria-label="メニュー開閉">←</button>
+  </div>
+  <nav>
+    <a href="index.html" class="ks-link" title="メニュー"><span class="ks-icon">🏠</span><span class="ks-label">メニュー</span></a><a href="炎龍の覇者_攻城タイムライン計算.html" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="王城到着同期カウントアップ.html" class="ks-link" title="KvK同着スタート カウントアップ表"><span class="ks-icon">⏱️</span><span class="ks-label">KvK同着スタート カウントアップ表</span></a><a href="KvK同着スタート カウントダウン表.html" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="周期ウェーブタイマー.html" class="ks-link ks-active" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><a href="音声アナウンス付きストップウォッチ.html" class="ks-link" title="音声ストップウォッチ（工事中）"><span class="ks-icon">🔊</span><span class="ks-label">音声ストップウォッチ（工事中）</span></a>
+  </nav>
+</div>
+<button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
+<script>
+(function() {
+  var collapsed = false;
+  try { collapsed = localStorage.getItem("ksSidebarCollapsed") === "1"; } catch (e) {}
+  function applyBtn() {
+    var btn = document.getElementById("ksToggleBtn");
+    if (btn) btn.textContent = document.body.classList.contains("ks-collapsed") ? "→" : "←";
+  }
+  if (collapsed) document.body.classList.add("ks-collapsed");
+  document.addEventListener("DOMContentLoaded", applyBtn);
+  applyBtn();
+  window.ksToggleSidebar = function() {
+    var next = !document.body.classList.contains("ks-collapsed");
+    document.body.classList.toggle("ks-collapsed", next);
+    try { localStorage.setItem("ksSidebarCollapsed", next ? "1" : "0"); } catch (e) {}
+    applyBtn();
+  };
+})();
+</script>
+<!-- ks-sidebar:end -->
+
+
+<h1>周期ウェーブタイマー</h1>
+<div class="sub">スタートで1個目が始まり、周期ごとに次の予定を自動追加。各予定はMAX秒で消えます。</div>
+
+<div class="card">
+  <h2>設定</h2>
+  <div class="settings-row">
+    <div class="field">
+      <label>周期</label>
+      <div class="unit-row">
+        <input type="number" id="periodMin" value="0" min="0" step="1"><span>分</span>
+        <input type="number" id="periodSec" value="10" min="0" max="59" step="1"><span>秒</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>MAX</label>
+      <div class="unit-row">
+        <input type="number" id="maxMin" value="0" min="0" step="1"><span>分</span>
+        <input type="number" id="maxSec" value="30" min="0" max="59" step="1"><span>秒</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>MAX＋◯秒まで表示</label>
+      <input type="number" id="extraDisplaySec" value="3" min="0" step="1">
+    </div>
+    <div class="controls">
+      <button id="startBtn">スタート</button>
+      <button id="stopBtn" class="secondary" disabled>ストップ</button>
+      <button id="resetBtn" class="danger">リセット</button>
+    </div>
+  </div>
+</div>
+
+<div class="layout">
+<div class="col-main">
+
+<div class="stack" id="itemStack"></div>
+<div class="empty" id="emptyMsg">まだ予定がありません</div>
+
+</div>
+
+<div class="col-side">
+<div class="card">
+  <h2>炎龍 集結タイムライン計算の結果を貼り付け</h2>
+  <textarea id="pasteBox" class="paste-box" placeholder="「炎龍 集結タイムライン計算」で出力したテキストをここに貼り付けてください。自動的に保存されます（このブラウザ内のみ）。"></textarea>
+  <div class="save-status" id="saveStatus">&nbsp;</div>
+</div>
+</div>
+
+</div>
+
+<script>
+let running = false;
+let items = []; // {num, start(ms, performance.now), remaining}
+let itemCounter = 0;
+let spawnTimeoutId = null;
+let rafId = null;
+let period = 10;
+let maxLife = 30;
+let extraDisplaySec = 3;
+let pausedAt = null; // ストップした瞬間のperformance.now()（表示を凍結するため）
+let hasStarted = false;
+
+function getRefNow() {
+  if (running) return performance.now();
+  if (pausedAt !== null) return pausedAt;
+  return performance.now();
+}
+
+const periodMinInput = document.getElementById("periodMin");
+const periodSecInput = document.getElementById("periodSec");
+const maxMinInput = document.getElementById("maxMin");
+const maxSecInput = document.getElementById("maxSec");
+const extraDisplayInput = document.getElementById("extraDisplaySec");
+const startBtn = document.getElementById("startBtn");
+const stopBtn = document.getElementById("stopBtn");
+const resetBtn = document.getElementById("resetBtn");
+const itemStack = document.getElementById("itemStack");
+const emptyMsg = document.getElementById("emptyMsg");
+
+function formatElapsed(sec) {
+  const sign = sec < 0 ? "-" : "";
+  const totalMs = Math.abs(sec) * 1000;
+  const minutes = Math.floor(totalMs / 60000);
+  const seconds = Math.floor((totalMs % 60000) / 1000);
+  const tenths = Math.floor((totalMs % 1000) / 100);
+  const pad = n => String(n).padStart(2, "0");
+  return `${sign}${pad(minutes)}:${pad(seconds)}.${tenths}`;
+}
+
+let baseTime = 0; // スタートを押した瞬間のperformance.now()
+
+function scheduleSpawn(k) {
+  // k = 1始まりの予定番号。baseTimeからの絶対時刻で狙いを定め、そこから「今」を引いた分だけ待つ
+  // （相対時間の積み上げにしない。前は先出し表示のためのリード時間があったが廃止）。
+  const nominalOffsetMs = (k - 1) * period * 1000;
+  const targetFireTime = baseTime + nominalOffsetMs;
+  const fireDelay = Math.max(0, targetFireTime - performance.now());
+  spawnTimeoutId = setTimeout(() => {
+    if (!running) return;
+    itemCounter += 1;
+    const nominalStart = baseTime + nominalOffsetMs;
+    items.push({ num: itemCounter, start: nominalStart, remaining: maxLife });
+    scheduleSpawn(k + 1);
+  }, fireDelay);
+}
+
+function loopRender() {
+  const now = getRefNow();
+  items.forEach(it => {
+    it.remaining = maxLife - (now - it.start) / 1000;
+  });
+  items = items.filter(it => it.remaining > -extraDisplaySec);
+
+  renderTimelineStatus();
+  renderStack();
+
+  if (running) {
+    rafId = requestAnimationFrame(loopRender);
+  } else {
+    rafId = null;
+  }
+}
+
+function renderStack() {
+  const sorted = [...items].sort((a, b) => a.num - b.num);
+  itemStack.innerHTML = "";
+  emptyMsg.style.display = sorted.length ? "none" : "block";
+  sorted.forEach((it, index) => {
+    const div = document.createElement("div");
+    const numText = formatElapsed(maxLife - it.remaining);
+    if (index === 0) {
+      div.className = "item-card with-timeline";
+      const patternsHtml = activePatternHeaders.length
+        ? activePatternHeaders.map(h => `<div>${h}</div>`).join("")
+        : (timelineBlocks.length ? "" : `<div class="empty-note">タイムラインのテキストが貼り付けられていません</div>`);
+      div.innerHTML = `
+        <div class="item-label">${index + 1}個目</div>
+        <div class="item-num-wrap"><div class="item-num">${numText}</div></div>
+        <div class="item-timeline">${patternsHtml}</div>
+      `;
+    } else {
+      div.className = "item-card";
+      div.innerHTML = `
+        <div class="item-label">${index + 1}個目</div>
+        <div class="item-num">${numText}</div>
+      `;
+    }
+    itemStack.appendChild(div);
+  });
+
+  if (waitingPatterns.length > 0) {
+    const minRemain = Math.min(...waitingPatterns.map(w => w.remain));
+    const listHtml = waitingPatterns.map(w => `<div>${w.header}</div>`).join("");
+    const div = document.createElement("div");
+    div.className = "item-card with-timeline";
+    div.innerHTML = `
+      <div class="item-label">2周目</div>
+      <div class="item-num-wrap"><div class="item-num">${formatElapsed(-minRemain)}</div></div>
+      <div class="item-timeline">${listHtml}</div>
+    `;
+    itemStack.appendChild(div);
+  }
+}
+
+function readMinSec(minInput, secInput) {
+  const min = parseInt(minInput.value, 10) || 0;
+  const sec = parseInt(secInput.value, 10) || 0;
+  return min * 60 + sec;
+}
+
+function setInputsDisabled(disabled) {
+  periodMinInput.disabled = disabled;
+  periodSecInput.disabled = disabled;
+  maxMinInput.disabled = disabled;
+  maxSecInput.disabled = disabled;
+  extraDisplayInput.disabled = disabled;
+}
+
+// --- 設定値の自動保存（このブラウザのみ） ---
+const SETTINGS_STORAGE_KEY = "waveTimerSettings";
+const settingInputs = [periodMinInput, periodSecInput, maxMinInput, maxSecInput, extraDisplayInput];
+
+function saveSettings() {
+  try {
+    const data = {};
+    settingInputs.forEach(el => { data[el.id] = el.value; });
+    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {}
+}
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    settingInputs.forEach(el => {
+      if (data[el.id] !== undefined) el.value = data[el.id];
+    });
+  } catch (e) {}
+}
+
+settingInputs.forEach(el => el.addEventListener("input", saveSettings));
+loadSettings();
+
+startBtn.addEventListener("click", () => {
+  if (running) return;
+  period = Math.max(1, readMinSec(periodMinInput, periodSecInput));
+  maxLife = Math.max(1, readMinSec(maxMinInput, maxSecInput));
+  extraDisplaySec = Math.max(0, parseInt(extraDisplayInput.value, 10) || 0);
+  running = true;
+  pausedAt = null;
+  hasStarted = true;
+  items = [];
+  itemCounter = 0;
+  startBtn.disabled = true;
+  stopBtn.disabled = false;
+  setInputsDisabled(true);
+  baseTime = performance.now();
+  scheduleSpawn(1);
+  if (!rafId) rafId = requestAnimationFrame(loopRender);
+});
+
+stopBtn.addEventListener("click", () => {
+  running = false;
+  pausedAt = performance.now();
+  clearTimeout(spawnTimeoutId);
+  startBtn.disabled = false;
+  stopBtn.disabled = true;
+  setInputsDisabled(false);
+  renderTimelineStatus();
+  renderStack();
+});
+
+resetBtn.addEventListener("click", () => {
+  running = false;
+  pausedAt = null;
+  hasStarted = false;
+  clearTimeout(spawnTimeoutId);
+  cancelAnimationFrame(rafId);
+  rafId = null;
+  items = [];
+  itemCounter = 0;
+  startBtn.disabled = false;
+  stopBtn.disabled = true;
+  setInputsDisabled(false);
+  renderTimelineStatus();
+  renderStack();
+});
+
+// --- 右側：炎龍タイムライン結果の貼り付け欄（このブラウザのlocalStorageに自動保存） ---
+const PASTE_STORAGE_KEY = "waveTimerPastedTimeline";
+const pasteBox = document.getElementById("pasteBox");
+const saveStatus = document.getElementById("saveStatus");
+let saveStatusTimer = null;
+
+const PASTE_MAX_FONT = 16;
+const PASTE_MIN_FONT = 8;
+
+function fitPasteBoxFont() {
+  let fontSize = PASTE_MAX_FONT;
+  pasteBox.style.fontSize = fontSize + "px";
+  while (pasteBox.scrollHeight > pasteBox.clientHeight && fontSize > PASTE_MIN_FONT) {
+    fontSize -= 1;
+    pasteBox.style.fontSize = fontSize + "px";
+  }
+}
+
+function loadPasteBox() {
+  try {
+    const saved = localStorage.getItem(PASTE_STORAGE_KEY);
+    if (saved !== null) pasteBox.value = saved;
+  } catch (e) {
+    // localStorageが使えない環境では何もしない
+  }
+  fitPasteBoxFont();
+}
+
+window.addEventListener("resize", fitPasteBoxFont);
+
+function savePasteBox() {
+  try {
+    localStorage.setItem(PASTE_STORAGE_KEY, pasteBox.value);
+    saveStatus.textContent = "保存しました";
+  } catch (e) {
+    saveStatus.textContent = "この環境では保存できません";
+  }
+  clearTimeout(saveStatusTimer);
+  saveStatusTimer = setTimeout(() => { saveStatus.textContent = " "; }, 1500);
+}
+
+pasteBox.addEventListener("input", () => {
+  fitPasteBoxFont();
+  savePasteBox();
+  reparseTimeline();
+});
+loadPasteBox();
+
+// --- タイムライン進行状況：貼り付けたテキスト（1週分）を無限ループとして扱う。
+//     ①②③...の最後のパターンが終わったら、また最初のパターンから繰り返す。
+//     進行中は未終了のパターンだけ表示。全部終わった瞬間（ループの境目）だけ全パターンを表示。 ---
+let timelineBlocks = []; // [{header, startSec, endSec}]
+let activePatternHeaders = [];
+let waitingPatterns = []; // [{header, numText}] 次の周を待っているパターン（大きな時計カードで表示）
+let parsedCycleLen = null; // テキスト内の「周期：」の行から読み取った、本当の1周の長さ（秒）
+
+function parseCycleLength(text) {
+  const m = text.match(/周期[：:]\s*(\d{1,3})分(\d{1,2})秒/) || text.match(/周期[：:]\s*(\d{1,3}):(\d{2})/);
+  if (!m) return null;
+  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+}
+
+function parseTimeline(text) {
+  const lines = text.split(/\r?\n/);
+  const blocks = [];
+  let current = null;
+  const headerRe = /^[①②③④⑤⑥⑦⑧⑨⑩]/;
+  const timeRe = /^(\d{1,3})分(\d{1,2})秒|^(\d{1,3}):(\d{2})/;
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (headerRe.test(line)) {
+      current = { header: line, startSec: null, endSec: null };
+      blocks.push(current);
+      continue;
+    }
+    const m = line.match(timeRe);
+    if (m && current) {
+      const sec = m[1] !== undefined
+        ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10)
+        : parseInt(m[3], 10) * 60 + parseInt(m[4], 10);
+      if (current.startSec === null) current.startSec = sec;
+      if (current.endSec === null || sec > current.endSec) current.endSec = sec;
+    }
+  }
+  return blocks.filter(b => b.endSec !== null);
+}
+
+function reparseTimeline() {
+  timelineBlocks = parseTimeline(pasteBox.value);
+  parsedCycleLen = parseCycleLength(pasteBox.value);
+  renderTimelineStatus();
+  renderStack();
+}
+
+function renderTimelineStatus() {
+  const elapsedSec = hasStarted ? (getRefNow() - baseTime) / 1000 : 0;
+  activePatternHeaders = [];
+  waitingPatterns = [];
+  if (timelineBlocks.length === 0) return;
+
+  const firstStart = Math.min(...timelineBlocks.map(b => b.startSec));
+  const lastEnd = Math.max(...timelineBlocks.map(b => b.endSec));
+  if (elapsedSec < firstStart) return; // まだ1周目も始まっていない
+
+  // 「周期：」の行があればそれを優先（行軍・帰還・クールダウンを含む本当の1周の長さ）。
+  // 無ければ発起時刻の範囲から簡易計算（フォールバック）。
+  const cycleLen = Math.max(1, parsedCycleLen !== null ? parsedCycleLen : (lastEnd - firstStart));
+  const cyclePos = firstStart + ((elapsedSec - firstStart) % cycleLen);
+
+  // パターンごとに独立して判定：今の周でまだ終わっていなければ小さいリストに、
+  // すでに終わっていれば次の周でまた始まるまでのマイナスカウントダウンを
+  // 大きな時計表示の専用カードで見せる（waitingPatterns）。
+  timelineBlocks.forEach(b => {
+    if (cyclePos < b.endSec) {
+      activePatternHeaders.push(b.header);
+    } else {
+      const remain = (b.startSec + cycleLen) - cyclePos;
+      waitingPatterns.push({ header: b.header, remain });
+    }
+  });
+}
+
+reparseTimeline();
+</script>
+
+</body>
+</html>
