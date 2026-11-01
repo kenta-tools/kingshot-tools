@@ -21,12 +21,14 @@ from pathlib import Path
 
 FOLDER = Path(__file__).resolve().parent.parent
 
-# (リポジトリルートからの相対パス, アイコン, ラベル)
-# サイドバー（全ページ共通メニュー）に常設するのは「TOP」と個別ツールだけ。
-# tools-index.html / flame-dragon-index.html / holy-sword-league-index.html の
-# 3つのカテゴリ切り替えは、サイドバーには出さずTOP（index.html）のカード選択のみで行う。
-NAV_ITEMS = [
-    ("index.html", "🏠", "TOP"),
+# tools / flame-dragon / holy-sword-league は互いに独立したカテゴリとして扱う。
+# カテゴリ間の行き来はTOP（index.html）のカード選択のみで行い、
+# 各カテゴリ内のページのサイドバーには「TOP」に戻るリンク＋そのカテゴリ自身の項目だけを出す
+# （他カテゴリの項目は出さない）。
+HOME = ("index.html", "🏠", "TOP")
+
+NAV_TOOLS = [
+    HOME,
     ("tools/炎龍の覇者_攻城タイムライン計算.html", "🐉", "炎龍 集結タイムライン計算"),
     ("tools/王城到着同期カウントアップ.html", "⏱️", "KvK同着スタート カウントアップ表"),
     ("tools/KvK同着スタート カウントダウン表.html", "⏲️", "KvK同着スタート カウントダウン表"),
@@ -34,16 +36,15 @@ NAV_ITEMS = [
     ("tools/周期ウェーブタイマー.html", "🌊", "周期ウェーブタイマー"),
     ("tools/音声アナウンス付きストップウォッチ.html", "🔊", "音声ストップウォッチ（工事中）"),
 ]
+NAV_FLAME_DRAGON = [HOME]
+NAV_HOLY_SWORD_LEAGUE = [HOME]
 
-# サイドバー自体は表示するが、ナビの一覧には載せないページ（カテゴリのトップページ）。
-# TOPを経由してアクセスする想定なので、ここに来てもTOPへ戻るリンクなどNAV_ITEMSはそのまま出す。
-EXTRA_SIDEBAR_PAGES = [
-    "tools/tools-index.html",
-    "flame-dragon/flame-dragon-index.html",
-    "holy-sword-league/holy-sword-league-index.html",
+# (対象ページの相対パス一覧, そのページで使うナビ項目リスト)
+PAGE_GROUPS = [
+    ([rel_path for rel_path, _, _ in NAV_TOOLS if rel_path != "index.html"] + ["tools/tools-index.html"], NAV_TOOLS),
+    (["flame-dragon/flame-dragon-index.html"], NAV_FLAME_DRAGON),
+    (["holy-sword-league/holy-sword-league-index.html"], NAV_HOLY_SWORD_LEAGUE),
 ]
-
-TOOLS = NAV_ITEMS
 
 MARK_START = "<!-- ks-sidebar:start -->"
 MARK_END = "<!-- ks-sidebar:end -->"
@@ -58,9 +59,9 @@ def rel_href(from_rel_path: str, to_rel_path: str) -> str:
     return href
 
 
-def build_sidebar(current_rel_path):
+def build_sidebar(current_rel_path, nav_items):
     links = []
-    for rel_path, icon, label in TOOLS:
+    for rel_path, icon, label in nav_items:
         active = rel_path == current_rel_path
         cls = "ks-link ks-active" if active else "ks-link"
         href = rel_href(current_rel_path, rel_path)
@@ -185,11 +186,11 @@ def ensure_viewport(text: str) -> str:
     return re.sub(r"(<head[^>]*>)", lambda m: m.group(1) + "\n" + VIEWPORT_TAG, text, count=1)
 
 
-def inject(path: Path, rel_path: str):
+def inject(path: Path, rel_path: str, nav_items):
     text = path.read_text(encoding="utf-8")
 
     text = ensure_viewport(text)
-    sidebar = build_sidebar(rel_path)
+    sidebar = build_sidebar(rel_path, nav_items)
 
     if MARK_START in text:
         text = re.sub(
@@ -213,15 +214,14 @@ def inject(path: Path, rel_path: str):
 def main():
     done = []
     # index.html（TOPページ）自体にはサイドバーを出さない（3カード選択がナビの役割を兼ねるため）。
-    # NAV_ITEMS内の"index.html"エントリは、他ページのサイドバーからのリンク先としてのみ使う。
-    all_paths = [rel_path for rel_path, _, _ in NAV_ITEMS if rel_path != "index.html"] + EXTRA_SIDEBAR_PAGES
-    for rel_path in all_paths:
-        p = FOLDER / rel_path
-        if p.exists():
-            if inject(p, rel_path):
-                done.append(rel_path)
-        else:
-            print("NOT FOUND:", rel_path)
+    for rel_paths, nav_items in PAGE_GROUPS:
+        for rel_path in rel_paths:
+            p = FOLDER / rel_path
+            if p.exists():
+                if inject(p, rel_path, nav_items):
+                    done.append(rel_path)
+            else:
+                print("NOT FOUND:", rel_path)
     print("injected:", len(done))
     for d in done:
         print(" -", d)
