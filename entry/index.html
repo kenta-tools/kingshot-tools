@@ -116,7 +116,8 @@
   <div class="warn" style="margin-top: 6px;">⚠ 登録した参加時間に参加できなそうなときは、必ず連絡してください。</div>
 </div>
 
-<!-- Discordへの案内（招待リンクを変えたら href を差し替える。今のリンクは 2026-11-01 作成・30日で期限切れ） -->
+<!-- Discordへの案内。リンクは中継役（pubGet の discordInvite）が毎日作り直したものに自動で差し替わる。
+     href は中継役から取れなかったときの予備（2026-11-01 作成・30日で期限切れ） -->
 <details class="discord">
   <summary>💬 Discordに参加していない人はこちら</summary>
   <div class="dc-head">Discordのアカウントを持っている人</div>
@@ -532,6 +533,8 @@
     return gasCall({ action: "pubGet" }).then(function(res) {
       if (!res.ok) throw new Error(res.error || "読み込めませんでした");
       history = res.history || { events: [], entries: [] };
+      // 中継役が毎日作り直している Discord の招待リンクがあれば、それを使う（なければページに書いてあるリンク）
+      if (res.discordInvite) document.querySelectorAll("a.join").forEach(function(a) { a.href = res.discordInvite; });
       data = { events: res.events || [], users: res.users || [], entries: res.entries || [] };
       $("loadingView").style.display = "none";
       if (!data.events.length) {

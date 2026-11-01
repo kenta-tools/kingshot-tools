@@ -122,7 +122,9 @@ function pubGet_(token) {
     history: {
       events: (d.events || []).map(function(e) { return { id: e.id, type: e.type, date: e.date }; }),
       entries: d.entries || []
-    }
+    },
+    // Discord の招待リンク（refreshDiscordInvite が毎日作り直す。未設定なら ""）
+    discordInvite: PropertiesService.getScriptProperties().getProperty("DISCORD_INVITE") || ""
   };
 }
 
@@ -503,6 +505,44 @@ function importFromGitHub_(token) {
 }
 
 // 初回だけエディタから実行する: ドライブにデータ用ファイルを作り、GitHub の data/members.json をコピーする
+// ---------- Discord の招待リンク ----------
+// スクリプトプロパティ:
+//   DISCORD_BOT_TOKEN  : bot のトークン（秘密。サーバーに追加済みで「招待を作成」権限があること）
+//   DISCORD_CHANNEL_ID : 招待先のチャンネルID（bot がそのチャンネルを見られること）
+//   DISCORD_INVITE / DISCORD_INVITE_AT : 作った招待リンクと日時（自動）
+// 初回だけ: エディタで関数「setupDiscordInvite」を実行 → 毎日朝5時台に作り直すトリガーができ、すぐ1回作る
+var DISCORD_INVITE_DAYS = 7; // 1つのリンクの有効日数（毎日作り直すので、古いリンクも数日は使える）
+
+function refreshDiscordInvite() {
+  var props = PropertiesService.getScriptProperties();
+  var token = props.getProperty("DISCORD_BOT_TOKEN"), channel = props.getProperty("DISCORD_CHANNEL_ID");
+  if (!token || !channel) throw new Error("スクリプトプロパティ DISCORD_BOT_TOKEN と DISCORD_CHANNEL_ID を設定してください");
+  var r = UrlFetchApp.fetch("https://discord.com/api/v10/channels/" + encodeURIComponent(channel) + "/invites", {
+    method: "post", contentType: "application/json", muteHttpExceptions: true,
+    headers: { Authorization: "Bot " + token },
+    payload: JSON.stringify({ max_age: DISCORD_INVITE_DAYS * 86400, max_uses: 0, temporary: false, unique: true })
+  });
+  var code = r.getResponseCode();
+  if (code !== 200 && code !== 201) {
+    throw new Error("Discord が招待リンクを作れませんでした（" + code + "）: " + r.getContentText().slice(0, 200) +
+      "（401=トークン違い、403=bot に招待を作成の権限がない／チャンネルが見えない、404=チャンネルIDが違う）");
+  }
+  var url = "https://discord.gg/" + JSON.parse(r.getContentText()).code;
+  props.setProperty("DISCORD_INVITE", url);
+  props.setProperty("DISCORD_INVITE_AT", new Date().toISOString());
+  Logger.log("招待リンクを作りました: " + url);
+  return url;
+}
+
+function setupDiscordInvite() {
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === "refreshDiscordInvite") ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger("refreshDiscordInvite").timeBased().everyDays(1).atHour(5).create();
+  Logger.log("毎日5時台に招待リンクを作り直す設定にしました");
+  refreshDiscordInvite();
+}
+
 function setupStorage() {
   var props = PropertiesService.getScriptProperties();
   var id = props.getProperty("DATA_FILE_ID");
