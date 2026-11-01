@@ -133,6 +133,11 @@
   #simDetails { margin-bottom: 10px; }
   #simDetails summary { cursor: pointer; font-size: 13px; font-weight: bold; color: #a86a00; }
   .sim-pair { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 13px; }
+  .watch { background: #fff4f2; border: 1px solid #f3c6bf; border-radius: 8px; padding: 8px 12px; margin: 8px 0; font-size: 13px; line-height: 1.7; }
+  .watch b { color: #c0392b; }
+  .block-box { background: #f6f8fb; border-radius: 8px; padding: 8px 12px; margin: 8px 0; font-size: 13px; }
+  .block-row { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 4px 0; border-bottom: 1px solid #e6e9ee; }
+  tr.blocked td { background: #fff0ee; }
   .sim-pair .names { flex: 1; min-width: 220px; }
 
   /* ログイン画面 */
@@ -454,6 +459,16 @@
         <button type="button" class="small" id="logLoadBtn">記録を読み込む</button>
         <input type="search" id="logFilter" placeholder="絞り込み（名前・IP・イベント）">
         <span class="hint" id="logInfo"></span>
+      </div>
+      <div id="logWatch" class="watch" style="display: none;"></div>
+      <div class="block-box">
+        <b>🚫 ブロックするIP</b> <span class="hint">（このIPからの個人登録・変更・取消を断ります。すぐ反映され、「💾 保存する」は不要です。末尾を * にすると前方一致：例 203.0.113.*）</span>
+        <div class="row" style="margin: 6px 0;">
+          <input type="text" id="blockIpInput" placeholder="IP（例: 203.0.113.5）" style="width: 200px;" autocomplete="off">
+          <input type="text" id="blockNoteInput" placeholder="メモ（例: いたずら）" style="width: 180px;">
+          <button type="button" class="small danger" id="blockAddBtn">ブロックする</button>
+        </div>
+        <div id="blockList"></div>
       </div>
       <div class="scroll">
         <table>
@@ -2424,7 +2439,66 @@
 
   // ---------- 個人登録の記録 ----------
   var logRows = [];
-  var LOG_ACT = { added: "登録", updated: "変更", canceled: "取消" };
+  var LOG_ACT = { added: "登録", updated: "変更", canceled: "取消", blocked: "ブロック" };
+  var blocklist = [];
+
+  function ipBlocked(ip) {
+    return !!ip && blocklist.some(function(b) {
+      return b.ip.slice(-1) === "*" ? ip.indexOf(b.ip.slice(0, -1)) === 0 : ip === b.ip;
+    });
+  }
+
+  // いたずらっぽい動きの自動チェック（記録は新しい順）
+  //   ・同じIPから3人以上の名前で登録・変更している
+  //   ・前に登録したときと違うIPから、その人の登録が変更・取消された（他人の登録を触った可能性）
+  function watchItems() {
+    var byIp = {}, items = [];
+    logRows.forEach(function(r) {
+      if (!r.ip || r.act === "blocked") return;
+      (byIp[r.ip] = byIp[r.ip] || {})[r.uid || r.name] = r.name;
+    });
+    Object.keys(byIp).forEach(function(ip) {
+      var names = Object.keys(byIp[ip]).map(function(k) { return byIp[ip][k]; });
+      if (names.length >= 3) items.push({ ip: ip, text: "IP " + ip + " から " + names.length + "人分の登録・変更（" + names.join("、") + "）" });
+    });
+    var firstIp = {};
+    logRows.slice().reverse().forEach(function(r) {
+      if (!r.ip || !r.uid || r.act === "blocked") return;
+      if (!firstIp[r.uid]) { firstIp[r.uid] = r.ip; return; }
+      if (r.ip !== firstIp[r.uid] && r.act !== "added") {
+        items.push({ ip: r.ip, text: formatTime(r.t) + "「" + r.name + "」の登録が、最初と違うIP " + r.ip + " から" + (LOG_ACT[r.act] || r.act) + "されました（最初は " + firstIp[r.uid] + "）" });
+      }
+    });
+    return items;
+  }
+
+  function renderBlocklist() {
+    $("blockList").innerHTML = blocklist.map(function(b, i) {
+      return '<div class="block-row"><b>' + escapeHtml(b.ip) + '</b><span class="hint">' + escapeHtml(b.note || "") +
+        (b.at ? "（" + escapeHtml(formatTime(b.at)) + "〜）" : "") + '</span><button type="button" class="small sub-btn" data-unblock="' + i + '">解除</button></div>';
+    }).join("") || '<div class="hint">ブロック中のIPはありません</div>';
+  }
+
+  function saveBlocklist(list, msg) {
+    $("logInfo").textContent = "保存中…";
+    return gasCall({ action: "setBlocklist", list: list }).then(function(res) {
+      if (!res.ok) throw new Error(res.error || "保存できませんでした");
+      blocklist = res.blocklist || [];
+      renderBlocklist();
+      renderLog();
+      $("logInfo").textContent = msg;
+    }).catch(function(e) {
+      $("logInfo").textContent = "保存できませんでした: " + e.message;
+    });
+  }
+
+  function blockIp(ip, note) {
+    ip = String(ip || "").trim();
+    if (!ip) return;
+    if (blocklist.some(function(b) { return b.ip === ip; })) { $("logInfo").textContent = ip + " はすでにブロック中です"; return; }
+    if (!confirm(ip + " からの個人登録をブロックします。よろしいですか？")) return;
+    saveBlocklist(blocklist.concat([{ ip: ip, note: note || "", at: new Date().toISOString() }]), ip + " をブロックしました");
+  }
 
   function renderLog() {
     var q = $("logFilter").value.trim().toLowerCase();
@@ -2433,10 +2507,20 @@
     });
     $("logInfo").textContent = logRows.length ? (q ? rows.length + " / " : "") + logRows.length + "件" : "";
     $("logBody").innerHTML = rows.map(function(r) {
-      return "<tr><td style=\"white-space: nowrap;\">" + escapeHtml(formatTime(r.t)) + "</td><td>" + escapeHtml(r.ev || "") +
+      var blocked = ipBlocked(r.ip);
+      return '<tr' + (blocked ? ' class="blocked"' : "") + "><td style=\"white-space: nowrap;\">" + escapeHtml(formatTime(r.t)) + "</td><td>" + escapeHtml(r.ev || "") +
         "</td><td>" + escapeHtml(r.name || "") + "</td><td>" + escapeHtml(LOG_ACT[r.act] || r.act || "") +
-        "</td><td>" + escapeHtml(r.ip || "（不明）") + '</td><td class="hint">' + escapeHtml(r.ua || "") + "</td></tr>";
+        "</td><td style=\"white-space: nowrap;\">" + escapeHtml(r.ip || "（不明）") +
+        (r.ip && !blocked ? ' <button type="button" class="small danger" data-block="' + escapeHtml(r.ip) + '" data-name="' + escapeHtml(r.name || "") + '">ブロック</button>' : "") +
+        (blocked ? ' <span class="tag new">ブロック中</span>' : "") +
+        '</td><td class="hint">' + escapeHtml(r.ua || "") + "</td></tr>";
     }).join("") || '<tr><td colspan="6" class="hint">記録はまだありません</td></tr>';
+    var items = watchItems();
+    $("logWatch").style.display = items.length ? "block" : "none";
+    $("logWatch").innerHTML = "<b>⚠ 要注意（" + items.length + "件）</b><br>" + items.map(function(it) {
+      return escapeHtml(it.text) + (ipBlocked(it.ip) ? ' <span class="tag new">ブロック中</span>' :
+        ' <button type="button" class="small danger" data-block="' + escapeHtml(it.ip) + '" data-name="">ブロック</button>');
+    }).join("<br>");
   }
 
   $("logLoadBtn").addEventListener("click", function() {
@@ -2444,12 +2528,31 @@
     gasCall({ action: "getLog" }).then(function(res) {
       if (!res.ok) throw new Error(res.error || "読み込めませんでした");
       logRows = res.log || [];
+      blocklist = res.blocklist || [];
+      renderBlocklist();
       renderLog();
     }).catch(function(e) {
       $("logInfo").textContent = "読み込めませんでした: " + e.message;
     });
   });
   $("logFilter").addEventListener("input", renderLog);
+  $("blockAddBtn").addEventListener("click", function() {
+    blockIp($("blockIpInput").value, $("blockNoteInput").value.trim());
+    $("blockIpInput").value = ""; $("blockNoteInput").value = "";
+  });
+  [$("logBody"), $("logWatch")].forEach(function(el) {
+    el.addEventListener("click", function(e) {
+      var btn = e.target.closest("button[data-block]");
+      if (btn) blockIp(btn.dataset.block, btn.dataset.name ? "「" + btn.dataset.name + "」の記録から" : "要注意から");
+    });
+  });
+  $("blockList").addEventListener("click", function(e) {
+    var btn = e.target.closest("button[data-unblock]");
+    if (!btn) return;
+    var b = blocklist[Number(btn.dataset.unblock)];
+    if (!b || !confirm(b.ip + " のブロックを解除します。よろしいですか？")) return;
+    saveBlocklist(blocklist.filter(function(x) { return x !== b; }), b.ip + " のブロックを解除しました");
+  });
 
   $("aiCopyBtn").addEventListener("click", function() { copyText(refreshAiText(), this); });
   document.querySelectorAll("input[name=aiFormat]").forEach(function(r) { r.addEventListener("change", refreshAiText); });

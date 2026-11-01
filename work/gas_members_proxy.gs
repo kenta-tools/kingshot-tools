@@ -66,7 +66,9 @@ function handle_(p) {
     if (p.action === "importFromGitHub") return json_(importFromGitHub_(token));
 
     // 個人登録の記録（管理画面用。公開データには入れない）
-    if (p.action === "getLog") return json_({ ok: true, log: readLog_() });
+    if (p.action === "getLog") return json_({ ok: true, log: readLog_(), blocklist: readBlocklist_() });
+    // ブロックするIPの一覧（管理画面で編集。まるごと置き換え）
+    if (p.action === "setBlocklist") return json_(writeBlocklist_(p.list));
 
     // 管理画面とのやりとりは GitHub 時代と同じ形（content=Base64のJSON、sha=版番号）
     if (p.action === "get") {
@@ -256,6 +258,12 @@ function selfSave_(token, p) {
 
   var name = clip_(p.name, 30);
   if (!name) return { ok: false, status: 400, error: "名前を入力してください" };
+  var ip = String(p.ip || "").replace(/[^0-9a-fA-F:.]/g, "").slice(0, 45);
+  if (isBlocked_(ip)) {
+    appendLog_({ t: new Date().toISOString(), ev: String(p.eventId || ""), name: name, uid: String(p.userId || ""), act: "blocked",
+      ip: ip, ua: clip_(p.ua, 120) });
+    return { ok: false, status: 403, error: "登録できませんでした。管理者に連絡してください" };
+  }
   var row = null;
   if (!p.cancel) {
     row = cleanEntry_(p.entry || {});
@@ -377,6 +385,28 @@ function key_(s) { return String(s).trim().toLowerCase(); }
 // IP は登録ページが調べて送る値（GAS は相手のIPを受け取れないため）。目安として扱う
 var LOG_CHUNK = 25;       // 1つの値は9KBまでなので、1件200バイト前後×25件に収める
 var LOG_MAX_CHUNKS = 80;  // 約2,000件
+
+// ---------- IPブラックリスト ----------
+// スクリプトプロパティ BLOCK_IPS（非公開）に [{ ip, note, at }] で保存。ip の末尾が * なら前方一致
+function readBlocklist_() {
+  return JSON.parse(PropertiesService.getScriptProperties().getProperty("BLOCK_IPS") || "[]");
+}
+
+function writeBlocklist_(list) {
+  if (!Array.isArray(list)) return { ok: false, status: 400, error: "一覧の形式が違います" };
+  var clean = list.slice(0, 500).map(function(b) {
+    return { ip: String(b.ip || "").replace(/[^0-9a-fA-F:.*]/g, "").slice(0, 46), note: clip_(b.note, 60), at: clip_(b.at, 30) };
+  }).filter(function(b) { return b.ip && b.ip !== "*"; });
+  PropertiesService.getScriptProperties().setProperty("BLOCK_IPS", JSON.stringify(clean));
+  return { ok: true, blocklist: clean };
+}
+
+function isBlocked_(ip) {
+  if (!ip) return false;
+  return readBlocklist_().some(function(b) {
+    return b.ip.slice(-1) === "*" ? ip.indexOf(b.ip.slice(0, -1)) === 0 : ip === b.ip;
+  });
+}
 
 function appendLog_(rec) {
   try {
