@@ -287,7 +287,7 @@
   };
 
   var data = { events: [], users: [], entries: [] };
-  // 過去のイベントも含む公開データ（前回の入力を初期値にするため）。読めなくても登録はできる
+  // 過去のイベントも含む参加情報（前回の入力を初期値にするため。中継役の pubGet が返す）
   var history = { events: [], entries: [] };
   var currentEventId = null;
   var me = null; // { userId（既存ユーザー。新規なら null）, name, oldName }
@@ -480,12 +480,9 @@
   function load() {
     $("loadingView").style.display = "block";
     $("errorView").style.display = "none";
-    fetch("../data/members.json", { cache: "no-store" })
-      .then(function(r) { return r.ok ? r.json() : {}; })
-      .then(function(d) { history = { events: d.events || [], entries: d.entries || [] }; })
-      .catch(function() {});
     return gasCall({ action: "pubGet" }).then(function(res) {
       if (!res.ok) throw new Error(res.error || "読み込めませんでした");
+      history = res.history || { events: [], entries: [] };
       data = { events: res.events || [], users: res.users || [], entries: res.entries || [] };
       $("loadingView").style.display = "none";
       if (!data.events.length) {

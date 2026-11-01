@@ -1,7 +1,8 @@
 /**
  * メンバー管理の保存用 中継役（Google Apps Script ウェブアプリ）。
  *
- * GitHub のトークンをここ（スクリプトプロパティ）にだけ置く。更新できるのは data/members.json だけ。
+ * データ（ユーザー・イベント・参加情報・KvK名簿）は、このスクリプトの持ち主の Google ドライブにある
+ * 非公開ファイル（DATA_FILE_ID）に保存する。公開サイトには置かない（2026-11-01 に GitHub の data/members.json から移行）。
  *   - 管理画面（admin/members-admin.html）: パスワード付きで「取得（get）」「保存（put）」
  *   - 個人登録ページ（entry/index.html）: パスワードなしで「受付中イベントの取得（pubGet）」
  *     「自分の参加登録・変更・取消（selfSave）」。受付中のイベントの、1人分の参加情報しか変えられない
@@ -9,14 +10,20 @@
  *     パスワードなしで「名簿の取得（pubGetに同梱）」「名簿の保存（kvkSave）」。イベントID単位で1件（名簿まるごと上書き）
  *
  * スクリプトプロパティ（プロジェクトの設定 → スクリプト プロパティ）:
- *   GITHUB_TOKEN  : kenta-tools の Fine-grained トークン（kingshot-tools のみ・Contents: Read and write）
  *   EDIT_PASSWORD : 管理画面のログインパスワードと同じ文字列
+ *   DATA_FILE_ID  : データを保存するドライブのファイルID（setupStorage を実行すると自動で入る）
+ *   DATA_VERSION  : 保存のたびに1増える番号（同時保存の衝突検出用。自動）
+ *   GITHUB_TOKEN  : 移行元（GitHub の data/members.json）を読むためだけに使う。移行後は不要
+ *
+ * 初回だけ: エディタで関数「setupStorage」を選んで「実行」→ ドライブへのアクセスを許可する
+ *（GitHub の data/members.json をドライブのファイルにコピーして、以後はそこを使う）
  *
  * デプロイ: デプロイ → 新しいデプロイ → 種類「ウェブアプリ」→ 実行ユーザー「自分」→ アクセス「全員」
  * 更新時: デプロイ → デプロイを管理 → 鉛筆 → バージョン「新バージョン」→ デプロイ（URLは変わらない）
  */
-var GH = { owner: "kenta-tools", repo: "kingshot-tools", path: "data/members.json", branch: "main" };
-var MAX_BYTES = 900 * 1024; // GitHub Contents API の上限（1MB）より少し小さく
+var GH = { owner: "kenta-tools", repo: "kingshot-tools", path: "data/members.json", branch: "main" }; // 移行元
+var MAX_BYTES = 5 * 1024 * 1024; // 保存データの上限（いたずら対策）
+var DATA_FILE_NAME = "Kingshot メンバー管理データ（非公開）.json";
 var GRADES = ["G8", "G7", "G6", "G5", "その他"];
 var SELF_LIMIT_PER_MIN = 60; // 個人登録の受付上限（全体で1分あたり。いたずら連打対策）
 
@@ -38,8 +45,9 @@ function handle_(p) {
   try {
     var props = PropertiesService.getScriptProperties();
     var password = props.getProperty("EDIT_PASSWORD");
-    var token = props.getProperty("GITHUB_TOKEN");
-    if (!password || !token) return json_({ ok: false, status: 500, error: "中継役の設定（スクリプトプロパティ）が未完了です" });
+    var token = props.getProperty("GITHUB_TOKEN"); // 移行（importFromGitHub）にだけ使う
+    if (!password) return json_({ ok: false, status: 500, error: "中継役の設定（スクリプトプロパティ）が未完了です" });
+    if (!props.getProperty("DATA_FILE_ID")) return json_({ ok: false, status: 500, error: "データの保存先が未設定です（setupStorage を実行してください）" });
 
     // 個人登録ページ用（パスワード不要）
     if (p.action === "pubGet") return json_(pubGet_(token));
@@ -52,19 +60,17 @@ function handle_(p) {
       return json_({ ok: false, status: 401, error: "パスワードが違います" });
     }
 
-    var url = fileUrl_();
-    var headers = ghHeaders_(token);
+    // GitHub の data/members.json の内容で、ドライブのデータを置き換える（移行の取り直し用）
+    if (p.action === "importFromGitHub") return json_(importFromGitHub_(token));
 
     // 個人登録の記録（管理画面用。公開データには入れない）
     if (p.action === "getLog") return json_({ ok: true, log: readLog_() });
 
+    // 管理画面とのやりとりは GitHub 時代と同じ形（content=Base64のJSON、sha=版番号）
     if (p.action === "get") {
-      var r = UrlFetchApp.fetch(url + "?ref=" + GH.branch, { headers: headers, muteHttpExceptions: true });
-      var code = r.getResponseCode();
-      if (code === 404) return json_({ ok: true, content: null, sha: null });
-      if (code !== 200) return json_({ ok: false, status: code, error: "GitHubから取得できませんでした" });
-      var j = JSON.parse(r.getContentText());
-      return json_({ ok: true, content: j.content, sha: j.sha });
+      var g = readFile_(token);
+      if (!g.ok) return json_(g);
+      return json_({ ok: true, content: Utilities.base64Encode(JSON.stringify(g.data), Utilities.Charset.UTF_8), sha: g.sha });
     }
 
     if (p.action === "put") {
@@ -75,15 +81,13 @@ function handle_(p) {
       if (!Array.isArray(data.users) || !Array.isArray(data.events) || !Array.isArray(data.entries)) {
         return json_({ ok: false, status: 400, error: "members.json の形式ではありません" });
       }
-      var body = { message: "Update members.json from admin page", content: p.content, branch: GH.branch };
-      if (p.sha) body.sha = p.sha;
-      var r2 = UrlFetchApp.fetch(url, {
-        method: "put", headers: headers, contentType: "application/json",
-        payload: JSON.stringify(body), muteHttpExceptions: true
-      });
-      var c2 = r2.getResponseCode();
-      if (c2 === 200 || c2 === 201) return json_({ ok: true });
-      return json_({ ok: false, status: c2, error: "GitHubへの保存に失敗しました" });
+      var lock = LockService.getScriptLock();
+      if (!lock.tryLock(30000)) return json_({ ok: false, status: 503, error: "混み合っています。少し待ってからもう一度押してください" });
+      try {
+        return json_(writeFile_(token, data, p.sha, "admin"));
+      } finally {
+        lock.releaseLock();
+      }
     }
 
     return json_({ ok: false, status: 400, error: "不明な操作です" });
@@ -107,7 +111,11 @@ function pubGet_(token) {
     events: events,
     users: (d.users || []).map(function(u) { return { id: u.id, name: u.name, alliance: u.alliance, aliases: u.aliases || [] }; }),
     entries: (d.entries || []).filter(function(x) { return ids[x.eventId]; }),
-    kvkRosters: (d.kvkRosters || []).filter(function(r) { return ids[r.eventId]; })
+    kvkRosters: (d.kvkRosters || []).filter(function(r) { return ids[r.eventId]; }),
+    history: {
+      events: (d.events || []).map(function(e) { return { id: e.id, type: e.type, date: e.date }; }),
+      entries: d.entries || []
+    }
   };
 }
 
@@ -339,29 +347,68 @@ function ghHeaders_(token) {
   return { Authorization: "Bearer " + token, Accept: "application/vnd.github+json" };
 }
 
+// ---------- データの保存先（Google ドライブの非公開ファイル） ----------
+// 戻り値の sha は保存のたびに増える版番号。writeFile_ に渡した sha が今の版と違えば、その間に誰かが保存したので 409 を返す
+// （呼び出し側は読み直してやり直す）。token は GitHub 時代の名残で使わない
 function readFile_(token) {
+  var props = PropertiesService.getScriptProperties();
+  var text = DriveApp.getFileById(props.getProperty("DATA_FILE_ID")).getBlob().getDataAsString("UTF-8");
+  return { ok: true, data: JSON.parse(text || "{}"), sha: props.getProperty("DATA_VERSION") || "0" };
+}
+
+// 呼び出し側で LockService のロックを取ってから呼ぶこと（版番号の確認と書き込みの間に割り込まれないように）
+function writeFile_(token, data, sha, message) {
+  var props = PropertiesService.getScriptProperties();
+  var version = props.getProperty("DATA_VERSION") || "0";
+  if (sha != null && String(sha) !== version) return { ok: false, status: 409, error: "直前に他の人が保存しました" };
+  var text = JSON.stringify(data, null, 2) + "\n";
+  if (text.length > MAX_BYTES) return { ok: false, status: 413, error: "データが大きすぎます。管理者に連絡してください" };
+  DriveApp.getFileById(props.getProperty("DATA_FILE_ID")).setContent(text);
+  props.setProperty("DATA_VERSION", String(Number(version) + 1));
+  return { ok: true };
+}
+
+// GitHub の data/members.json を読む（移行用）
+function readGitHub_(token) {
+  if (!token) return { ok: false, status: 500, error: "GITHUB_TOKEN がありません" };
   var r = UrlFetchApp.fetch(fileUrl_() + "?ref=" + GH.branch, { headers: ghHeaders_(token), muteHttpExceptions: true });
   var code = r.getResponseCode();
-  if (code === 404) return { ok: true, data: { users: [], events: [], entries: [], notSame: [] }, sha: null };
+  if (code === 404) return { ok: false, status: 404, error: "GitHub に data/members.json がありません" };
   if (code !== 200) return { ok: false, status: code, error: "GitHubから取得できませんでした" };
   var j = JSON.parse(r.getContentText());
   var text = Utilities.newBlob(Utilities.base64Decode(j.content.replace(/\s/g, ""))).getDataAsString("UTF-8");
-  return { ok: true, data: JSON.parse(text || "{}"), sha: j.sha };
+  return { ok: true, data: JSON.parse(text || "{}") };
 }
 
-function writeFile_(token, data, sha, message) {
-  var text = JSON.stringify(data, null, 2) + "\n";
-  var content = Utilities.base64Encode(text, Utilities.Charset.UTF_8);
-  if (content.length * 3 / 4 > MAX_BYTES) return { ok: false, status: 413, error: "データが大きすぎます。管理者に連絡してください" };
-  var body = { message: message, content: content, branch: GH.branch };
-  if (sha) body.sha = sha;
-  var r = UrlFetchApp.fetch(fileUrl_(), {
-    method: "put", headers: ghHeaders_(token), contentType: "application/json",
-    payload: JSON.stringify(body), muteHttpExceptions: true
-  });
-  var c = r.getResponseCode();
-  if (c === 200 || c === 201) return { ok: true };
-  return { ok: false, status: c, error: "GitHubへの保存に失敗しました" };
+function importFromGitHub_(token) {
+  var g = readGitHub_(token);
+  if (!g.ok) return g;
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) return { ok: false, status: 503, error: "混み合っています" };
+  try {
+    var w = writeFile_(token, g.data, null, "import");
+    if (!w.ok) return w;
+    return { ok: true, users: (g.data.users || []).length, entries: (g.data.entries || []).length };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// 初回だけエディタから実行する: ドライブにデータ用ファイルを作り、GitHub の data/members.json をコピーする
+function setupStorage() {
+  var props = PropertiesService.getScriptProperties();
+  var id = props.getProperty("DATA_FILE_ID");
+  if (id) {
+    Logger.log("設定済みです: " + DriveApp.getFileById(id).getName() + " (" + id + ")");
+    return;
+  }
+  var g = readGitHub_(props.getProperty("GITHUB_TOKEN"));
+  var text = JSON.stringify(g.ok ? g.data : { users: [], events: [], entries: [], notSame: [] }, null, 2) + "\n";
+  var file = DriveApp.createFile(DATA_FILE_NAME, text, MimeType.PLAIN_TEXT);
+  props.setProperty("DATA_FILE_ID", file.getId());
+  props.setProperty("DATA_VERSION", "1");
+  Logger.log("ドライブにデータ用ファイルを作りました: " + file.getName() + " (" + file.getId() + ") " +
+    (g.ok ? "GitHub からユーザー" + (g.data.users || []).length + "人・参加情報" + (g.data.entries || []).length + "件をコピー" : "空で作成（" + g.error + "）"));
 }
 
 function json_(o) {
