@@ -54,6 +54,8 @@ function handle_(p) {
     if (p.action === "selfSave") return json_(selfSave_(token, p));
     // KvK同着カウントダウン表「共有用」画面用（パスワード不要）
     if (p.action === "kvkSave") return json_(kvkSave_(token, p));
+    // 炎龍 集結タイムライン計算「共有用」画面用（パスワード不要）
+    if (p.action === "flameSave") return json_(flameSave_(token, p));
 
     if (p.password !== password) {
       Utilities.sleep(1000); // 総当たり対策
@@ -111,7 +113,10 @@ function pubGet_(token) {
     events: events,
     users: (d.users || []).map(function(u) { return { id: u.id, name: u.name, alliance: u.alliance, aliases: u.aliases || [] }; }),
     entries: (d.entries || []).filter(function(x) { return ids[x.eventId]; }),
-    kvkRosters: (d.kvkRosters || []).filter(function(r) { return ids[r.eventId]; }),
+    // kvkRosters/flameRostersは終了したイベント分も含めて全部返す（終了後も閲覧はできるようにするため。
+    // 更新を締め切るかどうかはクライアント側で「そのイベントがopenか」を見て判断する）
+    kvkRosters: d.kvkRosters || [],
+    flameRosters: d.flameRosters || [],
     history: {
       events: (d.events || []).map(function(e) { return { id: e.id, type: e.type, date: e.date }; }),
       entries: d.entries || []
@@ -148,6 +153,7 @@ function kvkSave_(token, p) {
       var f = readFile_(token);
       if (!f.ok) return f;
       var d = f.data;
+      if (!isEventOpen_(d, p.eventId)) return { ok: false, status: 403, error: "このイベントは終了しているため更新できません" };
       d.kvkRosters = d.kvkRosters || [];
       var existing = d.kvkRosters.filter(function(x) { return x.eventId === p.eventId; })[0];
       var record = { eventId: p.eventId, rows: rows, updatedAt: new Date().toISOString() };
@@ -169,6 +175,74 @@ function kvkSave_(token, p) {
 function numOrNull_(v) {
   var n = Number(v);
   return v !== "" && v != null && isFinite(n) ? n : null;
+}
+
+// eventIdが「受付中（open:true）」のイベントかどうか（終了済みイベントへの共有保存を止めるため）
+function isEventOpen_(d, eventId) {
+  var ev = (d.events || []).filter(function(e) { return e.id === eventId; })[0];
+  return !!(ev && ev.open);
+}
+
+// 炎龍 集結タイムライン計算「共有用」画面の保存。イベントID単位で1件、まるごと上書き。
+// p: { eventId, members: [{id,role,label,march,petLevel,usePet}], patterns: [{id,name,kezuriIds,reinforceIds}], settings: {...} }
+function flameSave_(token, p) {
+  var cache = CacheService.getScriptCache();
+  var minuteKey = "flame_" + Math.floor(Date.now() / 60000);
+  var count = Number(cache.get(minuteKey) || 0);
+  if (count >= SELF_LIMIT_PER_MIN) return { ok: false, status: 429, error: "混み合っています。1分ほど待ってからもう一度押してください" };
+  cache.put(minuteKey, String(count + 1), 120);
+
+  if (!p.eventId) return { ok: false, status: 400, error: "イベントが選ばれていません" };
+  var members = (Array.isArray(p.members) ? p.members : []).slice(0, 200).map(function(m) {
+    return {
+      id: clip_(m.id, 20),
+      role: clip_(m.role, 10),
+      label: clip_(m.label, 30),
+      march: numOrNull_(m.march) || 0,
+      petLevel: count_(m.petLevel, 8) || 0,
+      usePet: m.usePet !== false
+    };
+  }).filter(function(m) { return m.id; });
+  var patterns = (Array.isArray(p.patterns) ? p.patterns : []).slice(0, 50).map(function(pt) {
+    return {
+      id: clip_(pt.id, 20),
+      name: clip_(pt.name, 10),
+      kezuriIds: (Array.isArray(pt.kezuriIds) ? pt.kezuriIds : []).map(function(x) { return clip_(x, 20); }),
+      reinforceIds: (Array.isArray(pt.reinforceIds) ? pt.reinforceIds : []).map(function(x) { return clip_(x, 20); })
+    };
+  }).filter(function(pt) { return pt.id; });
+  var s = p.settings || {};
+  var settings = {
+    kezuriRallyMin: numOrNull_(s.kezuriRallyMin) || 0,
+    mainRallyMin: numOrNull_(s.mainRallyMin) || 0,
+    phaseGap: numOrNull_(s.phaseGap) || 0,
+    buffer: numOrNull_(s.buffer) || 0
+  };
+
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) return { ok: false, status: 503, error: "混み合っています。少し待ってからもう一度押してください" };
+  try {
+    for (var attempt = 0; attempt < 3; attempt++) {
+      var f = readFile_(token);
+      if (!f.ok) return f;
+      var d = f.data;
+      if (!isEventOpen_(d, p.eventId)) return { ok: false, status: 403, error: "このイベントは終了しているため更新できません" };
+      d.flameRosters = d.flameRosters || [];
+      var existing = d.flameRosters.filter(function(x) { return x.eventId === p.eventId; })[0];
+      var record = { eventId: p.eventId, members: members, patterns: patterns, settings: settings, updatedAt: new Date().toISOString() };
+      if (existing) d.flameRosters[d.flameRosters.indexOf(existing)] = record;
+      else d.flameRosters.push(record);
+
+      d.updated = new Date().toISOString();
+      var w = writeFile_(token, d, f.sha, "Flame dragon shared roster saved");
+      if (w.ok) return { ok: true };
+      if (w.status !== 409 && w.status !== 422) return w;
+      // 直前に他の人が保存した → 取り直してもう一度
+    }
+    return { ok: false, status: 409, error: "混み合っています。もう一度押してください" };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 // 1人分の参加登録・変更・取消。受付中のイベントだけ。

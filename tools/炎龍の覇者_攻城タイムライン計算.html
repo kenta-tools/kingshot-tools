@@ -26,6 +26,13 @@
   }
   .card h2 { font-size: 15px; margin: 0 0 14px; }
 
+  .event-row { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin-bottom: 10px; }
+  .event-row select { width: auto; min-width: 200px; }
+  .mode-row { display: flex; gap: 8px; margin-bottom: 10px; }
+  .mode-row button.active { background: #4a6cf7; }
+  .mode-row button:not(.active) { background: #ccc; color: #444; }
+  .save-note { font-size: 12px; color: #999; }
+
   .settings-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -203,7 +210,7 @@
     <button type="button" class="ks-toggle-btn" id="ksToggleBtn" onclick="ksToggleSidebar()" aria-label="メニュー開閉">←</button>
   </div>
   <nav>
-    <a href="../index.html?v=20261102011853" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261102011853" class="ks-link ks-active" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261102011853" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261102011853" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261102011853" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="../kvk-matchup/kvk-matchup-index.html?v=20261102011853" class="ks-link" title="KvK相手突合せ まとめ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ まとめ</span></a>
+    <a href="../index.html?v=20261102015351" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261102015351" class="ks-link ks-active" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261102015351" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261102015351" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261102015351" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="../kvk-matchup/kvk-matchup-index.html?v=20261102015351" class="ks-link" title="KvK相手突合せ まとめ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ まとめ</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -234,6 +241,22 @@
 「メイン合わせ集結」作戦（削り→メイン→増援の階段状着弾、帰還ベースのクールダウン）でタイムラインを自動計算します。<br>
 削り・増援はパターンごとに使う／使わないを選べます。メインは全パターン共通で使い回されます。<br>
 ※行軍秒数（ペットあり）は一旦四捨五入して表示・計算しています。
+</div>
+
+<div class="card">
+  <h2>イベント・表示モード</h2>
+  <div class="event-row">
+    <label>イベント: <select id="eventSelect"><option value="">（読み込み中…）</option></select></label>
+  </div>
+  <div class="mode-row">
+    <button type="button" class="active" id="modePersonalBtn">自分用（このブラウザだけ）</button>
+    <button type="button" class="secondary" id="modeSharedBtn">共有用（みんなで見る）</button>
+  </div>
+  <div class="event-row" id="sharedActions" style="display:none;">
+    <button type="button" class="secondary small" id="sharedReloadBtn">最新を取得</button>
+    <button type="button" class="small" id="sharedSaveBtn">共有に保存</button>
+    <span class="save-note" id="sharedNote"></span>
+  </div>
 </div>
 
 <div class="card">
@@ -337,30 +360,90 @@ function marchWithPet(march, petLevel) {
   return march / (1 + bonus / 100);
 }
 
-// --- ユーザー登録データ（entry/index.htmlと同じGAS中継役）から名前の候補だけ取得 ---
+// --- ユーザー登録データ（entry/index.htmlと同じGAS中継役）。名前候補・イベント一覧・共有名簿に使う ---
 const GAS_URL = "https://script.google.com/macros/s/AKfycbxu5HW9uLU9pCsUs1r_45xpuofWZmQAyZFDwSLK1C_7GvA7SDXZ4ayBEJTS0sR_8oToAw/exec";
-function fetchRegUserNames() {
-  fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "pubGet" }) })
+const EVENT_TYPE = "炎龍";
+let regData = { events: [], users: [], flameRosters: [], history: { events: [], entries: [] } };
+let mode = "personal"; // "personal" | "shared"
+let currentEventId = "";
+let sharedDirty = false;
+
+function gasCall(payload) {
+  return fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) })
     .then(r => r.json())
-    .then(res => {
-      if (!res.ok) return;
-      document.getElementById("regUserList").innerHTML = (res.users || []).map(u => `<option value="${escapeAttr(u.name)}">`).join("");
-    })
-    .catch(() => {});
+    .catch(() => { throw new Error("通信できませんでした。電波の良いところでもう一度押してください"); });
+}
+
+function formatTime(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return "";
+  const p2 = n => (n < 10 ? "0" : "") + n;
+  return (d.getMonth() + 1) + "/" + p2(d.getDate()) + " " + p2(d.getHours()) + ":" + p2(d.getMinutes());
+}
+
+function isEventOpen(id) {
+  return regData.events.some(ev => ev.id === id);
+}
+
+function eventLabel(ev) {
+  return ev.type + " " + ev.date + (isEventOpen(ev.id) ? "" : "（終了）");
+}
+
+function refreshEventSelect() {
+  const sel = document.getElementById("eventSelect");
+  const events = regData.history.events
+    .filter(ev => ev.type === EVENT_TYPE)
+    .slice()
+    .sort((a, b) => b.date.localeCompare(a.date));
+  const keep = sel.value;
+  sel.innerHTML = events.length
+    ? events.map(ev => `<option value="${escapeAttr(ev.id)}">${escapeAttr(eventLabel(ev))}</option>`).join("")
+    : `<option value="">（${EVENT_TYPE}のイベントがありません）</option>`;
+  if (events.some(ev => ev.id === keep)) sel.value = keep;
+  currentEventId = sel.value;
+}
+
+function fetchRegData() {
+  return gasCall({ action: "pubGet" }).then(res => {
+    if (!res.ok) throw new Error(res.error || "読み込めませんでした");
+    regData = {
+      events: res.events || [], users: res.users || [],
+      flameRosters: res.flameRosters || [],
+      history: res.history || { events: [], entries: [] },
+    };
+    refreshEventSelect();
+    document.getElementById("regUserList").innerHTML = regData.users.map(u => `<option value="${escapeAttr(u.name)}">`).join("");
+  }).catch(e => {
+    document.getElementById("sharedNote").textContent = "ユーザー登録データを読み込めませんでした: " + e.message;
+  });
 }
 
 // --- 入力値の自動保存（このブラウザのみ） ---
 const SIEGE_STORAGE_KEY = "siegeCalcState";
 const settingFieldIds = ["kezuriRallyMin", "mainRallyMin", "phaseGap", "buffer"];
 
+// 保存先の切り替え：自分用（ローカル）のときだけlocalStorageに即保存、共有用は「共有に保存」ボタンを押すまで送らない
 function saveSiegeState() {
+  if (mode === "personal") savePersonalState();
+  else sharedDirty = true;
+}
+
+function currentSettings() {
+  const settings = {};
+  settingFieldIds.forEach(id => { settings[id] = document.getElementById(id).value; });
+  return settings;
+}
+
+function serializedPatterns() {
+  return patterns.map(p => ({ id: p.id, name: p.name, kezuriIds: Array.from(p.kezuriIds), reinforceIds: Array.from(p.reinforceIds) }));
+}
+
+function savePersonalState() {
   try {
-    const settings = {};
-    settingFieldIds.forEach(id => { settings[id] = document.getElementById(id).value; });
     localStorage.setItem(SIEGE_STORAGE_KEY, JSON.stringify({
       memberSeq, patternSeq, members,
-      patterns: patterns.map(p => ({ id: p.id, name: p.name, kezuriIds: Array.from(p.kezuriIds), reinforceIds: Array.from(p.reinforceIds) })),
-      settings,
+      patterns: serializedPatterns(),
+      settings: currentSettings(),
       petSameForAll, petSameValue,
     }));
   } catch (e) {}
@@ -593,44 +676,129 @@ function circledNumber(n) {
   return n <= circled.length ? circled[n - 1] : `(${n})`;
 }
 
-// --- 初期データ：保存済みの入力があれば復元、なければサンプルを表示 ---
-const savedSiege = loadSiegeState();
-if (savedSiege && Array.isArray(savedSiege.members) && savedSiege.members.length) {
-  memberSeq = savedSiege.memberSeq || 0;
-  patternSeq = savedSiege.patternSeq || 0;
-  members = savedSiege.members;
-  members.forEach(m => {
-    m.petLevel = m.petLevel || 0;
-    m.usePet = m.usePet !== undefined ? m.usePet : true;
-  });
-  petSameForAll = !!savedSiege.petSameForAll;
-  petSameValue = savedSiege.petSameValue !== undefined ? savedSiege.petSameValue : true;
-  applyPetSameIfNeeded();
+// メンバー・パターンをまとめて反映する共通処理（自分用・共有用の両方から使う）
+function setMembersAndPatterns(membersData, patternsData, settingsData) {
+  members = (membersData || []).map(m => ({
+    ...m,
+    petLevel: m.petLevel || 0,
+    usePet: m.usePet !== undefined ? m.usePet : true,
+  }));
   const allReinforceIds = members.filter(m => m.role === "増援").map(m => m.id);
-  patterns = (savedSiege.patterns || []).map(p => ({
+  patterns = (patternsData || []).map(p => ({
     id: p.id,
     name: p.name,
     kezuriIds: new Set(p.kezuriIds),
     // 旧データ（reinforceIdsが無い保存データ）は、これまで通り増援を常に使う挙動に合わせる
     reinforceIds: new Set(p.reinforceIds !== undefined ? p.reinforceIds : allReinforceIds),
   }));
-  if (savedSiege.settings) {
+  if (settingsData) {
     settingFieldIds.forEach(id => {
-      if (savedSiege.settings[id] !== undefined) document.getElementById(id).value = savedSiege.settings[id];
+      if (settingsData[id] !== undefined) document.getElementById(id).value = settingsData[id];
     });
   }
-  syncPetSameUI();
+}
+
+// --- 自分用（このブラウザだけ）：保存済みの入力があれば復元、なければサンプルを表示 ---
+function loadPersonalIntoState() {
+  const savedSiege = loadSiegeState();
+  if (savedSiege && Array.isArray(savedSiege.members) && savedSiege.members.length) {
+    memberSeq = savedSiege.memberSeq || 0;
+    patternSeq = savedSiege.patternSeq || 0;
+    petSameForAll = !!savedSiege.petSameForAll;
+    petSameValue = savedSiege.petSameValue !== undefined ? savedSiege.petSameValue : true;
+    setMembersAndPatterns(savedSiege.members, savedSiege.patterns, savedSiege.settings);
+    applyPetSameIfNeeded();
+    syncPetSameUI();
+    renderMembers();
+    renderPatterns();
+  } else {
+    petSameForAll = false;
+    petSameValue = true;
+    members = [];
+    patterns = [];
+    memberSeq = 0;
+    patternSeq = 0;
+    syncPetSameUI();
+    addMember("メイン", "メイン", 0);
+    addMember("増援", "増援", 0);
+    ["A", "B", "C", "D", "E", "F"].forEach(l => addMember("削り", l, 0));
+    addPattern("①", ["A", "B", "C"]);
+    addPattern("②", ["D"]);
+    addPattern("③", ["E", "F"]);
+  }
+}
+
+// --- 共有用（みんなで見る）：選択中イベントの共有データを読み込む ---
+function loadSharedIntoState() {
+  const rec = regData.flameRosters.find(r => r.eventId === currentEventId);
+  memberSeq = 0;
+  patternSeq = 0;
+  setMembersAndPatterns(rec ? rec.members : [], rec ? rec.patterns : [], rec ? rec.settings : null);
+  memberSeq = Math.max(0, ...members.map(m => parseInt(String(m.id).replace(/\D/g, ""), 10) || 0), 0);
+  patternSeq = Math.max(0, ...patterns.map(p => parseInt(String(p.id).replace(/\D/g, ""), 10) || 0), 0);
+  sharedDirty = false;
   renderMembers();
   renderPatterns();
-} else {
-  addMember("メイン", "メイン", 0);
-  addMember("増援", "増援", 0);
-  ["A", "B", "C", "D", "E", "F"].forEach(l => addMember("削り", l, 0));
-  addPattern("①", ["A", "B", "C"]);
-  addPattern("②", ["D"]);
-  addPattern("③", ["E", "F"]);
+  const note = document.getElementById("sharedNote");
+  const editable = isEventOpen(currentEventId);
+  document.getElementById("sharedSaveBtn").disabled = !editable;
+  note.textContent = rec
+    ? `最終更新: ${formatTime(rec.updatedAt)}${editable ? "" : "（このイベントは終了したため閲覧のみです）"}`
+    : (editable ? "（まだ共有データがありません。入力して「共有に保存」を押してください）" : "（このイベントは終了しており、共有データもありません）");
 }
-fetchRegUserNames();
+
+function setMode(newMode) {
+  if (mode === newMode) return;
+  if (mode === "shared" && sharedDirty) {
+    if (!confirm("共有用の保存していない変更があります。保存せずに切り替えますか？")) return;
+  }
+  mode = newMode;
+  sharedDirty = false;
+  document.getElementById("modePersonalBtn").classList.toggle("active", mode === "personal");
+  document.getElementById("modePersonalBtn").classList.toggle("secondary", mode !== "personal");
+  document.getElementById("modeSharedBtn").classList.toggle("active", mode === "shared");
+  document.getElementById("modeSharedBtn").classList.toggle("secondary", mode !== "shared");
+  document.getElementById("sharedActions").style.display = mode === "shared" ? "flex" : "none";
+  if (mode === "personal") loadPersonalIntoState();
+  else loadSharedIntoState();
+}
+
+document.getElementById("modePersonalBtn").addEventListener("click", () => setMode("personal"));
+document.getElementById("modeSharedBtn").addEventListener("click", () => setMode("shared"));
+
+document.getElementById("eventSelect").addEventListener("change", function () {
+  currentEventId = this.value;
+  if (mode === "shared") loadSharedIntoState();
+});
+
+document.getElementById("sharedReloadBtn").addEventListener("click", () => {
+  document.getElementById("sharedNote").textContent = "読み込み中…";
+  fetchRegData().then(() => loadSharedIntoState());
+});
+
+document.getElementById("sharedSaveBtn").addEventListener("click", () => {
+  if (!currentEventId) { document.getElementById("sharedNote").textContent = "イベントを選んでください"; return; }
+  if (!isEventOpen(currentEventId)) { document.getElementById("sharedNote").textContent = "このイベントは終了しているため更新できません"; return; }
+  document.getElementById("sharedNote").textContent = "保存中…";
+  gasCall({
+    action: "flameSave", eventId: currentEventId,
+    members, patterns: serializedPatterns(), settings: currentSettings(),
+  }).then(res => {
+    if (!res.ok) throw new Error(res.error || "保存できませんでした");
+    sharedDirty = false;
+    const updatedAt = new Date().toISOString();
+    const idx = regData.flameRosters.findIndex(r => r.eventId === currentEventId);
+    const rec = { eventId: currentEventId, members, patterns: serializedPatterns(), settings: currentSettings(), updatedAt };
+    if (idx >= 0) regData.flameRosters[idx] = rec; else regData.flameRosters.push(rec);
+    document.getElementById("sharedNote").textContent = "保存しました（最終更新: " + formatTime(updatedAt) + "）";
+  }).catch(e => {
+    document.getElementById("sharedNote").textContent = "保存できませんでした: " + e.message;
+  });
+});
+
+// init：まずローカルのサンプル/保存データで即座に表示し、裏でユーザー登録データを取得する
+loadPersonalIntoState();
+fetchRegData();
 
 settingFieldIds.forEach(id => {
   document.getElementById(id).addEventListener("input", saveSiegeState);

@@ -139,7 +139,7 @@
     <button type="button" class="ks-toggle-btn" id="ksToggleBtn" onclick="ksToggleSidebar()" aria-label="メニュー開閉">←</button>
   </div>
   <nav>
-    <a href="../index.html?v=20261102011853" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261102011853" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261102011853" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261102011853" class="ks-link ks-active" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261102011853" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="../kvk-matchup/kvk-matchup-index.html?v=20261102011853" class="ks-link" title="KvK相手突合せ まとめ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ まとめ</span></a>
+    <a href="../index.html?v=20261102015351" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261102015351" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261102015351" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261102015351" class="ks-link ks-active" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261102015351" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="../kvk-matchup/kvk-matchup-index.html?v=20261102015351" class="ks-link" title="KvK相手突合せ まとめ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ まとめ</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -263,7 +263,7 @@ function escapeAttr(str){
 
 // --- ユーザー登録データ（entry/index.htmlと同じGAS中継役を読み取り専用で利用） ---
 const GAS_URL = "https://script.google.com/macros/s/AKfycbxu5HW9uLU9pCsUs1r_45xpuofWZmQAyZFDwSLK1C_7GvA7SDXZ4ayBEJTS0sR_8oToAw/exec";
-let regData = { events: [], users: [], entries: [], kvkRosters: [] };
+let regData = { events: [], users: [], entries: [], kvkRosters: [], history: { events: [], entries: [] } };
 
 function gasCall(payload){
   return fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) })
@@ -295,7 +295,11 @@ function findRegUserPetLevel(name){
   return rows[0].rallySpeedPet;
 }
 
-function eventLabel(ev){ return ev ? ev.type + " " + ev.date : ""; }
+const EVENT_TYPE = "KVK";
+
+function isEventOpen(id){ return regData.events.some(ev => ev.id === id); }
+
+function eventLabel(ev){ return ev ? ev.type + " " + ev.date + (isEventOpen(ev.id) ? "" : "（終了）") : ""; }
 
 function formatTime(iso){
   const d = new Date(iso);
@@ -306,11 +310,14 @@ function formatTime(iso){
 
 function refreshEventSelect(){
   const sel = document.getElementById("eventSelect");
-  const events = regData.events.slice().sort((a, b) => b.date.localeCompare(a.date));
+  const events = regData.history.events
+    .filter(ev => ev.type === EVENT_TYPE)
+    .slice()
+    .sort((a, b) => b.date.localeCompare(a.date));
   const keep = sel.value;
   sel.innerHTML = events.length
     ? events.map(ev => `<option value="${escapeAttr(ev.id)}">${escapeAttr(eventLabel(ev))}</option>`).join("")
-    : `<option value="">（受付中のイベントがありません）</option>`;
+    : `<option value="">（${EVENT_TYPE}のイベントがありません）</option>`;
   if (events.some(ev => ev.id === keep)) sel.value = keep;
   currentEventId = sel.value;
 }
@@ -322,7 +329,10 @@ function refreshNameList(){
 function fetchRegData(){
   return gasCall({ action: "pubGet" }).then(res => {
     if(!res.ok) throw new Error(res.error || "読み込めませんでした");
-    regData = { events: res.events || [], users: res.users || [], entries: res.entries || [], kvkRosters: res.kvkRosters || [] };
+    regData = {
+      events: res.events || [], users: res.users || [], entries: res.entries || [], kvkRosters: res.kvkRosters || [],
+      history: res.history || { events: [], entries: [] },
+    };
     refreshEventSelect();
     refreshNameList();
   }).catch(e => {
@@ -533,6 +543,8 @@ function loadPersonalIntoState(){
   } else {
     rosterRows = SAMPLE.map(r => newRow(r));
   }
+  document.getElementById("sharedSaveBtn").disabled = false;
+  document.getElementById("importBtn").disabled = false;
   renderRoster();
   compute();
 }
@@ -544,7 +556,13 @@ function loadSharedIntoState(){
   sharedDirty = false;
   renderRoster();
   compute();
-  document.getElementById("sharedNote").textContent = rec ? ("最終更新: " + formatTime(rec.updatedAt)) : "（まだ共有データがありません。入力して「共有に保存」を押してください）";
+  const editable = isEventOpen(currentEventId);
+  document.getElementById("sharedSaveBtn").disabled = !editable;
+  document.getElementById("importBtn").disabled = !editable;
+  const note = document.getElementById("sharedNote");
+  note.textContent = rec
+    ? `最終更新: ${formatTime(rec.updatedAt)}${editable ? "" : "（このイベントは終了したため閲覧のみです）"}`
+    : (editable ? "（まだ共有データがありません。入力して「共有に保存」を押してください）" : "（このイベントは終了しており、共有データもありません）");
 }
 
 function setMode(newMode){
@@ -576,6 +594,7 @@ document.getElementById("sharedReloadBtn").addEventListener("click", () => {
 
 document.getElementById("sharedSaveBtn").addEventListener("click", () => {
   if(!currentEventId){ document.getElementById("sharedNote").textContent = "イベントを選んでください"; return; }
+  if(!isEventOpen(currentEventId)){ document.getElementById("sharedNote").textContent = "このイベントは終了しているため更新できません"; return; }
   document.getElementById("sharedNote").textContent = "保存中…";
   gasCall({ action: "kvkSave", eventId: currentEventId, rows: rosterRows }).then(res => {
     if(!res.ok) throw new Error(res.error || "保存できませんでした");
@@ -592,6 +611,7 @@ document.getElementById("sharedSaveBtn").addEventListener("click", () => {
 
 document.getElementById("importBtn").addEventListener("click", () => {
   if(!currentEventId){ alert("イベントを選んでください"); return; }
+  if(mode === "shared" && !isEventOpen(currentEventId)){ alert("このイベントは終了しているため更新できません"); return; }
   const targets = regData.entries.filter(e => e.eventId === currentEventId && e.entry !== "absent" && e.rallyCount != null);
   if(!targets.length){ alert("このイベントで「集結の指示があった」人がユーザー登録に見つかりません"); return; }
   if(!confirm(`名簿を一旦クリアして、${targets.length}人を取り込みます。よろしいですか？`)) return;
