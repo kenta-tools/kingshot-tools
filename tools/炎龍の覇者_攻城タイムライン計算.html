@@ -59,6 +59,8 @@
   td.role-col select { width: 100px; }
   td.label-col input { width: 90px; }
   td.march-col input { width: 80px; }
+  td.pet-col select { width: 70px; }
+  td.march-pet-col input { width: 80px; background: #f3f3f3; color: #555; }
 
   button {
     font-size: 13px;
@@ -191,7 +193,7 @@
     <button type="button" class="ks-toggle-btn" id="ksToggleBtn" onclick="ksToggleSidebar()" aria-label="メニュー開閉">←</button>
   </div>
   <nav>
-    <a href="../index.html?v=20261101172438" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261101172438" class="ks-link ks-active" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="王城到着同期カウントアップ.html?v=20261101172438" class="ks-link" title="KvK同着スタート カウントアップ表"><span class="ks-icon">⏱️</span><span class="ks-label">KvK同着スタート カウントアップ表</span></a><a href="KvK同着スタート カウントダウン表.html?v=20261101172438" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261101172438" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="周期ウェーブタイマー.html?v=20261101172438" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><a href="音声アナウンス付きストップウォッチ.html?v=20261101172438" class="ks-link" title="音声ストップウォッチ（工事中）"><span class="ks-icon">🔊</span><span class="ks-label">音声ストップウォッチ（工事中）</span></a>
+    <a href="../index.html?v=20261101202400" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261101202400" class="ks-link ks-active" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="王城到着同期カウントアップ.html?v=20261101202400" class="ks-link" title="KvK同着スタート カウントアップ表"><span class="ks-icon">⏱️</span><span class="ks-label">KvK同着スタート カウントアップ表</span></a><a href="KvK同着スタート カウントダウン表.html?v=20261101202400" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261101202400" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="周期ウェーブタイマー.html?v=20261101202400" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><a href="音声アナウンス付きストップウォッチ.html?v=20261101202400" class="ks-link" title="音声ストップウォッチ（工事中）"><span class="ks-icon">🔊</span><span class="ks-label">音声ストップウォッチ（工事中）</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -249,7 +251,7 @@
   <h2>メンバー設定</h2>
   <table id="memberTable">
     <thead>
-      <tr><th>役割</th><th>ラベル／名前</th><th>行軍秒数</th><th></th></tr>
+      <tr><th>役割</th><th>ラベル／名前</th><th>行軍秒数（ペットなし）</th><th>速度ペットLv</th><th>行軍秒数（ペットあり）</th><th></th></tr>
     </thead>
     <tbody id="memberBody"></tbody>
   </table>
@@ -290,8 +292,19 @@ const refOutputEl = document.getElementById("refOutput");
 
 let memberSeq = 0;
 let patternSeq = 0;
-let members = []; // {id, role, label, march}
+let members = []; // {id, role, label, march, petLevel}
 let patterns = []; // {id, name, kezuriIds: Set of member ids}
+
+// 出征速度ペット「恐怖の咆哮（グリズリー）」レベル別ボーナス(%)。0=ペットなし。
+// Lv1=15%、Lv7まで2%ずつアップ、Lv8のみ+3%（最大Lv8）
+const MARCH_PET_BONUS = [0, 15, 17, 19, 21, 23, 25, 27, 30];
+
+// ペット適用後の実際の行軍秒数（ボーナス%ぶん速くなる＝時間を割って短縮）
+function marchWithPet(march, petLevel) {
+  const bonus = MARCH_PET_BONUS[petLevel] || 0;
+  if (!bonus) return march;
+  return march / (1 + bonus / 100);
+}
 
 // --- 入力値の自動保存（このブラウザのみ） ---
 const SIEGE_STORAGE_KEY = "siegeCalcState";
@@ -318,9 +331,9 @@ function loadSiegeState() {
   }
 }
 
-function addMember(role, label, march) {
+function addMember(role, label, march, petLevel) {
   memberSeq += 1;
-  members.push({ id: "m" + memberSeq, role, label, march });
+  members.push({ id: "m" + memberSeq, role, label, march, petLevel: petLevel || 0 });
   renderMembers();
   renderPatterns();
 }
@@ -346,6 +359,12 @@ function renderMembers() {
       </td>
       <td class="label-col"><input type="text" data-id="${m.id}" class="label-input" value="${escapeAttr(m.label)}"></td>
       <td class="march-col"><input type="number" data-id="${m.id}" class="march-input" value="${m.march}" min="0"></td>
+      <td class="pet-col">
+        <select data-id="${m.id}" class="pet-select">
+          ${MARCH_PET_BONUS.map((bonus, lv) => `<option value="${lv}" ${m.petLevel === lv ? "selected" : ""}>${lv === 0 ? "なし" : `Lv${lv}(+${bonus}%)`}</option>`).join("")}
+        </select>
+      </td>
+      <td class="march-pet-col"><input type="text" data-id="${m.id}" class="march-pet-output" value="${formatMarchPetDisplay(m)}" readonly tabindex="-1"></td>
       <td><button class="danger small del-member-btn" data-id="${m.id}">削除</button></td>
     `;
     memberBody.appendChild(tr);
@@ -369,6 +388,15 @@ function renderMembers() {
     inp.addEventListener("input", () => {
       const m = members.find(x => x.id === inp.dataset.id);
       m.march = parseFloat(inp.value) || 0;
+      updateMarchPetCell(m.id);
+      saveSiegeState();
+    });
+  });
+  memberBody.querySelectorAll(".pet-select").forEach(sel => {
+    sel.addEventListener("change", () => {
+      const m = members.find(x => x.id === sel.dataset.id);
+      m.petLevel = parseInt(sel.value, 10) || 0;
+      updateMarchPetCell(m.id);
       saveSiegeState();
     });
   });
@@ -376,6 +404,18 @@ function renderMembers() {
     btn.addEventListener("click", () => removeMember(btn.dataset.id));
   });
   saveSiegeState();
+}
+
+function formatMarchPetDisplay(m) {
+  if (!m.petLevel) return "（ペットなし）";
+  const val = marchWithPet(m.march, m.petLevel);
+  return `${Math.round(val * 10) / 10}`;
+}
+
+function updateMarchPetCell(id) {
+  const m = members.find(x => x.id === id);
+  const cell = memberBody.querySelector(`.march-pet-output[data-id="${id}"]`);
+  if (m && cell) cell.value = formatMarchPetDisplay(m);
 }
 
 function escapeAttr(str) {
@@ -482,6 +522,7 @@ if (savedSiege && Array.isArray(savedSiege.members) && savedSiege.members.length
   memberSeq = savedSiege.memberSeq || 0;
   patternSeq = savedSiege.patternSeq || 0;
   members = savedSiege.members;
+  members.forEach(m => { m.petLevel = m.petLevel || 0; });
   const allReinforceIds = members.filter(m => m.role === "増援").map(m => m.id);
   patterns = (savedSiege.patterns || []).map(p => ({
     id: p.id,
@@ -559,13 +600,17 @@ function runCalculation() {
     return members.filter(m => p.reinforceIds.has(m.id));
   }
 
+  function effMarch(m) {
+    return marchWithPet(m.march, m.petLevel);
+  }
+
   function computeMinT(instance) {
     const kezuri = kezuriOf(instance.pattern);
     const reinforce = reinforceOf(instance.pattern);
     const candidates = [0];
-    kezuri.forEach(m => candidates.push(readyTime[m.id] + kezuriRally + m.march));
-    mainMembers.forEach(m => candidates.push(readyTime[m.id] + mainRally + m.march - gap));
-    reinforce.forEach(m => candidates.push(readyTime[m.id] + mainRally + m.march - gap * 2));
+    kezuri.forEach(m => candidates.push(readyTime[m.id] + kezuriRally + effMarch(m)));
+    mainMembers.forEach(m => candidates.push(readyTime[m.id] + mainRally + effMarch(m) - gap));
+    reinforce.forEach(m => candidates.push(readyTime[m.id] + mainRally + effMarch(m) - gap * 2));
     return Math.max(...candidates);
   }
 
@@ -581,23 +626,26 @@ function runCalculation() {
     const lines = [];
 
     kezuri.forEach(m => {
+      const march = effMarch(m);
       const arrival = T;
-      const launch = arrival - kezuriRally - m.march;
-      const ret = arrival + m.march;
+      const launch = arrival - kezuriRally - march;
+      const ret = arrival + march;
       readyTime[m.id] = ret + buffer;
       lines.push({ label: m.label, rallyDur: kezuriRally, launch, arrival, ret });
     });
     mainMembers.forEach(m => {
+      const march = effMarch(m);
       const arrival = T + gap;
-      const launch = arrival - mainRally - m.march;
-      const ret = arrival + m.march;
+      const launch = arrival - mainRally - march;
+      const ret = arrival + march;
       readyTime[m.id] = ret + buffer;
       lines.push({ label: m.label, rallyDur: mainRally, launch, arrival, ret });
     });
     reinforce.forEach(m => {
+      const march = effMarch(m);
       const arrival = T + gap * 2;
-      const launch = arrival - mainRally - m.march;
-      const ret = arrival + m.march;
+      const launch = arrival - mainRally - march;
+      const ret = arrival + march;
       readyTime[m.id] = ret + buffer;
       lines.push({ label: m.label, rallyDur: mainRally, launch, arrival, ret });
     });
