@@ -69,7 +69,11 @@
   .banner { background: #fff1d6; color: #8a5600; border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; font-size: 14px; }
   .cand { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
   .cand button { text-align: left; }
-  .rally { border: 1px dashed #c3cad5; border-radius: 10px; padding: 12px; margin-bottom: 16px; }
+  .rally { border: 2px solid #e8890c; background: #fff7ec; border-radius: 10px; padding: 14px; margin-bottom: 16px; }
+  .rally-title { font-size: 16px; font-weight: bold; color: #a85a00; margin-bottom: 4px; }
+  .rally-sub { font-size: 13px; color: #8a5600; margin-bottom: 10px; }
+  .rally .chip span { border-color: #e8890c; color: #a85a00; font-weight: bold; padding: 11px 16px; }
+  .rally .chip input:checked + span { background: #e8890c; border-color: #e8890c; color: #fff; }
   .done { text-align: center; }
   .done .big { font-size: 22px; font-weight: bold; color: #1e7d3a; margin-bottom: 6px; }
   .done .sub { color: #666; font-size: 14px; margin-bottom: 14px; }
@@ -86,7 +90,7 @@
 
 <div class="row" style="justify-content: space-between;">
   <h1>📝 イベント参加登録</h1>
-  <a href="../index.html" class="top-link">← TOP</a>
+  <a href="../index.html?v=20261101202228" class="top-link">← TOP</a>
 </div>
 <div class="howto">
   ① 名前を入れて「次へ」<br>
@@ -123,6 +127,7 @@
     <div class="event-title" id="formEvent"></div>
     <div class="who" id="whoText"></div>
     <div class="banner" id="registeredBanner" style="display: none;">登録済みです。直して「変更を保存する」か、いちばん下の「登録を取り消す」を押してください。</div>
+    <div class="banner" id="prevBanner" style="display: none;"></div>
 
     <div class="field">
       <span class="cap">同盟（英字3文字）<span class="req">必須</span></span>
@@ -190,8 +195,10 @@
     </div>
 
     <div class="rally">
+      <div class="rally-title">⚔️ 集結の指示があった人だけ</div>
+      <div class="rally-sub">指示があった人は、下のボタンを押して3つ入れてください。</div>
       <div class="chips">
-        <label class="chip"><input type="checkbox" id="fRallyOn"><span>集結の指示があった人はここを押す</span></label>
+        <label class="chip"><input type="checkbox" id="fRallyOn"><span>集結の指示があった（押す）</span></label>
       </div>
       <div id="rallyFields" style="margin-top: 12px;">
         <div class="field">
@@ -266,6 +273,8 @@
   };
 
   var data = { events: [], users: [], entries: [] };
+  // 過去のイベントも含む公開データ（前回の入力を初期値にするため）。読めなくても登録はできる
+  var history = { events: [], entries: [] };
   var currentEventId = null;
   var me = null; // { userId（既存ユーザー。新規なら null）, name, oldName }
   var saving = false;
@@ -412,6 +421,10 @@
   function load() {
     $("loadingView").style.display = "block";
     $("errorView").style.display = "none";
+    fetch("../data/members.json", { cache: "no-store" })
+      .then(function(r) { return r.ok ? r.json() : {}; })
+      .then(function(d) { history = { events: d.events || [], entries: d.entries || [] }; })
+      .catch(function() {});
     return gasCall({ action: "pubGet" }).then(function(res) {
       if (!res.ok) throw new Error(res.error || "読み込めませんでした");
       data = { events: res.events || [], users: res.users || [], entries: res.entries || [] };
@@ -432,6 +445,17 @@
     });
   }
 
+  // このイベント以外で、いちばん新しいイベントの入力（不参加は除く）
+  function previousEntry(userId) {
+    var dates = {};
+    history.events.forEach(function(e) { dates[e.id] = e; });
+    return history.entries.filter(function(x) {
+      return x.userId === userId && x.eventId !== currentEventId && x.entry !== "absent" && dates[x.eventId];
+    }).sort(function(a, b) {
+      return dates[b.eventId].date.localeCompare(dates[a.eventId].date);
+    })[0] || null;
+  }
+
   function startForm(user, name) {
     me = { userId: user ? user.id : null, name: name, oldName: user && nameKey(user.name) !== nameKey(name) ? user.name : "" };
     store(NAME_KEY, name);
@@ -442,7 +466,15 @@
     $("registeredBanner").style.display = existing ? "block" : "none";
     $("cancelEntryBtn").style.display = existing ? "inline-block" : "none";
     $("saveBtn").textContent = existing ? "変更を保存する" : "登録する";
-    fillForm(existing || { alliance: user ? user.alliance : "", entry: "start", grade: "G7" });
+    var prev = !existing && user && previousEntry(user.id);
+    $("prevBanner").style.display = prev ? "block" : "none";
+    if (prev) {
+      var pe = history.events.find(function(e) { return e.id === prev.eventId; });
+      $("prevBanner").textContent = "前回（" + eventLabel(pe) + "）の内容を入れてあります。変わったところだけ直して「登録する」を押してください。";
+      // 時刻・途中で抜ける・ひとことはイベントごとに違うので引き継がない
+      prev = Object.assign({}, prev, { entry: "start", joinAt: "", leaveAt: "", leaveEarly: false, note: "" });
+    }
+    fillForm(existing || prev || { alliance: user ? user.alliance : "", entry: "start", grade: "G7" });
     $("formMsg").textContent = "";
     show("form");
     renderList();
