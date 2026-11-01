@@ -112,9 +112,10 @@
 <div id="appView" style="display: none;">
   <!-- ① イベントと名前 -->
   <div class="card" id="nameCard">
-    <div class="field" id="eventField">
-      <span class="cap">イベント</span>
+    <div class="field">
+      <span class="cap">登録するイベント</span>
       <select id="eventSelect"></select>
+      <div class="event-title" id="eventOnly"></div>
     </div>
     <div class="field">
       <span class="cap">ゲーム内の名前</span>
@@ -410,8 +411,10 @@
       return '<option value="' + escapeHtml(ev.id) + '"' + (ev.id === currentEventId ? " selected" : "") + ">" +
         escapeHtml(eventLabel(ev)) + "</option>";
     }).join("");
-    // イベントが1つだけなら選ぶ必要はないので隠す（②の画面上部にイベント名が出る）
-    $("eventField").style.display = events.length > 1 ? "block" : "none";
+    // イベントが1つだけなら選ぶ必要はないので、プルダウンの代わりにイベント名を大きく出す
+    $("eventSelect").style.display = events.length > 1 ? "block" : "none";
+    $("eventOnly").style.display = events.length > 1 ? "none" : "block";
+    $("eventOnly").textContent = events.length === 1 ? eventLabel(events[0]) : "";
     $("nameList").innerHTML = data.users.map(function(u) {
       return '<option value="' + escapeHtml(u.name) + '">';
     }).join("");
