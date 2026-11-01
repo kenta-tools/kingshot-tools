@@ -229,7 +229,7 @@ function selfSave_(token, p) {
         var existing = d.entries.filter(function(x) { return x.eventId === ev.id && x.userId === user.id; })[0];
         var e = {
           alliance: row.alliance, entry: row.entry, grade: row.grade, monthly: row.monthly, leaveEarly: row.leaveEarly,
-          vc: row.vc, vivian4: row.vivian4, troops: row.troops, tier: row.tier, joinAt: row.joinAt, leaveAt: row.leaveAt,
+          vc: row.vc, vivian4: row.vivian4, mayChange: row.mayChange, troops: row.troops, tier: row.tier, joinAt: row.joinAt, leaveAt: row.leaveAt,
           note: row.note, marchCount: row.marchCount, marchPet: row.marchPet, rallyCount: row.rallyCount,
           rallyPet: row.rallyPet, rallySpeedPet: row.rallySpeedPet, updatedAt: new Date().toISOString(),
           id: existing ? existing.id : newId_("r"), eventId: ev.id, userId: user.id
@@ -267,6 +267,7 @@ function cleanEntry_(m) {
     leaveEarly: m.leaveEarly === true,
     vc: m.vc === true,
     vivian4: m.vivian4 === true,
+    mayChange: m.mayChange === true,
     troops: "歩騎弓".split("").filter(function(t) { return troopsIn.indexOf(t) >= 0; }).join(""),
     tier: tier >= 1 && tier <= 30 && Math.floor(tier) === tier ? tier : null,
     joinAt: clip_(m.joinAt, 20),

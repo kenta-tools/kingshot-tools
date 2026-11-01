@@ -327,6 +327,7 @@
             <label><input type="checkbox" id="fLeaveEarly"> △ 途中抜け</label>
             <label><input type="checkbox" id="fVc"> ◇ VC参加可能</label>
             <label><input type="checkbox" id="fVivian4"> ◆ ビビアン星4以上</label>
+            <label><input type="checkbox" id="fMayChange"> 変更の可能性あり</label>
           </div>
         </div>
         <div class="field">
@@ -702,6 +703,7 @@
       leaveEarly: bool(m.leaveEarly),
       vc: bool(m.vc),
       vivian4: bool(m.vivian4),
+      mayChange: bool(m.mayChange), // 個人登録で「変更の可能性あり」
       troops: normTroops(m.troops),
       tier: tier && !isNaN(Number(tier)) ? Number(tier) : null,
       joinAt: str(m.joinAt),
@@ -1375,7 +1377,7 @@
   // ---------- CSV ----------
   var CSV_COLS = [
     ["alliance", "同盟"], ["entry", "参加"], ["grade", "区分"], ["name", "名前"],
-    ["monthly", "マンスリー"], ["leaveEarly", "途中抜け"], ["vc", "VC"], ["vivian4", "ビビアン星4"],
+    ["monthly", "マンスリー"], ["leaveEarly", "途中抜け"], ["vc", "VC"], ["vivian4", "ビビアン星4"], ["mayChange", "変更の可能性"],
     ["troops", "兵種"], ["tier", "T"], ["joinAt", "参加開始"], ["leaveAt", "抜ける時刻"], ["note", "備考"]
   ].concat(NUM_FIELDS);
 
@@ -1544,7 +1546,8 @@
 
   function memberRowHtml(m, withOps) {
     return '<td>' + escapeHtml(m.alliance) + '</td>' +
-      '<td><span class="tag ' + m.entry + '">' + ENTRY_SHORT[m.entry] + '</span></td>' +
+      '<td><span class="tag ' + m.entry + '">' + ENTRY_SHORT[m.entry] + '</span>' +
+        (m.mayChange ? ' <span class="tag new">変更かも</span>' : '') + '</td>' +
       '<td>' + escapeHtml(m.grade) + '</td>' +
       '<td>' + escapeHtml(m.name) + '</td>' +
       '<td class="marks">' + marksOf(m) + '</td>' +
@@ -1786,6 +1789,7 @@
       leaveEarly: $("fLeaveEarly").checked,
       vc: $("fVc").checked,
       vivian4: $("fVivian4").checked,
+      mayChange: $("fMayChange").checked,
       troops: normTroops(troops),
       tier: tier ? Number(tier) : null,
       joinAt: $("fJoinAt").value.trim(),
@@ -1810,6 +1814,7 @@
     $("fLeaveEarly").checked = m.leaveEarly;
     $("fVc").checked = m.vc;
     $("fVivian4").checked = m.vivian4;
+    $("fMayChange").checked = !!m.mayChange;
     document.querySelectorAll(".fTroop").forEach(function(cb) { cb.checked = m.troops.indexOf(cb.value) >= 0; });
     $("fTier").value = m.tier == null ? "" : m.tier;
     $("fJoinAt").value = m.joinAt;
@@ -1826,7 +1831,7 @@
   function resetForm(keepContext) {
     var ctx = { alliance: $("fAlliance").value, entry: $("fEntry").value, grade: $("fGrade").value };
     fillForm({ alliance: "", entry: "start", grade: "G7", name: "", monthly: false, leaveEarly: false, vc: false,
-      vivian4: false, troops: "", tier: null, joinAt: "", leaveAt: "", note: "",
+      vivian4: false, mayChange: false, troops: "", tier: null, joinAt: "", leaveAt: "", note: "",
       marchCount: null, marchPet: null, rallyCount: null, rallyPet: null, rallySpeedPet: null });
     if (keepContext) {
       $("fAlliance").value = ctx.alliance; $("fEntry").value = ctx.entry; $("fGrade").value = ctx.grade;
@@ -2252,7 +2257,7 @@
   function aiRecord(m) {
     return {
       "同盟": m.alliance, "名前": m.name, "参加": ENTRY_SHORT[m.entry], "区分": m.grade,
-      "マンスリー": m.monthly, "途中抜け": m.leaveEarly, "VC": m.vc, "ビビアン星4以上": m.vivian4,
+      "マンスリー": m.monthly, "途中抜け": m.leaveEarly, "VC": m.vc, "ビビアン星4以上": m.vivian4, "変更の可能性": m.mayChange,
       "兵種": m.troops, "T": m.tier, "参加開始": m.joinAt, "抜ける時刻": m.leaveAt, "備考": m.note,
       "出征部隊数": m.marchCount, "出征容量ペットLv": m.marchPet, "集結部隊数": m.rallyCount, "集結容量ペットLv": m.rallyPet,
       "行軍速度ペットLv": m.rallySpeedPet
@@ -2272,6 +2277,7 @@
       format === "csv"
         ? "- マンスリー・途中抜け・VC・ビビアン星4以上: ◯なら該当（VC＝ボイスチャット参加可能・聴き専含む）"
         : "- マンスリー・途中抜け・VC・ビビアン星4以上: true なら該当（VC＝ボイスチャット参加可能・聴き専含む）",
+      "- 変更の可能性: 登録時点で、参加時間などが変わる可能性があると本人が答えた人",
       "- 兵種: 歩＝歩兵、騎＝騎兵、弓＝弓兵（例: 歩弓＝歩兵と弓兵）。空欄は指定なし",
       "- T: 兵士レベル（大きいほど強い）。空欄は不明",
       "- 参加開始・抜ける時刻: 途中から参加する時刻／途中で抜ける時刻。空欄は指定なし",
@@ -2283,7 +2289,7 @@
     ];
     var body;
     if (format === "csv") {
-      var cols = ["同盟", "名前", "参加", "区分", "マンスリー", "途中抜け", "VC", "ビビアン星4以上", "兵種", "T", "参加開始", "抜ける時刻", "備考",
+      var cols = ["同盟", "名前", "参加", "区分", "マンスリー", "途中抜け", "VC", "ビビアン星4以上", "変更の可能性", "兵種", "T", "参加開始", "抜ける時刻", "備考",
         "出征部隊数", "出征容量ペットLv", "集結部隊数", "集結容量ペットLv", "行軍速度ペットLv"];
       body = [cols.join(",")].concat(rows.map(function(m) {
         var r = aiRecord(m);

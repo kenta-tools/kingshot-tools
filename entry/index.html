@@ -165,6 +165,10 @@
         <label class="chip"><input type="radio" name="fEntry" value="part"><span>一部参加</span></label>
         <label class="chip"><input type="radio" name="fEntry" value="absent"><span>不参加</span></label>
       </div>
+      <div class="chips" style="margin-top: 10px;">
+        <label class="chip"><input type="checkbox" id="fMayChange"><span>変更の可能性あり</span></label>
+      </div>
+      <div style="font-size: 12px; color: #666; margin-top: 4px; line-height: 1.6;">ここを選ばなかったからといって、変更できないわけではありません。あくまで現時点で変更する可能性があるかの確認です。</div>
       <div class="sub-field two" id="partField">
         <div>
           <span class="cap">何時から？</span>
@@ -484,7 +488,7 @@
       var time = m.joinAt || m.leaveAt ? (m.joinAt || "") + "〜" + (m.leaveAt || "") : "";
       return '<tr class="' + (mine ? "me" : "") + (abs ? " absent" : "") + '">' +
         '<td><button type="button" class="sub-btn edit" data-user="' + escapeHtml(m.userId) + '">直す</button></td>' +
-        "<td>" + v(m.alliance) + "</td><td>" + v(m.name) + "</td><td>" + entryLabel(m) + "</td>" +
+        "<td>" + v(m.alliance) + "</td><td>" + v(m.name) + "</td><td>" + entryLabel(m) + (m.mayChange ? "（変更の可能性あり）" : "") + "</td>" +
         (abs ? '<td colspan="9"></td>' :
           "<td>" + v(m.grade) + '</td><td class="marks">' + marksOf(m) + "</td><td>" + v(m.troops) + "</td><td>" + v(time) + "</td>" +
           "<td>" + v(m.marchCount) + "</td><td>" + pet(m.marchPet) + "</td><td>" + v(m.rallyCount) + "</td><td>" +
@@ -656,7 +660,7 @@
     var alliance = str($("fAlliance").value).normalize("NFKC");
     if (choice === "absent") {
       return { alliance: alliance, entry: "absent", grade: radioValue("fGrade") || "その他", monthly: false, leaveEarly: false,
-        vc: false, vivian4: false, troops: "", tier: null, joinAt: "", leaveAt: "", note: str($("fNote").value),
+        vc: false, vivian4: false, mayChange: $("fMayChange").checked, troops: "", tier: null, joinAt: "", leaveAt: "", note: str($("fNote").value),
         marchCount: null, marchPet: null, rallyCount: null, rallyPet: null, rallySpeedPet: null };
     }
     // 一部参加: 開始時刻があれば途中参加、終了時刻があれば途中抜け（データの形は管理画面・募集フォーマットと同じ）
@@ -670,6 +674,7 @@
       leaveEarly: !!leaveAt,
       vc: $("fVc").checked,
       vivian4: $("fVivian4").checked,
+      mayChange: $("fMayChange").checked,
       troops: troops,
       tier: troops ? 11 : null, // 選んだ兵種は T11
       joinAt: joinAt,
@@ -690,6 +695,7 @@
     $("fMonthly").checked = !!m.monthly;
     $("fVc").checked = !!m.vc;
     $("fVivian4").checked = !!m.vivian4;
+    $("fMayChange").checked = !!m.mayChange;
     document.querySelectorAll(".fTroop").forEach(function(cb) { cb.checked = (m.troops || "").indexOf(cb.value) >= 0; });
     $("fJoinAt").value = m.joinAt || "";
     $("fLeaveAt").value = m.leaveAt || "";
