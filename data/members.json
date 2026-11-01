@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-01T05:23:25.868Z",
+  "updated": "2026-11-01T05:24:03.215Z",
   "users": [
     {
       "id": "umvxd79ui5i2wv",
@@ -346,34 +346,12 @@
   ],
   "events": [
     {
-      "id": "emvxd6yki0dijo",
-      "type": "KVK",
-      "date": "2026-11-01"
-    },
-    {
       "id": "emvxdrseln9wlb",
       "type": "炎龍",
       "date": "2026-10-25"
     }
   ],
   "entries": [
-    {
-      "alliance": "EGG",
-      "entry": "start",
-      "grade": "G7",
-      "monthly": false,
-      "leaveEarly": false,
-      "vc": false,
-      "vivian4": false,
-      "troops": "",
-      "tier": null,
-      "joinAt": "",
-      "leaveAt": "",
-      "note": "",
-      "id": "rmvxd79uiixii2",
-      "eventId": "emvxd6yki0dijo",
-      "userId": "umvxd79ui5i2wv"
-    },
     {
       "alliance": "TNP",
       "entry": "start",
