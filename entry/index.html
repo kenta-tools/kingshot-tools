@@ -312,6 +312,16 @@
     try { return localStorage.getItem(key) || ""; } catch (e) { return ""; }
   }
 
+  var myIp = null;
+  function lookupIp() {
+    if (myIp !== null) return Promise.resolve(myIp);
+    var timer = new Promise(function(resolve) { setTimeout(function() { resolve(""); }, 3000); });
+    var req = fetch("https://api.ipify.org?format=json").then(function(r) { return r.json(); })
+      .then(function(j) { myIp = String(j.ip || ""); return myIp; })
+      .catch(function() { return ""; });
+    return Promise.race([req, timer]);
+  }
+
   function gasCall(payload) {
     // text/plain にして CORS のプリフライトを避ける（GAS ウェブアプリの決まりごと）
     return fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) })
@@ -674,8 +684,13 @@
     if (err) { setMsg($("formMsg"), err, false); return; }
     setSaving(true);
     setMsg($("formMsg"), cancel ? "取り消し中…" : "保存中…", true);
-    var payload = { action: "selfSave", eventId: currentEventId, userId: me.userId, name: me.name, cancel: !!cancel, entry: m };
-    gasCall(payload).then(function(res) {
+    var payload = { action: "selfSave", eventId: currentEventId, userId: me.userId, name: me.name, cancel: !!cancel, entry: m,
+      ua: navigator.userAgent };
+    // 登録の記録用に、この端末のIPを調べて一緒に送る（管理者だけが見られる記録に残る。調べられなくても登録はできる）
+    lookupIp().then(function(ip) {
+      payload.ip = ip;
+      return gasCall(payload);
+    }).then(function(res) {
       if (!res.ok) throw new Error(res.error || "保存できませんでした");
       me.userId = res.userId;
       me.oldName = "";

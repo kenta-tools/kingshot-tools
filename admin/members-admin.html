@@ -454,6 +454,28 @@
     </div>
   </div>
 
+  <!-- 個人登録の記録 -->
+  <div class="card">
+    <details id="logDetails">
+      <summary style="cursor: pointer; font-size: 16px; font-weight: bold;">🕵️ 個人登録の記録（IP）</summary>
+      <div class="hint" style="margin: 6px 0;">
+        個人登録ページからの登録・変更・取消の記録です（管理者だけが見られます。参加者の一覧や公開データには出ません）。新しい順に約2,000件まで残り、古いものから消えます。<br>
+        IPは登録した端末が調べて送った値なので、目安として見てください。
+      </div>
+      <div class="row" style="margin: 8px 0;">
+        <button type="button" class="small" id="logLoadBtn">記録を読み込む</button>
+        <input type="search" id="logFilter" placeholder="絞り込み（名前・IP・イベント）">
+        <span class="hint" id="logInfo"></span>
+      </div>
+      <div class="scroll">
+        <table>
+          <thead><tr><th class="nosort">日時</th><th class="nosort">イベント</th><th class="nosort">名前</th><th class="nosort">操作</th><th class="nosort">IP</th><th class="nosort">端末</th></tr></thead>
+          <tbody id="logBody"></tbody>
+        </table>
+      </div>
+    </details>
+  </div>
+
   <!-- ユーザー一覧（蓄積） -->
   <div class="card">
     <div class="row" style="justify-content: space-between; margin-bottom: 10px;">
@@ -2364,6 +2386,35 @@
     $("aiInfo").textContent = aiRows().length + "人・約" + text.length.toLocaleString() + "文字";
     return text;
   }
+
+  // ---------- 個人登録の記録 ----------
+  var logRows = [];
+  var LOG_ACT = { added: "登録", updated: "変更", canceled: "取消" };
+
+  function renderLog() {
+    var q = $("logFilter").value.trim().toLowerCase();
+    var rows = logRows.filter(function(r) {
+      return !q || [r.name, r.ip, r.ev].join(" ").toLowerCase().indexOf(q) >= 0;
+    });
+    $("logInfo").textContent = logRows.length ? (q ? rows.length + " / " : "") + logRows.length + "件" : "";
+    $("logBody").innerHTML = rows.map(function(r) {
+      return "<tr><td style=\"white-space: nowrap;\">" + escapeHtml(formatTime(r.t)) + "</td><td>" + escapeHtml(r.ev || "") +
+        "</td><td>" + escapeHtml(r.name || "") + "</td><td>" + escapeHtml(LOG_ACT[r.act] || r.act || "") +
+        "</td><td>" + escapeHtml(r.ip || "（不明）") + '</td><td class="hint">' + escapeHtml(r.ua || "") + "</td></tr>";
+    }).join("") || '<tr><td colspan="6" class="hint">記録はまだありません</td></tr>';
+  }
+
+  $("logLoadBtn").addEventListener("click", function() {
+    $("logInfo").textContent = "読み込み中…";
+    gasCall({ action: "getLog" }).then(function(res) {
+      if (!res.ok) throw new Error(res.error || "読み込めませんでした");
+      logRows = res.log || [];
+      renderLog();
+    }).catch(function(e) {
+      $("logInfo").textContent = "読み込めませんでした: " + e.message;
+    });
+  });
+  $("logFilter").addEventListener("input", renderLog);
 
   $("aiCopyBtn").addEventListener("click", function() { copyText(refreshAiText(), this); });
   document.querySelectorAll("input[name=aiFormat]").forEach(function(r) { r.addEventListener("change", refreshAiText); });

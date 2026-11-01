@@ -55,6 +55,9 @@ function handle_(p) {
     var url = fileUrl_();
     var headers = ghHeaders_(token);
 
+    // 個人登録の記録（管理画面用。公開データには入れない）
+    if (p.action === "getLog") return json_({ ok: true, log: readLog_() });
+
     if (p.action === "get") {
       var r = UrlFetchApp.fetch(url + "?ref=" + GH.branch, { headers: headers, muteHttpExceptions: true });
       var code = r.getResponseCode();
@@ -228,7 +231,11 @@ function selfSave_(token, p) {
 
       d.updated = new Date().toISOString();
       var w = writeFile_(token, d, f.sha, "Self registration: " + ev.type + " " + ev.date);
-      if (w.ok) return { ok: true, result: result, userId: user.id, name: user.name };
+      if (w.ok) {
+        appendLog_({ t: d.updated, ev: ev.type + " " + ev.date, name: user.name, uid: user.id, act: result,
+          ip: String(p.ip || "").replace(/[^0-9a-fA-F:.]/g, "").slice(0, 45), ua: clip_(p.ua, 120) });
+        return { ok: true, result: result, userId: user.id, name: user.name };
+      }
       if (w.status !== 409 && w.status !== 422) return w;
       // 直前に他の人が保存した → 取り直してもう一度
     }
@@ -279,6 +286,46 @@ function count_(v, max) {
 }
 
 function key_(s) { return String(s).trim().toLowerCase(); }
+// ---------- 個人登録の記録 ----------
+// スクリプトプロパティ（非公開）に selfLog_<番号> として LOG_CHUNK 件ずつ保存し、古いものから消す（最大 LOG_CHUNK × LOG_MAX_CHUNKS 件）。
+// IP は登録ページが調べて送る値（GAS は相手のIPを受け取れないため）。目安として扱う
+var LOG_CHUNK = 25;       // 1つの値は9KBまでなので、1件200バイト前後×25件に収める
+var LOG_MAX_CHUNKS = 80;  // 約2,000件
+
+function appendLog_(rec) {
+  try {
+    var props = PropertiesService.getScriptProperties();
+    var meta = JSON.parse(props.getProperty("selfLog_meta") || '{"first":0,"last":0}');
+    var key = "selfLog_" + meta.last;
+    var list = JSON.parse(props.getProperty(key) || "[]");
+    if (list.length >= LOG_CHUNK) {
+      meta.last++;
+      key = "selfLog_" + meta.last;
+      list = [];
+    }
+    list.push(rec);
+    props.setProperty(key, JSON.stringify(list));
+    while (meta.last - meta.first + 1 > LOG_MAX_CHUNKS) {
+      props.deleteProperty("selfLog_" + meta.first);
+      meta.first++;
+    }
+    props.setProperty("selfLog_meta", JSON.stringify(meta));
+  } catch (err) {
+    // 記録に失敗しても登録自体は成功扱いにする
+  }
+}
+
+// 新しい順
+function readLog_() {
+  var props = PropertiesService.getScriptProperties();
+  var meta = JSON.parse(props.getProperty("selfLog_meta") || '{"first":0,"last":0}');
+  var all = [];
+  for (var i = meta.first; i <= meta.last; i++) {
+    all = all.concat(JSON.parse(props.getProperty("selfLog_" + i) || "[]"));
+  }
+  return all.reverse();
+}
+
 function clip_(v, n) { return String(v == null ? "" : v).replace(/[\r\n\t]/g, " ").trim().slice(0, n); }
 function newId_(prefix) { return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
