@@ -578,6 +578,12 @@
       "type": "KVK",
       "date": "2026-11-01",
       "open": true
+    },
+    {
+      "id": "etestlive20261101",
+      "type": "KVK",
+      "date": "2099-01-01",
+      "open": true
     }
   ],
   "entries": [
