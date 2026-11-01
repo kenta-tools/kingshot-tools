@@ -193,7 +193,7 @@
     <button type="button" class="ks-toggle-btn" id="ksToggleBtn" onclick="ksToggleSidebar()" aria-label="メニュー開閉">←</button>
   </div>
   <nav>
-    <a href="../index.html?v=20261101202400" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261101202400" class="ks-link ks-active" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="王城到着同期カウントアップ.html?v=20261101202400" class="ks-link" title="KvK同着スタート カウントアップ表"><span class="ks-icon">⏱️</span><span class="ks-label">KvK同着スタート カウントアップ表</span></a><a href="KvK同着スタート カウントダウン表.html?v=20261101202400" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261101202400" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="周期ウェーブタイマー.html?v=20261101202400" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><a href="音声アナウンス付きストップウォッチ.html?v=20261101202400" class="ks-link" title="音声ストップウォッチ（工事中）"><span class="ks-icon">🔊</span><span class="ks-label">音声ストップウォッチ（工事中）</span></a>
+    <a href="../index.html?v=20261101202902" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261101202902" class="ks-link ks-active" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="王城到着同期カウントアップ.html?v=20261101202902" class="ks-link" title="KvK同着スタート カウントアップ表"><span class="ks-icon">⏱️</span><span class="ks-label">KvK同着スタート カウントアップ表</span></a><a href="KvK同着スタート カウントダウン表.html?v=20261101202902" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261101202902" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="周期ウェーブタイマー.html?v=20261101202902" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><a href="音声アナウンス付きストップウォッチ.html?v=20261101202902" class="ks-link" title="音声ストップウォッチ（工事中）"><span class="ks-icon">🔊</span><span class="ks-label">音声ストップウォッチ（工事中）</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -296,8 +296,18 @@ let members = []; // {id, role, label, march, petLevel}
 let patterns = []; // {id, name, kezuriIds: Set of member ids}
 
 // 出征速度ペット「恐怖の咆哮（グリズリー）」レベル別ボーナス(%)。0=ペットなし。
-// Lv1=15%、Lv7まで2%ずつアップ、Lv8のみ+3%（最大Lv8）
+// Lv1=15%、Lv7まで2%ずつアップ、Lv8のみ+3%（最大Lv8）。イベント参加登録ページのPETS.speedと同じ定義。
 const MARCH_PET_BONUS = [0, 15, 17, 19, 21, 23, 25, 27, 30];
+
+// プルダウンの中身をメンバー登録ページ（entry/index.html）の速度ペット選択と同じ並び・表記で生成
+// （持っていない→Lv8→Lv7→…→Lv1の順、「Lv1（+15%）」のような全角カッコ表記）
+function buildPetOptions(selectedLv) {
+  let html = `<option value="0"${selectedLv === 0 ? " selected" : ""}>持っていない</option>`;
+  for (let lv = MARCH_PET_BONUS.length - 1; lv >= 1; lv--) {
+    html += `<option value="${lv}"${selectedLv === lv ? " selected" : ""}>Lv${lv}（+${MARCH_PET_BONUS[lv]}%）</option>`;
+  }
+  return html;
+}
 
 // ペット適用後の実際の行軍秒数（ボーナス%ぶん速くなる＝時間を割って短縮）
 function marchWithPet(march, petLevel) {
@@ -360,9 +370,7 @@ function renderMembers() {
       <td class="label-col"><input type="text" data-id="${m.id}" class="label-input" value="${escapeAttr(m.label)}"></td>
       <td class="march-col"><input type="number" data-id="${m.id}" class="march-input" value="${m.march}" min="0"></td>
       <td class="pet-col">
-        <select data-id="${m.id}" class="pet-select">
-          ${MARCH_PET_BONUS.map((bonus, lv) => `<option value="${lv}" ${m.petLevel === lv ? "selected" : ""}>${lv === 0 ? "なし" : `Lv${lv}(+${bonus}%)`}</option>`).join("")}
-        </select>
+        <select data-id="${m.id}" class="pet-select">${buildPetOptions(m.petLevel)}</select>
       </td>
       <td class="march-pet-col"><input type="text" data-id="${m.id}" class="march-pet-output" value="${formatMarchPetDisplay(m)}" readonly tabindex="-1"></td>
       <td><button class="danger small del-member-btn" data-id="${m.id}">削除</button></td>
