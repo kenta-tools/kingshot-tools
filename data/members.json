@@ -564,12 +564,6 @@
       "name": "bowen",
       "alliance": "EGG",
       "aliases": []
-    },
-    {
-      "id": "umvxswe8y953v4",
-      "name": "zzテスト削除予定",
-      "alliance": "TST",
-      "aliases": []
     }
   ],
   "events": [
@@ -583,12 +577,6 @@
       "id": "emvxlacjz9goas",
       "type": "KVK",
       "date": "2026-11-01",
-      "open": true
-    },
-    {
-      "id": "etestlive20261101",
-      "type": "KVK",
-      "date": "2099-01-01",
       "open": true
     }
   ],
@@ -2660,29 +2648,6 @@
       "id": "rmvxlcaglukwa7",
       "eventId": "emvxlacjz9goas",
       "userId": "umvxlcagl25h3v"
-    },
-    {
-      "alliance": "TST",
-      "entry": "absent",
-      "grade": "その他",
-      "monthly": false,
-      "leaveEarly": false,
-      "vc": false,
-      "vivian4": false,
-      "troops": "",
-      "tier": null,
-      "joinAt": "",
-      "leaveAt": "",
-      "note": "",
-      "marchCount": null,
-      "marchPet": null,
-      "rallyCount": null,
-      "rallyPet": null,
-      "rallySpeedPet": null,
-      "updatedAt": "2026-11-01T12:23:14.249Z",
-      "id": "rmvxswe904xhnh",
-      "eventId": "etestlive20261101",
-      "userId": "umvxswe8y953v4"
     }
   ],
   "notSame": [],
