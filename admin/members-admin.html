@@ -45,6 +45,17 @@
   .msg.ok { color: #1e7d3a; }
   .msg.err { color: #c0392b; }
 
+  .save-card { position: sticky; top: 8px; z-index: 50; border-left: 6px solid #2e9e57; }
+  .save-card.dirty { border-left-color: #f0ad4e; background: #fffaf0; box-shadow: 0 2px 10px rgba(240,173,78,0.35); }
+  .save-main { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
+  .save-title { font-size: 15px; font-weight: bold; }
+  .save-card.clean .save-title { color: #1e7d3a; }
+  .save-card.dirty .save-title { color: #a86a00; }
+  .save-btn { font-size: 15px; padding: 9px 22px; }
+  .save-card.dirty .save-btn { background: #e8890c; border-color: #e8890c; }
+  .save-card .msg:empty { display: none; }
+  #ghDetails { margin-top: 8px; }
+  #ghDetails summary { cursor: pointer; }
   .status-bar {
     display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between;
     font-size: 13px;
@@ -141,27 +152,34 @@
       <button type="button" class="sub-btn small" id="logoutBtn">ログアウト</button>
     </div>
   </div>
-  <div class="sub">ユーザーは蓄積され、イベントごとに参加情報を登録します。登録・変更した内容は、最後に上の「<b>GitHubに公開</b>」を押すとサイトのデータ（<code>data/members.json</code>）に保存されます。複数の管理者が別々に登録しても、公開時に自動でマージされます。</div>
+  <div class="sub">ユーザーは蓄積され、イベントごとに参加情報を登録します。登録・変更したら、最後に「<b>💾 保存する</b>」を押してください（押すまでは、この端末にだけ残っていて他の人には見えません）。</div>
 
-  <!-- 保存状態 -->
-  <div class="card status-bar">
-    <div>
-      <span class="pill" id="statePill"></span>
-      <span id="stateText" class="hint"></span>
+  <!-- 保存 -->
+  <div class="card save-card clean" id="saveCard">
+    <div class="save-main">
+      <div>
+        <div class="save-title" id="saveTitle"></div>
+        <div class="hint" id="saveSub"></div>
+      </div>
+      <div class="row">
+        <button type="button" class="save-btn" id="publishBtn">💾 保存する</button>
+        <button type="button" class="sub-btn" id="discardBtn">↩ 保存前の変更を取り消す</button>
+      </div>
     </div>
-    <div class="row">
-      <button type="button" id="publishBtn">GitHubに公開</button>
-      <button type="button" class="sub-btn" id="pullBtn">最新を読み込む</button>
-      <button type="button" class="sub-btn" id="exportJsonBtn">members.json を書き出し</button>
-      <button type="button" class="danger" id="discardBtn">変更を破棄</button>
-    </div>
-    <div class="msg" id="ghMsg" style="width: 100%;"></div>
-    <details id="ghDetails" style="width: 100%;">
-      <summary class="hint" style="cursor: pointer;">⚙ 保存のしくみ・GitHubオーナー用の設定 <span id="ghTokenState"></span></summary>
-      <div class="hint" style="margin-top: 6px;">
-        「GitHubに公開」を押すと、GitHub上の最新の members.json に自分の変更をマージして保存します（他の人が先に保存していても消えません）。サイトへの反映は1〜2分後です。<br>
-        ログインできる人なら、<b>GitHubのアカウントやトークンがなくても</b>保存できます（保存は中継役がログインパスワードを確認して行います）。<br>
-        <b>以下は GitHubオーナー（kenta-tools）用で、通常は設定不要です。</b>このブラウザにトークンを保存すると、中継役を通さず直接GitHubに保存します（中継役が止まっているときの予備）。<br>
+    <div class="msg" id="ghMsg"></div>
+    <details id="ghDetails">
+      <summary class="hint">その他の操作・設定</summary>
+      <div class="row" style="margin: 8px 0;">
+        <button type="button" class="small sub-btn" id="pullBtn">🔄 他の人が保存した内容を読み込む</button>
+        <button type="button" class="small sub-btn" id="exportJsonBtn">📄 データをファイルに書き出す（バックアップ）</button>
+      </div>
+      <div class="hint">
+        <b>保存のしくみ</b>：保存すると、他の人が先に保存した内容と自動でまとめてから保存します（他の人の登録は消えません）。画面を開いたときも、最新の保存内容を読み込みます。チーム分けなどサイトの他のツールに反映されるのは1〜2分後です。
+      </div>
+      <div id="ownerSettings" style="display: none;">
+      <div class="hint" style="margin-top: 10px;">
+        <b>GitHubオーナー（kenta-tools）用の予備設定・通常は不要</b>（URL末尾に #owner を付けたときだけ表示） <span id="ghTokenState"></span><br>
+        このブラウザにGitHubのトークンを保存すると、中継役を通さず直接GitHubに保存します（中継役が止まっているときの予備）。<br>
         <b>トークンの作り方</b>：GitHubに kenta-tools でログイン → 右上アイコン → Settings → Developer settings → Personal access tokens → <b>Fine-grained tokens</b> → Generate new token →
         Repository access で「Only select repositories」→ <b>kingshot-tools</b> を選択 → Permissions の <b>Contents</b> を「Read and write」→ Generate token → 表示された文字列をコピーして下に貼り付け
       </div>
@@ -169,6 +187,7 @@
         <input type="password" id="ghTokenInput" placeholder="github_pat_..." style="flex: 1; min-width: 220px;" autocomplete="off">
         <button type="button" class="small" id="ghTokenSaveBtn">保存</button>
         <button type="button" class="small danger" id="ghTokenClearBtn">このブラウザから削除</button>
+      </div>
       </div>
     </details>
   </div>
@@ -535,6 +554,7 @@
   //                 grade: "G8".."G5"|"その他", monthly, leaveEarly, vc, vivian4 (各bool),
   //                 troops: "歩騎弓"の部分文字列 ("" = 指定なし), tier: 数値|null, joinAt, leaveAt (例 "23時"), note }
   var state = { users: [], events: [], entries: [], notSame: [] };
+  var lastSaved = null;  // 最後に保存された日時（members.json の updated）
   var lastParsed = null; // 「読み取り結果を確認」で表示中の内容 { text, parsed }
   var loadedFile = null; // 読み込んだファイル { name, text }
   var currentEventId = null;
@@ -665,11 +685,13 @@
   }
 
   function ghError(status) {
-    if (status === 401) return "トークンが無効です（入力ミス・期限切れ）。設定から入れ直してください";
-    if (status === 403) return "トークンに書き込み権限がありません（Contents を Read and write にしてください）";
-    if (status === 404) return "リポジトリが見つかりません（トークンの対象に kingshot-tools を選んでください）";
-    if (status === 409 || status === 422) return "他の人の保存と重なりました。もう一度「GitHubに公開」を押してください";
-    return "GitHubへの接続でエラーが発生しました（" + status + "）";
+    if (status === 409 || status === 422) return "他の人の保存と重なりました。もう一度「保存する」を押してください";
+    if (saveMode() === "token") {
+      if (status === 401) return "トークンが無効です（入力ミス・期限切れ）。設定から入れ直してください";
+      if (status === 403) return "トークンに書き込み権限がありません（Contents を Read and write にしてください）";
+      if (status === 404) return "リポジトリが見つかりません（トークンの対象に kingshot-tools を選んでください）";
+    }
+    return "保存先との通信でエラーが発生しました（" + status + "）。時間をおいてもう一度試し、続く場合はサイトの管理者に連絡してください";
   }
 
   function b64ToUtf8(b64) {
@@ -810,9 +832,10 @@
     try { currentEventId = localStorage.getItem(EVENT_KEY); } catch (e) {}
 
     return fetchRemote().catch(function(e) {
-      setMsg($("ghMsg"), "GitHubから読み込めなかったので公開ページの内容を表示しています: " + e.message, false);
+      setMsg($("ghMsg"), "最新の保存内容を読み込めなかったので、少し前の内容を表示しています（" + e.message + "）", false);
       return fetchFromPages();
     }).then(function(res) {
+      lastSaved = res.data && res.data.updated || null;
       var remote = normalizeState(res.data);
       publishedJson = JSON.stringify(remote);
       if (draft && draft.base && draft.state) {
@@ -850,11 +873,11 @@
   function publish(isRetry) {
     if (!saveMode()) {
       $("ghDetails").open = true;
-      setMsg($("ghMsg"), "保存先がまだ設定されていません（中継役のURLが未設定です。サイトの管理者に連絡してください）", false);
+      setMsg($("ghMsg"), "保存先がまだ設定されていません。サイトの管理者に連絡してください", false);
       return Promise.resolve();
     }
     $("publishBtn").disabled = true;
-    setMsg($("ghMsg"), "GitHubに保存中…", true);
+    setMsg($("ghMsg"), "保存中…", true);
     return fetchRemote().then(function(res) {
       var remote = normalizeState(res.data);
       var merged = mergeIntoRemote(normalizeState(JSON.parse(publishedJson)), state, remote);
@@ -865,17 +888,21 @@
         if (!r.ok) throw new Error(r.error && r.status >= 500 ? r.error : ghError(r.status));
         publishedJson = JSON.stringify(merged);
         state = merged;
+        lastSaved = body.updated;
         if (editingId && !state.entries.some(function(x) { return x.id === editingId; })) resetForm(false);
         saveDraft();
         render();
-        setMsg($("ghMsg"), "GitHubに保存しました（他の人の登録とマージ済み）。サイトへの反映は1〜2分後です。", true);
+        setMsg($("ghMsg"), "保存しました（他の人が保存した内容ともまとめてあります）。", true);
       });
     }).catch(function(e) {
       setMsg($("ghMsg"), "保存できませんでした: " + e.message, false);
     }).then(function() {
-      $("publishBtn").disabled = false;
+      renderState();
     });
   }
+
+  // GitHubオーナー用の予備設定は URL末尾が #owner のとき（またはトークン設定済みのとき）だけ表示
+  if (location.hash === "#owner" || ghToken()) $("ownerSettings").style.display = "block";
 
   function renderTokenState() {
     var mode = saveMode();
@@ -888,7 +915,7 @@
     setMsg($("ghMsg"), "読み込み中…", true);
     loadData().then(function() {
       if (!/読み込めなかった/.test($("ghMsg").textContent)) {
-        setMsg($("ghMsg"), "最新の公開版を読み込みました（自分の未公開の変更は残しています）", true);
+        setMsg($("ghMsg"), "他の人が保存した最新の内容を読み込みました（あなたの保存前の変更はそのまま残っています）", true);
       }
     });
   });
@@ -1324,15 +1351,35 @@
   }
 
   // ---------- 描画 ----------
+  // 保存済みの内容（base）からの変更件数（ユーザー・イベント・参加情報の追加・変更・削除）
+  function countChanges(base, local) {
+    var n = 0;
+    ["users", "events", "entries"].forEach(function(k) {
+      var b = byId(base[k]), l = byId(local[k]);
+      local[k].forEach(function(x) { if (!b[x.id] || JSON.stringify(b[x.id]) !== JSON.stringify(x)) n++; });
+      base[k].forEach(function(x) { if (!l[x.id]) n++; });
+    });
+    return n;
+  }
+
+  function formatTime(iso) {
+    var d = new Date(iso);
+    if (isNaN(d)) return "";
+    return (d.getMonth() + 1) + "/" + pad2(d.getDate()) + " " + pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+  }
+
   function renderState() {
-    var dirty = serialize() !== publishedJson;
-    var pill = $("statePill");
-    pill.className = "pill " + (dirty ? "dirty" : "saved");
-    pill.textContent = dirty ? "未公開の変更あり" : "公開版と同じ";
-    $("stateText").textContent = dirty
-      ? "このブラウザに下書き保存中です。「GitHubに公開」を押すとサイトのデータに保存されます。"
-      : "";
-    $("discardBtn").disabled = !dirty;
+    var dirty = !!publishedJson && serialize() !== publishedJson;
+    var n = dirty ? countChanges(JSON.parse(publishedJson), state) : 0;
+    $("saveCard").className = "card save-card " + (dirty ? "dirty" : "clean");
+    $("saveTitle").textContent = dirty
+      ? "⚠ まだ保存していない変更があります（" + (n || 1) + "件）"
+      : "✅ すべて保存済みです";
+    $("saveSub").textContent = dirty
+      ? "「保存する」を押すまで、この変更はこの端末にだけ残っていて、他の人には見えません。"
+      : (lastSaved ? "最終保存: " + formatTime(lastSaved) : "");
+    $("publishBtn").disabled = !dirty;
+    $("discardBtn").style.display = dirty ? "" : "none";
   }
 
   function sortedEvents() {
@@ -2033,7 +2080,7 @@
   });
 
   $("discardBtn").addEventListener("click", function() {
-    if (!confirm("このブラウザに保存されている未公開の変更を破棄して、公開版に戻しますか？")) return;
+    if (!confirm("まだ保存していない変更を取り消して、最後に保存された状態に戻しますか？")) return;
     try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
     resetForm(false);
     loadData();
