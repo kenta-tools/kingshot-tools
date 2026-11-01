@@ -154,6 +154,20 @@
   .alt-rally { font-size: 12px; font-weight: normal; color: #8a6d00; margin-top: 2px; }
   .alt-rally .alt-original { font-weight: bold; text-decoration: underline; }
 
+  .missed-launch {
+    background: #f1f1f1; border: 1px solid #ddd; border-radius: 10px;
+    padding: 10px 16px; margin-bottom: 14px; font-size: 13px; color: #555;
+  }
+  .missed-item { margin-bottom: 8px; }
+  .missed-item:last-child { margin-bottom: 0; }
+  .missed-item .missed-label { font-weight: bold; margin-bottom: 4px; }
+  .missed-item .alt-btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .missed-item .alt-btn {
+    font-size: 12px; padding: 4px 10px; border-radius: 999px; border: 1px solid #c7a600;
+    background: #fff; color: #7a5b00; cursor: pointer;
+  }
+  .missed-item .alt-btn:hover { background: #fff3cd; }
+
   .pattern-block-item {
     border: 1px solid #eee; border-radius: 8px; padding: 6px 10px; margin-bottom: 6px;
     font-size: 13px; background: #fafafa; text-align: left;
@@ -274,7 +288,7 @@
     <button type="button" class="ks-toggle-btn" id="ksToggleBtn" onclick="ksToggleSidebar()" aria-label="メニュー開閉">←</button>
   </div>
   <nav>
-    <a href="../index.html?v=20261102024117" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261102024117" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261102024117" class="ks-link ks-active" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261102024117" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261102024117" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="../kvk-matchup/kvk-matchup-index.html?v=20261102024117" class="ks-link" title="KvK相手突合せ まとめ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ まとめ</span></a>
+    <a href="../index.html?v=20261102024449" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261102024449" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261102024449" class="ks-link ks-active" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261102024449" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261102024449" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="../kvk-matchup/kvk-matchup-index.html?v=20261102024449" class="ks-link" title="KvK相手突合せ まとめ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ まとめ</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -342,6 +356,7 @@
 <div class="col-main">
 
 <div class="upcoming-launch" id="upcomingLaunchBox" style="display:none;"></div>
+<div class="missed-launch" id="missedLaunchBox" style="display:none;"></div>
 <div class="stack" id="itemStack"></div>
 <div class="empty" id="emptyMsg">まだ予定がありません</div>
 
@@ -548,18 +563,42 @@ function renderUpcomingLaunch() {
   }
   box.style.display = "block";
   box.innerHTML = upcomingLaunch.map(g => {
-    const rallyText = g.rallyMin != null ? `（${g.rallyMin}分集結）` : "";
     const altsHtml = g.alts.length > 1
       ? `<div class="alt-rally">出せなかったら時短：${g.alts.map(a =>
           `<span class="${a.isOriginal ? "alt-original" : ""}">${a.min}分集結なら${a.remain}秒後</span>`
         ).join(" ／ ")}</div>`
       : "";
-    return `<div class="upcoming-item">⏱ <span class="remain">${g.remain}秒後</span>：${g.names.join("、")}${rallyText}${altsHtml}</div>`;
+    return `<div class="upcoming-item">⏱ <span class="remain">${g.remain}秒後</span>：${g.names.join("、")}${altsHtml}</div>`;
   }).join("");
+}
+
+function renderMissedLaunches() {
+  const box = document.getElementById("missedLaunchBox");
+  if (!missedLaunches || !missedLaunches.length) {
+    box.style.display = "none";
+    box.innerHTML = "";
+    return;
+  }
+  box.style.display = "block";
+  box.innerHTML = missedLaunches.map((g, i) => {
+    const btnsHtml = g.alts.length
+      ? `<div class="alt-btn-row">${g.alts.map(a =>
+          `<button type="button" class="alt-btn" data-group="${i}" data-min="${a.min}">${a.min}分集結で出す（${a.remain}秒後）</button>`
+        ).join("")}</div>`
+      : "";
+    return `<div class="missed-item"><div class="missed-label">⚠ ${g.elapsedSince}秒前に発起予定だった：${g.names.join("、")}</div>${btnsHtml}</div>`;
+  }).join("");
+  box.querySelectorAll(".alt-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const g = missedLaunches[parseInt(btn.dataset.group, 10)];
+      applyRallyOverride(g.keys, parseInt(btn.dataset.min, 10));
+    });
+  });
 }
 
 function renderStack() {
   renderUpcomingLaunch();
+  renderMissedLaunches();
   const sorted = [...items].sort((a, b) => a.num - b.num);
   itemStack.innerHTML = "";
   emptyMsg.style.display = sorted.length ? "none" : "block";
@@ -799,6 +838,11 @@ let timelineLines = []; // [{symbol, label, launchSec}] パターンでまとめ
 let activePatternHeaders = [];
 let waitingPatterns = []; // [{header, numText}] 次の周を待っているパターン（大きな時計カードで表示）
 let upcomingLaunch = null; // [{remain, names}] 1分以内に発起する人がいるときだけ、早い順にセットする
+let missedLaunches = null; // [{key, names, rallyMin, alts}] 発起時刻を過ぎてから1分以内の人
+let currentCycleIndex = 0; // 今が何周目か（0始まり）。時短オプションのボタンを押したときに使う
+// 「出せなかったので時短で出す」を選んだ記録。キー=symbol+label、値={cycleIndex, rallyMin}。
+// 周回（cycleIndex）が変わると自動的に効かなくなる（次の周では元の集結時間に戻る）。
+let rallyOverrides = {};
 let parsedCycleLen = null; // テキスト内の「周期：」の行から読み取った、本当の1周の長さ（秒）
 const UPCOMING_LAUNCH_WINDOW_SEC = 60;
 const ALT_RALLY_MINUTES = [1, 3, 5]; // 出せなかったときの時間短縮オプション（集結時間の候補）
@@ -893,6 +937,7 @@ function renderTimelineStatus() {
   activePatternHeaders = [];
   waitingPatterns = [];
   upcomingLaunch = null;
+  missedLaunches = null;
   if (timelineBlocks.length === 0) return;
 
   const firstStart = Math.min(...timelineBlocks.map(b => b.startSec));
@@ -916,39 +961,79 @@ function renderTimelineStatus() {
     }
   });
 
-  // 1分以内に発起する人を全員リストアップする（今の周でまだ発起していない人。
-  // いなければ次の周の最初の発起＝周期でラップした分も見る）。同じタイミングの人はまとめる。
+  // 1分以内に発起する人・発起時刻を過ぎてから1分以内の人（出せなかった可能性がある人）を仕分けする
   if (timelineLines.length) {
     function remainOf(sec) {
       return sec >= cyclePos ? sec - cyclePos : (sec + cycleLen) - cyclePos;
     }
-    const groups = new Map(); // 秒数（丸め）-> {names, rallyMin, launchSec}
+    currentCycleIndex = Math.floor((elapsedSec - firstStart) / cycleLen);
+
+    function overrideFor(line) {
+      const o = rallyOverrides[line.symbol + "|" + line.label];
+      return (o && o.cycleIndex === currentCycleIndex) ? o : null;
+    }
+    // 「時短で出す」を選んだ人は、その選んだ集結時間ぶん発起時刻が後ろにずれたものとして扱う
+    function effectiveLaunchAndRally(line) {
+      const o = overrideFor(line);
+      if (o && line.rallyMin != null) {
+        return { launchSec: line.launchSec + (line.rallyMin - o.rallyMin) * 60, rallyMin: o.rallyMin };
+      }
+      return { launchSec: line.launchSec, rallyMin: line.rallyMin };
+    }
+    // 本来の集結時間より短縮できる時間（1,3,5分のうち本来以下のもの）の、今から見た発起までの秒数
+    function buildAlts(launchSec, rallyMin) {
+      if (rallyMin == null) return [];
+      return ALT_RALLY_MINUTES
+        .filter(min => min <= rallyMin)
+        .sort((a, b) => b - a)
+        .map(min => ({
+          min,
+          remain: Math.round(remainOf(launchSec + (rallyMin - min) * 60)),
+          isOriginal: min === rallyMin,
+        }));
+    }
+
+    // 1分以内に発起する人（「時短で出す」を選んだ人はその新しい時刻で判定）
+    const upcomingGroups = new Map(); // 秒数（丸め）-> {names, rallyMin, launchSec}
     timelineLines.forEach(line => {
-      const remain = remainOf(line.launchSec);
+      const eff = effectiveLaunchAndRally(line);
+      const remain = remainOf(eff.launchSec);
       if (remain > UPCOMING_LAUNCH_WINDOW_SEC) return;
       const key = Math.round(remain);
-      if (!groups.has(key)) groups.set(key, { names: [], rallyMin: line.rallyMin, launchSec: line.launchSec });
-      groups.get(key).names.push(`${line.symbol}${line.label}`);
+      if (!upcomingGroups.has(key)) upcomingGroups.set(key, { names: [], rallyMin: eff.rallyMin, launchSec: eff.launchSec });
+      upcomingGroups.get(key).names.push(`${line.symbol}${line.label}`);
     });
-    if (groups.size) {
-      upcomingLaunch = Array.from(groups.entries())
+    if (upcomingGroups.size) {
+      upcomingLaunch = Array.from(upcomingGroups.entries())
         .sort((a, b) => a[0] - b[0])
-        .map(([remain, g]) => {
-          // 本来の集結時間より短縮できる時間（1,3,5分のうち本来以下のもの）の、今から見た発起までの秒数
-          const alts = g.rallyMin != null
-            ? ALT_RALLY_MINUTES
-                .filter(min => min <= g.rallyMin)
-                .sort((a, b) => b - a)
-                .map(min => ({
-                  min,
-                  remain: remainOf(g.launchSec + (g.rallyMin - min) * 60),
-                  isOriginal: min === g.rallyMin,
-                }))
-            : [];
-          return { remain, names: g.names, rallyMin: g.rallyMin, alts };
-        });
+        .map(([remain, g]) => ({ remain, names: g.names, rallyMin: g.rallyMin, alts: buildAlts(g.launchSec, g.rallyMin) }));
+    }
+
+    // 本来の発起時刻を過ぎてから1分以内の人（「時短で出す」を選んで対応済みの人は除く）
+    const missedGroups = new Map(); // 経過秒数（丸め）-> {names, keys, rallyMin, launchSec}
+    timelineLines.forEach(line => {
+      if (overrideFor(line)) return;
+      const remain = remainOf(line.launchSec);
+      const elapsedSince = cycleLen - remain;
+      if (remain <= UPCOMING_LAUNCH_WINDOW_SEC || elapsedSince > UPCOMING_LAUNCH_WINDOW_SEC) return;
+      const key = Math.round(elapsedSince);
+      if (!missedGroups.has(key)) missedGroups.set(key, { names: [], keys: [], rallyMin: line.rallyMin, launchSec: line.launchSec });
+      const g = missedGroups.get(key);
+      g.names.push(`${line.symbol}${line.label}`);
+      g.keys.push(line.symbol + "|" + line.label);
+    });
+    if (missedGroups.size) {
+      missedLaunches = Array.from(missedGroups.entries())
+        .sort((a, b) => a[0] - b[0])
+        .map(([elapsedSince, g]) => ({ elapsedSince, names: g.names, keys: g.keys, alts: buildAlts(g.launchSec, g.rallyMin) }));
     }
   }
+}
+
+function applyRallyOverride(keys, min) {
+  keys.forEach(key => { rallyOverrides[key] = { cycleIndex: currentCycleIndex, rallyMin: min }; });
+  renderTimelineStatus();
+  renderStack();
 }
 
 loadTabs();
