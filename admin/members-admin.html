@@ -80,6 +80,10 @@
   .tag.start { background: #e3f4e8; color: #1e7d3a; }
   .tag.late { background: #e8eefc; color: #2c5cc5; }
   .legend { font-size: 12px; color: #555; margin-bottom: 8px; }
+  .ai-steps { background: #f0f5ff; border: 1px solid #d5e1fb; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px; }
+  .ai-steps ol { margin: 6px 0 8px; padding-left: 20px; line-height: 1.7; }
+  .ai-steps details { flex: 1; min-width: 200px; }
+  .ai-steps details textarea { margin-top: 6px; min-height: 260px; }
 
   /* ログイン画面 */
   #loginView { max-width: 360px; margin: 80px auto; text-align: center; }
@@ -126,9 +130,21 @@
 
   <!-- テンプレート貼り付け・ファイル取り込み -->
   <div class="card">
-    <h2>まとめて登録（募集フォーマットの貼り付け・ファイル）</h2>
+    <h2>まとめて登録（AI変換・募集フォーマットの貼り付け・ファイル）</h2>
+    <div class="ai-steps">
+      <b>おすすめ：AIで変換してから登録</b>
+      <ol>
+        <li>「AI変換用プロンプトをコピー」を押して、ChatGPT・Claude などに貼り付ける</li>
+        <li>プロンプト末尾に、記入済みの募集フォーマットを貼り付けて送信する</li>
+        <li>AIが返したJSON（<code>[ ... ]</code>）を下の欄に貼り付けて「読み取り結果を確認」→「取り込み」</li>
+      </ol>
+      <div class="row">
+        <button type="button" class="small" id="copyPromptBtn">AI変換用プロンプトをコピー</button>
+        <details><summary class="hint">プロンプトの中身を見る</summary><textarea id="promptText" readonly></textarea></details>
+      </div>
+    </div>
     <div class="hint">
-      募集フォーマットに記入されたテキストをそのまま貼り付けてください。複数の同盟・「最初から参加できる」「途中参加」の見出しが混ざっていても読み取ります。<br>
+      記入済みの募集フォーマットを直接貼り付けても読み取れます（表記ゆれが多いときはAI変換がおすすめです）。複数の同盟・「最初から参加できる」「途中参加」の見出しが混ざっていても読み取ります。<br>
       名前の後ろの <b>◯△◇◆</b> と括弧（<b>(〜22時)</b>＝抜ける時刻、<b>(23時〜)</b>＝参加開始、<b>(T11)</b>＝3兵種T11、<b>(歩弓T11)</b>・<b>(歩弓)</b>＝兵種指定）を自動で振り分けます。それ以外の括弧は備考に入ります。<br>
       同じ同盟に同じ名前のメンバーがいる場合は上書き更新します。ファイルは .txt（このフォーマット）／.csv（CSV書き出しと同じ列）／.json に対応しています。
     </div>
@@ -138,7 +154,7 @@
       <span class="hint">見出しがないときの同盟名:</span>
       <input type="text" id="defaultAlliance" placeholder="例: EGG" style="width: 120px;">
     </div>
-    <textarea id="bulkText" placeholder="EGG(最初から参加できる)&#10;◯:マンスリー持ち&#10;…&#10;G7: あんこ◯△◆(〜22時)(T11)、"></textarea>
+    <textarea id="bulkText" placeholder="AIが返したJSON、または記入済みの募集フォーマットを貼り付け&#10;&#10;EGG(最初から参加できる)&#10;◯:マンスリー持ち&#10;…&#10;G7: あんこ◯△◆(〜22時)(T11)、"></textarea>
     <div class="row" style="margin-top: 10px;">
       <label class="hint"><input type="radio" name="importMode" value="merge" checked> 追加・更新</label>
       <label class="hint"><input type="radio" name="importMode" value="replace"> 全件置き換え</label>
@@ -287,6 +303,49 @@
     "G8:", "G7: かけ◯◇(23時〜)(歩弓)、", "G6: ", "G5:", "その他:"
   ].join("\n");
   var BLANK = ["同盟名:", LEGEND, "G8:", "G7:", "G6:", "G5:", "その他:"].join("\n");
+  var FENCE = "```";
+  var AI_PROMPT = [
+    "以下の「募集フォーマット」に書かれたメンバー情報を、指定のJSON形式に変換してください。",
+    "",
+    "## 変換ルール",
+    "- 1人＝1オブジェクト。出力はJSON配列だけを " + FENCE + "json のコードブロックで出す（説明文は不要）",
+    "- alliance: 同盟名（見出しの「同盟名:TNP」「EGG(最初から参加できる)」などから取る）",
+    "- entry: 見出しが「途中参加」なら \"途中参加\"、それ以外は \"最初から\"",
+    "- grade: そのメンバーが書かれている区分 \"G8\" \"G7\" \"G6\" \"G5\" \"その他\" のどれか。「G8:」の次の行から1人ずつ書かれている場合も、次の区分が出てくるまでは同じ区分",
+    "- name: プレイヤー名だけ（印・括弧・時間・兵種は含めない）",
+    "- monthly: ◯ があれば true（〇・○・o・O など丸っぽい文字も ◯ とみなす）",
+    "- leaveEarly: △ があれば true。抜ける時刻が書いてあれば true",
+    "- vc: ◇ があれば true",
+    "- vivian4: ◆ があれば true",
+    "- troops: 兵種。歩兵=歩、騎兵=騎、弓兵=弓 を「歩騎弓」の順につなげる（例 \"歩弓\"）。「T11」だけで兵種の指定がなければ \"歩騎弓\"。兵種もTもなければ \"\"",
+    "- tier: 兵士レベルの数字（T11 → 11）。なければ null",
+    "- joinAt: 参加開始時刻（「23時〜」→ \"23時\"）。なければ \"\"",
+    "- leaveAt: 抜ける時刻（「〜22時」→ \"22時\"）。なければ \"\"",
+    "- note: 上のどれにも当てはまらない補足。なければ \"\"",
+    "- 名前の直後の o・〇 は名前の一部ではなく ◯ 印として扱う。名前の一部か印か判断できないときは note に「要確認: 〜」と書く",
+    "- 括弧の全角・半角、〜・～・~ の違いは同じものとして扱う。兵種・Tは括弧の外に書かれていても読み取る",
+    "- 挨拶文や凡例の行（「◯:マンスリー持ち」など）は無視する",
+    "",
+    "## 例",
+    "入力:",
+    "EGG(最初から参加できる)",
+    "G7: あんこ◯△◆(〜22時)(T11)、",
+    "G6: おもち◯◇(歩弓T11)、",
+    "EGG(途中参加)",
+    "G7: かけ◯◇(23時〜)(歩弓)、",
+    "",
+    "出力:",
+    FENCE + "json",
+    "[",
+    "  {\"alliance\":\"EGG\",\"entry\":\"最初から\",\"grade\":\"G7\",\"name\":\"あんこ\",\"monthly\":true,\"leaveEarly\":true,\"vc\":false,\"vivian4\":true,\"troops\":\"歩騎弓\",\"tier\":11,\"joinAt\":\"\",\"leaveAt\":\"22時\",\"note\":\"\"},",
+    "  {\"alliance\":\"EGG\",\"entry\":\"最初から\",\"grade\":\"G6\",\"name\":\"おもち\",\"monthly\":true,\"leaveEarly\":false,\"vc\":true,\"vivian4\":false,\"troops\":\"歩弓\",\"tier\":11,\"joinAt\":\"\",\"leaveAt\":\"\",\"note\":\"\"},",
+    "  {\"alliance\":\"EGG\",\"entry\":\"途中参加\",\"grade\":\"G7\",\"name\":\"かけ\",\"monthly\":true,\"leaveEarly\":false,\"vc\":true,\"vivian4\":false,\"troops\":\"歩弓\",\"tier\":null,\"joinAt\":\"23時\",\"leaveAt\":\"\",\"note\":\"\"}",
+    "]",
+    FENCE,
+    "",
+    "## 変換するテキスト",
+    ""
+  ].join("\n");
 
   var $ = function(id) { return document.getElementById(id); };
 
@@ -459,6 +518,8 @@
   function parseEntry(text, ctx) {
     var parens = [];
     var rest = text.replace(/[(（]([^)）]*)[)）]/g, function(_, p) { parens.push(p.replace(/\s/g, "")); return ""; });
+    // 括弧の外に書かれた「歩T11」なども兵種・Tとして読む
+    rest = rest.replace(/\s*([歩騎弓]*T\d+)\s*$/i, function(_, p) { parens.push(p); return ""; });
     var marks = (rest.match(MARK_CHARS) || []).join("");
     var name = rest.replace(MARK_CHARS, "").trim();
     var m = {
@@ -489,7 +550,20 @@
 
   function parseFormatText(text, defaultAlliance) {
     var ctx = { alliance: defaultAlliance || "", entry: "start", grade: "その他" };
+    var inGrade = false; // G行の後ろ（次の行から1人ずつ書かれる形式）にいるか
     var rows = [], errors = [];
+
+    function addEntries(src, lineNo) {
+      src.split(/[、,，]/).forEach(function(part) {
+        part = part.trim();
+        if (!part) return;
+        var m = parseEntry(part, ctx);
+        if (!m.name) { errors.push(lineNo + "行目「" + part + "」: 名前が読めません"); return; }
+        if (!m.alliance) { errors.push(lineNo + "行目「" + m.name + "」: 同盟名がありません（見出しがない場合は同盟名を入力してください）"); return; }
+        rows.push(m);
+      });
+    }
+
     text.replace(/^\uFEFF/, "").split(/\r?\n/).forEach(function(raw, i) {
       var line = raw.trim();
       if (!line) return;
@@ -498,32 +572,53 @@
       var gm = line.match(/^(G\s*\d+|その他)\s*[:：]\s*(.*)$/i);
       if (gm) {
         ctx.grade = gm[1].replace(/\s/g, "").toUpperCase().replace("その他".toUpperCase(), "その他");
-        gm[2].split(/[、,，]/).forEach(function(part) {
-          part = part.trim();
-          if (!part) return;
-          var m = parseEntry(part, ctx);
-          if (!m.name) { errors.push((i + 1) + "行目「" + part + "」: 名前が読めません"); return; }
-          if (!m.alliance) { errors.push((i + 1) + "行目「" + m.name + "」: 同盟名がありません（見出しがない場合は同盟名を入力してください）"); return; }
-          rows.push(m);
-        });
+        inGrade = true;
+        addEntries(gm[2], i + 1);
         return;
       }
 
-      // 見出し: 「EGG(最初から参加できる)」「EGG(途中参加)」「EGG:」
+      // 見出し: 「EGG(最初から参加できる)」「EGG(途中参加)」
       var hm = line.match(/^(.+?)\s*[(（]([^)）]*参加[^)）]*)[)）]\s*[:：]?\s*$/);
       if (hm) {
         ctx.alliance = hm[1].trim();
         ctx.entry = /途中/.test(hm[2]) ? "late" : "start";
+        inGrade = false;
         return;
       }
-      var hm2 = line.match(/^([^:：\s]{1,20})\s*[:：]\s*$/);
-      if (hm2 && hm2[1] !== "同盟名") {
-        ctx.alliance = hm2[1];
+      // 見出し: 「同盟名:TNP」
+      var hm3 = line.match(/^同盟名?\s*[:：]\s*(\S.*)$/);
+      if (hm3) {
+        ctx.alliance = hm3[1].trim();
         ctx.entry = "start";
+        inGrade = false;
+        return;
       }
-      // それ以外（挨拶文など）は無視
+      // 見出し: 「EGG:」
+      var hm2 = line.match(/^([^:：\s]{1,20})\s*[:：]\s*$/);
+      if (hm2) {
+        if (hm2[1] !== "同盟名") { ctx.alliance = hm2[1]; ctx.entry = "start"; }
+        inGrade = false;
+        return;
+      }
+      // G行の次の行から1人ずつ書かれている形式（印・括弧・Tがある行、または短い行だけを対象にし、挨拶文は無視）
+      if (inGrade && (/[◯○〇△◇◆(（]|T\d/.test(line) || (line.length <= 16 && !/[。！？!?]$/.test(line)))) {
+        addEntries(line, i + 1);
+      }
     });
     return { rows: rows, errors: errors };
+  }
+
+  // AIが返したJSON（コードブロックや前後の説明文つきでも可）を読み取る
+  function parseJsonText(text) {
+    var start = text.indexOf("["), end = text.lastIndexOf("]");
+    var data;
+    if (start >= 0 && end > start) data = JSON.parse(text.slice(start, end + 1));
+    else data = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1));
+    var list = Array.isArray(data) ? data : data.members || [];
+    var rows = normalize(list);
+    rows.forEach(function(m) { delete m.id; });
+    var skipped = list.length - rows.length;
+    return { rows: rows, errors: skipped ? [skipped + "件: 同盟または名前が空のためスキップ"] : [] };
   }
 
   // ---------- CSV ----------
@@ -781,11 +876,14 @@
   var pending = null; // 確認済みの読み取り結果
 
   function parseBulk(text, filename) {
-    if (filename && /\.json$/i.test(filename)) {
-      var data = JSON.parse(text);
-      var rows = normalize(Array.isArray(data) ? data : data.members);
-      rows.forEach(function(m) { delete m.id; });
-      return { rows: rows, errors: [] };
+    var trimmed = text.replace(/^﻿/, "").trim();
+    // AIの返答は前後に説明文がつくことがあるので、先頭だけでなく中身でもJSONか判定する
+    if ((filename && /\.json$/i.test(filename)) || /^[\[{]/.test(trimmed) || /"(alliance|name)"\s*:/.test(trimmed)) {
+      try {
+        return parseJsonText(trimmed);
+      } catch (e) {
+        return { rows: [], errors: ["JSONとして読み取れませんでした（AIの出力を全部コピーできているか確認してください）: " + e.message] };
+      }
     }
     if (/^\uFEFF?同盟[,\t]/.test(text) || (filename && /\.(csv|tsv)$/i.test(filename))) return parseCsv(text);
     return parseFormatText(text, $("defaultAlliance").value.trim());
@@ -860,6 +958,8 @@
   }
 
   $("copyBlankBtn").addEventListener("click", function() { copyText(BLANK, this); });
+  $("promptText").value = AI_PROMPT;
+  $("copyPromptBtn").addEventListener("click", function() { copyText(AI_PROMPT, this); });
   $("sampleBtn").addEventListener("click", function() { $("bulkText").value = SAMPLE; });
 
   // ---------- 書き出し ----------
