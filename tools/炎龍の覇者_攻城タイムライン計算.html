@@ -61,6 +61,9 @@
   td.march-col input { width: 80px; }
   td.pet-col select { width: 70px; }
   td.march-pet-col input { width: 80px; background: #f3f3f3; color: #555; }
+  td.use-col { text-align: center; }
+  .pet-toolbar { display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: #555; margin-bottom: 10px; }
+  .pet-toolbar label { display: flex; align-items: center; gap: 4px; }
 
   button {
     font-size: 13px;
@@ -193,7 +196,7 @@
     <button type="button" class="ks-toggle-btn" id="ksToggleBtn" onclick="ksToggleSidebar()" aria-label="メニュー開閉">←</button>
   </div>
   <nav>
-    <a href="../index.html?v=20261101202902" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261101202902" class="ks-link ks-active" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="王城到着同期カウントアップ.html?v=20261101202902" class="ks-link" title="KvK同着スタート カウントアップ表"><span class="ks-icon">⏱️</span><span class="ks-label">KvK同着スタート カウントアップ表</span></a><a href="KvK同着スタート カウントダウン表.html?v=20261101202902" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261101202902" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="周期ウェーブタイマー.html?v=20261101202902" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><a href="音声アナウンス付きストップウォッチ.html?v=20261101202902" class="ks-link" title="音声ストップウォッチ（工事中）"><span class="ks-icon">🔊</span><span class="ks-label">音声ストップウォッチ（工事中）</span></a>
+    <a href="../index.html?v=20261101203310" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261101203310" class="ks-link ks-active" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="王城到着同期カウントアップ.html?v=20261101203310" class="ks-link" title="KvK同着スタート カウントアップ表"><span class="ks-icon">⏱️</span><span class="ks-label">KvK同着スタート カウントアップ表</span></a><a href="KvK同着スタート カウントダウン表.html?v=20261101203310" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261101203310" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="周期ウェーブタイマー.html?v=20261101203310" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><a href="音声アナウンス付きストップウォッチ.html?v=20261101203310" class="ks-link" title="音声ストップウォッチ（工事中）"><span class="ks-icon">🔊</span><span class="ks-label">音声ストップウォッチ（工事中）</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -249,9 +252,13 @@
 
 <div class="card">
   <h2>メンバー設定</h2>
+  <div class="pet-toolbar">
+    <label><input type="checkbox" id="petSameAllCheckbox"> 全員同じにする</label>
+    <label id="petSameValueLabel" style="display:none;"><input type="checkbox" id="petSameValueCheckbox"> 全員「ペットあり」の秒数を使う</label>
+  </div>
   <table id="memberTable">
     <thead>
-      <tr><th>役割</th><th>ラベル／名前</th><th>行軍秒数（ペットなし）</th><th>速度ペットLv</th><th>行軍秒数（ペットあり）</th><th></th></tr>
+      <tr><th>役割</th><th>ラベル／名前</th><th>行軍秒数（ペットなし）</th><th>速度ペットLv</th><th>行軍秒数（ペットあり）</th><th>ペットあり採用</th><th></th></tr>
     </thead>
     <tbody id="memberBody"></tbody>
   </table>
@@ -289,11 +296,16 @@ const outputCard = document.getElementById("outputCard");
 const outputEl = document.getElementById("output");
 const refOutputCard = document.getElementById("refOutputCard");
 const refOutputEl = document.getElementById("refOutput");
+const petSameAllCheckbox = document.getElementById("petSameAllCheckbox");
+const petSameValueCheckbox = document.getElementById("petSameValueCheckbox");
+const petSameValueLabel = document.getElementById("petSameValueLabel");
 
 let memberSeq = 0;
 let patternSeq = 0;
-let members = []; // {id, role, label, march, petLevel}
+let members = []; // {id, role, label, march, petLevel, usePet}
 let patterns = []; // {id, name, kezuriIds: Set of member ids}
+let petSameForAll = false; // 全員同じ（ペットあり/なし）にするかどうか
+let petSameValue = true; // 「全員同じ」のときに使う共通の採用値
 
 // 出征速度ペット「恐怖の咆哮（グリズリー）」レベル別ボーナス(%)。0=ペットなし。
 // Lv1=15%、Lv7まで2%ずつアップ、Lv8のみ+3%（最大Lv8）。イベント参加登録ページのPETS.speedと同じ定義。
@@ -328,6 +340,7 @@ function saveSiegeState() {
       memberSeq, patternSeq, members,
       patterns: patterns.map(p => ({ id: p.id, name: p.name, kezuriIds: Array.from(p.kezuriIds), reinforceIds: Array.from(p.reinforceIds) })),
       settings,
+      petSameForAll, petSameValue,
     }));
   } catch (e) {}
 }
@@ -343,7 +356,7 @@ function loadSiegeState() {
 
 function addMember(role, label, march, petLevel) {
   memberSeq += 1;
-  members.push({ id: "m" + memberSeq, role, label, march, petLevel: petLevel || 0 });
+  members.push({ id: "m" + memberSeq, role, label, march, petLevel: petLevel || 0, usePet: petSameForAll ? petSameValue : true });
   renderMembers();
   renderPatterns();
 }
@@ -373,6 +386,7 @@ function renderMembers() {
         <select data-id="${m.id}" class="pet-select">${buildPetOptions(m.petLevel)}</select>
       </td>
       <td class="march-pet-col"><input type="text" data-id="${m.id}" class="march-pet-output" value="${formatMarchPetDisplay(m)}" readonly tabindex="-1"></td>
+      <td class="use-col"><input type="checkbox" data-id="${m.id}" class="use-pet-checkbox" ${m.usePet ? "checked" : ""} ${petSameForAll ? "disabled" : ""}></td>
       <td><button class="danger small del-member-btn" data-id="${m.id}">削除</button></td>
     `;
     memberBody.appendChild(tr);
@@ -408,11 +422,45 @@ function renderMembers() {
       saveSiegeState();
     });
   });
+  memberBody.querySelectorAll(".use-pet-checkbox").forEach(cb => {
+    cb.addEventListener("change", () => {
+      const m = members.find(x => x.id === cb.dataset.id);
+      m.usePet = cb.checked;
+      saveSiegeState();
+    });
+  });
   memberBody.querySelectorAll(".del-member-btn").forEach(btn => {
     btn.addEventListener("click", () => removeMember(btn.dataset.id));
   });
   saveSiegeState();
 }
+
+// --- 「全員同じ」トグル：ONのときは全メンバーのusePetを共通値に揃え、行ごとのチェックボックスを無効化する ---
+function applyPetSameIfNeeded() {
+  if (petSameForAll) {
+    members.forEach(m => { m.usePet = petSameValue; });
+  }
+}
+
+function syncPetSameUI() {
+  petSameAllCheckbox.checked = petSameForAll;
+  petSameValueCheckbox.checked = petSameValue;
+  petSameValueLabel.style.display = petSameForAll ? "flex" : "none";
+}
+
+petSameAllCheckbox.addEventListener("change", () => {
+  petSameForAll = petSameAllCheckbox.checked;
+  applyPetSameIfNeeded();
+  syncPetSameUI();
+  renderMembers();
+  saveSiegeState();
+});
+petSameValueCheckbox.addEventListener("change", () => {
+  petSameValue = petSameValueCheckbox.checked;
+  applyPetSameIfNeeded();
+  renderMembers();
+  saveSiegeState();
+});
 
 function formatMarchPetDisplay(m) {
   if (!m.petLevel) return "（ペットなし）";
@@ -530,7 +578,13 @@ if (savedSiege && Array.isArray(savedSiege.members) && savedSiege.members.length
   memberSeq = savedSiege.memberSeq || 0;
   patternSeq = savedSiege.patternSeq || 0;
   members = savedSiege.members;
-  members.forEach(m => { m.petLevel = m.petLevel || 0; });
+  members.forEach(m => {
+    m.petLevel = m.petLevel || 0;
+    m.usePet = m.usePet !== undefined ? m.usePet : true;
+  });
+  petSameForAll = !!savedSiege.petSameForAll;
+  petSameValue = savedSiege.petSameValue !== undefined ? savedSiege.petSameValue : true;
+  applyPetSameIfNeeded();
   const allReinforceIds = members.filter(m => m.role === "増援").map(m => m.id);
   patterns = (savedSiege.patterns || []).map(p => ({
     id: p.id,
@@ -544,6 +598,7 @@ if (savedSiege && Array.isArray(savedSiege.members) && savedSiege.members.length
       if (savedSiege.settings[id] !== undefined) document.getElementById(id).value = savedSiege.settings[id];
     });
   }
+  syncPetSameUI();
   renderMembers();
   renderPatterns();
 } else {
@@ -609,7 +664,7 @@ function runCalculation() {
   }
 
   function effMarch(m) {
-    return marchWithPet(m.march, m.petLevel);
+    return m.usePet ? marchWithPet(m.march, m.petLevel) : m.march;
   }
 
   function computeMinT(instance) {
