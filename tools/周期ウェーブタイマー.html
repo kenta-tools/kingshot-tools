@@ -286,7 +286,7 @@
     <button type="button" class="ks-toggle-btn" id="ksToggleBtn" onclick="ksToggleSidebar()" aria-label="メニュー開閉">←</button>
   </div>
   <nav>
-    <a href="../index.html?v=20261102031001" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261102031001" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261102031001" class="ks-link ks-active" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261102031001" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261102031001" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="../kvk-matchup/kvk-matchup-index.html?v=20261102031001" class="ks-link" title="KvK相手突合せ まとめ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ まとめ</span></a>
+    <a href="../index.html?v=20261102032614" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261102032614" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261102032614" class="ks-link ks-active" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261102032614" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261102032614" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="../kvk-matchup/kvk-matchup-index.html?v=20261102032614" class="ks-link" title="KvK相手突合せ まとめ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ まとめ</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -818,6 +818,7 @@ let timelineLines = []; // [{symbol, label, launchSec, rallyMin}] パターン�
 // その項目がスタックから消えれば（＝items配列から外れれば）自然に使われなくなる。
 let rallyOverrides = {};
 const UPCOMING_LAUNCH_WINDOW_SEC = 60;
+const MISSED_DISPLAY_WINDOW_SEC = 30;
 const ALT_RALLY_MINUTES = [1, 3, 5]; // 出せなかったときの時間短縮オプション（集結時間の候補）
 
 // 「0分0秒 → ①A（5分集結）※行軍40秒（5分40秒着、6分20秒帰還）」のように、
@@ -849,18 +850,19 @@ function parseTimeline(text) {
     const label = labelM ? labelM[1].trim() : "";
 
     if (!blockMap.has(symbol)) {
-      blockMap.set(symbol, { symbol, labels: new Set(), startSec: launchSec, endSec: retSec });
+      blockMap.set(symbol, { symbol, labels: new Set(), startSec: launchSec, endSec: retSec, lastLaunchSec: launchSec });
       order.push(symbol);
     }
     const b = blockMap.get(symbol);
     if (label) b.labels.add(label);
     if (launchSec < b.startSec) b.startSec = launchSec;
     if (retSec > b.endSec) b.endSec = retSec;
+    if (launchSec > b.lastLaunchSec) b.lastLaunchSec = launchSec;
   }
   return order.map(s => {
     const b = blockMap.get(s);
     const labelsText = Array.from(b.labels).join("+");
-    return { header: labelsText ? `${b.symbol}${labelsText}` : b.symbol, startSec: b.startSec, endSec: b.endSec };
+    return { header: labelsText ? `${b.symbol}${labelsText}` : b.symbol, startSec: b.startSec, endSec: b.endSec, lastLaunchSec: b.lastLaunchSec };
   });
 }
 
@@ -905,8 +907,10 @@ function computeItemStatus(item, now) {
   const status = { active: [], upcoming: [], missed: [] };
   if (!timelineBlocks.length) return status;
 
+  // 「進行中」は帰還完了ではなく発起完了を基準にする。ブロック内の全員が発起し終えたら
+  // そのブロックは（このitemでは）終了扱いにし、次のitem（2個目…）側の表示に委ねる。
   timelineBlocks.forEach(b => {
-    if (itemElapsed < b.endSec) status.active.push(b.header);
+    if (itemElapsed < b.lastLaunchSec) status.active.push(b.header);
   });
 
   if (!timelineLines.length) return status;
@@ -922,17 +926,17 @@ function computeItemStatus(item, now) {
     }
     return { launchSec: line.launchSec, rallyMin: line.rallyMin };
   }
-  // 本来の集結時間より短縮できる時間（1,3,5分のうち本来以下のもの）の、今から見た発起までの秒数
+  // 本来の集結時間より1段階だけ短い時間（例：5分なら3分のみ、3分なら1分のみ）の、今から見た発起までの秒数
   function buildAlts(launchSec, rallyMin) {
     if (rallyMin == null) return [];
-    return ALT_RALLY_MINUTES
-      .filter(min => min <= rallyMin)
-      .sort((a, b) => b - a)
-      .map(min => ({
-        min,
-        remain: Math.round((launchSec + (rallyMin - min) * 60) - itemElapsed),
-        isOriginal: min === rallyMin,
-      }));
+    const lower = ALT_RALLY_MINUTES.filter(min => min < rallyMin).sort((a, b) => b - a);
+    if (!lower.length) return [];
+    const min = lower[0];
+    return [{
+      min,
+      remain: Math.round((launchSec + (rallyMin - min) * 60) - itemElapsed),
+      isOriginal: false,
+    }];
   }
 
   // 1分以内に発起する人（「時短で出す」を選んだ人はその新しい時刻で判定）
@@ -954,7 +958,7 @@ function computeItemStatus(item, now) {
   timelineLines.forEach(line => {
     if (overrideFor(line)) return;
     const elapsedSince = itemElapsed - line.launchSec;
-    if (elapsedSince < 0 || elapsedSince > UPCOMING_LAUNCH_WINDOW_SEC) return;
+    if (elapsedSince < 0 || elapsedSince > MISSED_DISPLAY_WINDOW_SEC) return;
     const key = Math.round(elapsedSince);
     if (!missedGroups.has(key)) missedGroups.set(key, { names: [], keys: [], rallyMin: line.rallyMin, launchSec: line.launchSec });
     const g = missedGroups.get(key);
