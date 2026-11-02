@@ -24,6 +24,8 @@ VERSION = datetime.now().strftime("%Y%m%d%H%M%S")
 
 # href="xxx.html" / href="xxx.html?v=12345" のうち、外部URL・アンカー・mailtoを除いたものにマッチ
 HREF_RE = re.compile(r'href="((?!https?:|mailto:|#)[^"]+?\.html)(\?v=\d+)?"')
+# src="xxx.js" / src="xxx.js?v=12345" のうち、外部URLを除いたものにマッチ（admin-common.js・kvk-auth-gate.jsなど）
+SRC_JS_RE = re.compile(r'src="((?!https?:)[^"]+?\.js)(\?v=\d+)?"')
 
 
 def should_skip(path: Path) -> bool:
@@ -43,7 +45,13 @@ def stamp_file(path: Path) -> int:
         count += 1
         return f'href="{m.group(1)}?v={VERSION}"'
 
+    def repl_js(m):
+        nonlocal count
+        count += 1
+        return f'src="{m.group(1)}?v={VERSION}"'
+
     new_text = HREF_RE.sub(repl, text)
+    new_text = SRC_JS_RE.sub(repl_js, new_text)
     if new_text != text:
         path.write_text(new_text, encoding="utf-8")
     return count
