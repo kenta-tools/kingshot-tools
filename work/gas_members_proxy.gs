@@ -521,11 +521,12 @@ function importFromGitHub_(token) {
 // 初回だけエディタから実行する: ドライブにデータ用ファイルを作り、GitHub の data/members.json をコピーする
 // ---------- Discord の招待リンク ----------
 // スクリプトプロパティ:
-//   DISCORD_BOT_TOKEN  : bot のトークン（秘密。サーバーに追加済みで「招待を作成」権限があること）
+//   DISCORD_BOT_TOKEN  : bot のトークン（秘密。サーバーに追加済みで「招待を作成」「チャンネルの管理」権限があること。
+//                        「チャンネルの管理」は古いリンクを消すため。なくても新しいリンクは作れる）
 //   DISCORD_CHANNEL_ID : 招待先のチャンネルID（bot がそのチャンネルを見られること）
 //   DISCORD_INVITE / DISCORD_INVITE_AT : 作った招待リンクと日時（自動）
 // 初回だけ: エディタで関数「setupDiscordInvite」を実行 → 毎日朝5時台に作り直すトリガーができ、すぐ1回作る
-var DISCORD_INVITE_DAYS = 7; // 1つのリンクの有効日数（毎日作り直すので、古いリンクも数日は使える）
+var DISCORD_INVITE_DAYS = 7; // 1つのリンクの有効日数（古いリンクは作り直すたびに消すので、消せなかったときの保険）
 
 function refreshDiscordInvite() {
   var props = PropertiesService.getScriptProperties();
@@ -541,11 +542,42 @@ function refreshDiscordInvite() {
     throw new Error("Discord が招待リンクを作れませんでした（" + code + "）: " + r.getContentText().slice(0, 200) +
       "（401=トークン違い、403=bot に招待を作成の権限がない／チャンネルが見えない、404=チャンネルIDが違う）");
   }
-  var url = "https://discord.gg/" + JSON.parse(r.getContentText()).code;
+  var newCode = JSON.parse(r.getContentText()).code;
+  var url = "https://discord.gg/" + newCode;
+  var prev = props.getProperty("DISCORD_INVITE");
   props.setProperty("DISCORD_INVITE", url);
   props.setProperty("DISCORD_INVITE_AT", new Date().toISOString());
   Logger.log("招待リンクを作りました: " + url);
+  deleteOldDiscordInvites_(token, channel, newCode, prev);
   return url;
+}
+
+// 有効なリンクを1つにするため、このチャンネルで bot が作った古い招待リンクを消す（失敗しても新しいリンクはそのまま使える）
+function deleteOldDiscordInvites_(token, channel, keepCode, prevUrl) {
+  var headers = { Authorization: "Bot " + token };
+  var codes = [];
+  try {
+    var me = JSON.parse(UrlFetchApp.fetch("https://discord.com/api/v10/users/@me", { headers: headers }).getContentText());
+    var lr = UrlFetchApp.fetch("https://discord.com/api/v10/channels/" + encodeURIComponent(channel) + "/invites",
+      { headers: headers, muteHttpExceptions: true });
+    if (lr.getResponseCode() === 200) {
+      JSON.parse(lr.getContentText()).forEach(function(inv) {
+        if (inv.code !== keepCode && inv.inviter && inv.inviter.id === me.id) codes.push(inv.code);
+      });
+    } else if (prevUrl) {
+      codes.push(String(prevUrl).replace(/^.*\//, "")); // 一覧が取れないときは、前に作ったリンクだけ消す
+    }
+  } catch (e) {
+    Logger.log("古いリンクの確認に失敗しました: " + e.message);
+  }
+  codes.forEach(function(c) {
+    if (!c || c === keepCode) return;
+    var d = UrlFetchApp.fetch("https://discord.com/api/v10/invites/" + encodeURIComponent(c),
+      { method: "delete", headers: headers, muteHttpExceptions: true });
+    var dc = d.getResponseCode();
+    Logger.log(dc === 200 || dc === 204 || dc === 404 ? "古いリンクを消しました: " + c
+      : "古いリンクを消せませんでした（" + dc + "。bot に「チャンネルの管理」権限がないかも）: " + c);
+  });
 }
 
 function setupDiscordInvite() {
