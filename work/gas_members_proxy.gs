@@ -316,7 +316,8 @@ function selfSave_(token, p) {
           alliance: row.alliance, entry: row.entry, grade: row.grade, monthly: row.monthly, leaveEarly: row.leaveEarly,
           vc: row.vc, vivian4: row.vivian4, mayChange: row.mayChange, troops: row.troops, tier: row.tier, joinAt: row.joinAt, leaveAt: row.leaveAt,
           note: row.note, marchCount: row.marchCount, marchPet: row.marchPet, rallyCount: row.rallyCount,
-          rallyPet: row.rallyPet, rallySpeedPet: row.rallySpeedPet, updatedAt: new Date().toISOString(),
+          rallyPet: row.rallyPet, rallySpeedPet: row.rallySpeedPet, marchCap: row.marchCap, rallyCap: row.rallyCap,
+          updatedAt: new Date().toISOString(),
           id: existing ? existing.id : newId_("r"), eventId: ev.id, userId: user.id
         };
         if (existing) d.entries[d.entries.indexOf(existing)] = e;
@@ -365,7 +366,20 @@ function cleanEntry_(m) {
     rallySpeedPet: count_(m.rallySpeedPet, 8)
   };
   if (r.leaveAt) r.leaveEarly = true;
+  var c = calcCap_(r);
+  r.marchCap = c.march;
+  r.rallyCap = c.rally;
   return r;
+}
+
+// 計算後の容量（管理画面の calcCapacity と同じ条件）: 出征スキル・集結スキルあり、バフ20%をスキルなしの出征容量にかけ、
+// 出征で増えた分（スキル＋バフ）はそのまま集結容量にも入る
+function calcCap_(m) {
+  var mUp = (m.marchPet ? 1500 * m.marchPet : 0) + (m.marchCount != null ? Math.floor(m.marchCount * 0.2) : 0);
+  return {
+    march: m.marchCount != null ? m.marchCount + mUp : null,
+    rally: m.rallyCount != null ? m.rallyCount + mUp + (m.rallyPet ? 50000 + 10000 * m.rallyPet : 0) : null
+  };
 }
 
 function findUser_(users, name) {
@@ -375,10 +389,10 @@ function findUser_(users, name) {
     || null;
 }
 
-// 部隊数・ペットLv（0〜max の整数。max 省略時は 99999。空や範囲外なら null）
+// 部隊数・ペットLv（0〜max の整数。max 省略時は 99,999,999（部隊数は容量の数字で 100万を超える）。空や範囲外なら null）
 function count_(v, max) {
   var n = Number(String(v == null ? "" : v).replace(/[,，]/g, ""));
-  return String(v == null ? "" : v).trim() !== "" && n >= 0 && n <= (max || 99999) && Math.floor(n) === n ? n : null;
+  return String(v == null ? "" : v).trim() !== "" && n >= 0 && n <= (max || 99999999) && Math.floor(n) === n ? n : null;
 }
 
 function key_(s) { return String(s).trim().toLowerCase(); }
