@@ -37,34 +37,23 @@ NAV_EVENT_GROUPS = [
     ("KvK", [
         ("tools/KvK同着スタート カウントダウン表.html", "⏲️", "KvK同着スタート カウントダウン表"),
         ("tools/KvK占領判定.html", "🏳️", "KvK占領戦 勝利判定ツール"),
-        ("kvk-matchup/kvk-matchup-index.html", "⚔️", "KvK相手突合せ まとめ"),
     ]),
 ]
 # 非表示中（2026-11-01、ユーザー指示でいったん非表示。ファイルは残したまま一覧・サイドバーから外す）:
 #   tools/王城到着同期カウントアップ.html
 #   tools/音声アナウンス付きストップウォッチ.html
+# KvK相手突合せ（kvk-matchup/）は2026-11-02、ユーザー指示で管理画面（admin/）の中に完全に移動し、
+# 認証必須にした。公開のtools一覧・レフトメニューからは外し、admin/members-admin.htmlからのみ辿れるようにする。
 
 NAV_TOOLS = [HOME] + [item for _, items in NAV_EVENT_GROUPS for item in items]
 
-# サイドバーを注入する対象ページ：tools/配下の実ツールページ＋kvk-matchup/配下の全ページ。
-# kvk-matchup/は「ツール一覧の中」に入れた経緯があるので、flame-dragon/holy-sword-leagueとは異なり
-# 他のtoolsページと同じレフトメニューを表示する（個別の突合せレポートもKvKごとに増えるので、
-# 固定リストではなくglobで拾う）。
-def kvk_matchup_pages():
-    kvk_dir = FOLDER / "kvk-matchup"
-    if not kvk_dir.exists():
-        return []
-    return sorted(
-        str(p.relative_to(FOLDER)).replace("\\", "/")
-        for p in kvk_dir.glob("*.html")
-    )
-
+# kvk-matchup/は2026-11-02にadmin配下の認証必須機能へ移したため、公開の共通サイドバーは注入しない
+# （admin/members-admin.htmlのログイン画面を経由しないと辿り着けないようにする）。
 
 PAGE_GROUPS = [
     (
         [rel_path for rel_path, _, _ in NAV_TOOLS if rel_path.startswith("tools/")]
-        + ["tools/tools-index.html"]
-        + kvk_matchup_pages(),
+        + ["tools/tools-index.html"],
         NAV_EVENT_GROUPS,
     ),
 ]
