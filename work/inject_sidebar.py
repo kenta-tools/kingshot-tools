@@ -43,12 +43,12 @@ NAV_EVENT_GROUPS = [
 #   tools/王城到着同期カウントアップ.html
 #   tools/音声アナウンス付きストップウォッチ.html
 # KvK相手突合せ（kvk-matchup/）は2026-11-02、ユーザー指示で管理画面（admin/）の中に完全に移動し、
-# 認証必須にした。公開のtools一覧・レフトメニューからは外し、admin/members-admin.htmlからのみ辿れるようにする。
+# 認証必須にした。公開のtools一覧・レフトメニューからは外し、admin/配下（管理画面）からのみ辿れるようにする。
 
 NAV_TOOLS = [HOME] + [item for _, items in NAV_EVENT_GROUPS for item in items]
 
 # kvk-matchup/は2026-11-02にadmin配下の認証必須機能へ移したため、公開の共通サイドバーは注入しない
-# （admin/members-admin.htmlのログイン画面を経由しないと辿り着けないようにする）。
+# （admin/配下のログイン画面を経由しないと辿り着けないようにする）。
 
 PAGE_GROUPS = [
     (

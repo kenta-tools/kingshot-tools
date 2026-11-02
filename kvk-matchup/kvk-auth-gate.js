@@ -1,5 +1,5 @@
 // KvK相手突合せ（kvk-matchup/配下）の認証ゲート。
-// admin/members-admin.htmlと同じ中継役（GAS）・同じパスワード・同じsessionStorageキーを使うので、
+// admin/配下（events.html・participants.html・users.html・logs.html）と同じ中継役（GAS）・同じパスワード・同じsessionStorageキーを使うので、
 // 同じタブでadmin側から遷移してきた場合は再ログイン不要（sessionStorageはタブ単位で同一オリジンなら引き継がれる）。
 // 使い方：対応ページの<head>先頭に
 //   <script>(function(){try{if(!sessionStorage.getItem('ksAdminPw'))document.documentElement.style.visibility='hidden';}catch(e){document.documentElement.style.visibility='hidden';}})();</script>

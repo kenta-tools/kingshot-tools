@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>個人登録の記録（管理者）</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+    background: #f4f5f7;
+    color: #222;
+    max-width: 1100px;
+    margin: 30px auto;
+    padding: 0 16px;
+  }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 0 0 12px; }
+  .sub { color: #666; font-size: 13px; margin-bottom: 20px; line-height: 1.6; }
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    margin-bottom: 16px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  input[type=text], input[type=password], input[type=search], input[type=number], input[type=date], textarea, select {
+    font: inherit; font-size: 14px; padding: 7px 9px;
+    border: 1px solid #ccd2db; border-radius: 6px; background: #fff;
+  }
+  textarea { width: 100%; min-height: 200px; font-family: Consolas, "MS Gothic", monospace; font-size: 13px; }
+  button {
+    font: inherit; font-size: 13px; padding: 7px 14px; border-radius: 6px;
+    border: 1px solid #3a4a63; background: #1a2332; color: #fff; cursor: pointer;
+  }
+  button.sub-btn { background: #fff; color: #1a2332; }
+  button.danger { background: #fff; color: #c0392b; border-color: #c0392b; }
+  button.small { padding: 4px 9px; font-size: 12px; }
+  button:hover { opacity: 0.85; }
+  button:disabled { opacity: 0.4; cursor: default; }
+  .hint { font-size: 12px; color: #777; line-height: 1.6; }
+  .msg { font-size: 13px; margin-top: 8px; min-height: 1em; white-space: pre-wrap; }
+  .msg.ok { color: #1e7d3a; }
+  .msg.err { color: #c0392b; }
+
+  .save-card { border-left: 6px solid #2e9e57; }
+  /* 保存の帯が画面外に出たときだけ、右下についてくる保存ボタン */
+  .float-save {
+    position: fixed; right: 16px; bottom: 16px; z-index: 100; display: none;
+    font-size: 15px; padding: 11px 20px; border-radius: 999px;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.25);
+  }
+  .float-save.show { display: block; }
+  .float-save.dirty { background: #e8890c; border-color: #e8890c; }
+  .float-save.clean { background: #fff; color: #1e7d3a; border-color: #b9dfc7; opacity: 1; }
+  .save-card.dirty { border-left-color: #f0ad4e; background: #fffaf0; box-shadow: 0 2px 10px rgba(240,173,78,0.35); }
+  .save-main { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
+  .save-title { font-size: 15px; font-weight: bold; }
+  .save-card.clean .save-title { color: #1e7d3a; }
+  .save-card.dirty .save-title { color: #a86a00; }
+  .save-btn { font-size: 15px; padding: 9px 22px; }
+  .save-card.dirty .save-btn { background: #e8890c; border-color: #e8890c; }
+  .save-card .msg:empty { display: none; }
+  #ghDetails { margin-top: 8px; }
+  #ghDetails summary { cursor: pointer; }
+  .status-bar {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between;
+    font-size: 13px;
+  }
+  .pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: bold; }
+  .pill.saved { background: #e3f4e8; color: #1e7d3a; }
+  .pill.dirty { background: #fff1d6; color: #a86a00; }
+  .pill.running { background: #e8eefc; color: #2c5cc5; }
+  .pill.done { background: #eee; color: #666; }
+  .done-card { border-left: 5px solid #9aa3ad; }
+  .done-card summary { cursor: pointer; font-size: 15px; font-weight: bold; }
+  .done-row { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; }
+  .done-row .label { flex: 1; min-width: 200px; }
+  .done-row.current { background: #f6f8fb; }
+
+  /* イベント選択 */
+  .event-card { border-left: 5px solid #1a2332; }
+  .event-card .group { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .event-card .sep { width: 1px; height: 28px; background: #e0e4ea; margin: 0 6px; }
+  #eventSelect { min-width: 240px; font-weight: bold; }
+  .event-name { color: #2c5cc5; }
+  .no-event { text-align: center; padding: 30px; color: #777; font-size: 14px; }
+
+  /* 1件登録フォーム */
+  .form-grid {
+    display: grid; gap: 10px 14px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .field label.cap { display: block; font-size: 12px; color: #555; margin-bottom: 3px; font-weight: bold; }
+  .field input[type=text], .field input[type=number], .field select { width: 100%; }
+  .field.wide { grid-column: span 2; }
+  .checks { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; padding-top: 6px; }
+  .checks label { white-space: nowrap; cursor: pointer; }
+  /* 新規の1人ずつ登録は個人登録ページでやるので、ここは一覧の「変更」を押したときだけ出す */
+  .form-card:not(.editing) { display: none; }
+  .form-card.editing { outline: 2px solid #f0ad4e; }
+  .edit-banner { display: none; background: #fff1d6; color: #a86a00; font-size: 13px; font-weight: bold;
+    padding: 6px 10px; border-radius: 6px; margin-bottom: 10px; }
+  .form-card.editing .edit-banner { display: block; }
+
+  /* 一覧 */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 7px 8px; border-bottom: 1px solid #e6e9ee; text-align: left; vertical-align: middle; }
+  th { background: #f0f2f5; cursor: pointer; user-select: none; white-space: nowrap; }
+  th.nosort { cursor: default; }
+  td.ops { white-space: nowrap; text-align: right; }
+  td.marks { letter-spacing: 2px; white-space: nowrap; }
+  td.num { text-align: right; }
+  tr.editing td { background: #fffbe8; }
+  .tag { display: inline-block; padding: 1px 7px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+  .tag.start { background: #e3f4e8; color: #1e7d3a; }
+  .tag.late { background: #e8eefc; color: #2c5cc5; }
+  .tag.absent { background: #eee; color: #777; }
+  .tag.new { background: #fff1d6; color: #a86a00; }
+  .legend { font-size: 12px; color: #555; margin-bottom: 8px; }
+  .ai-steps { background: #f0f5ff; border: 1px solid #d5e1fb; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px; }
+  .ai-steps ol { margin: 6px 0 8px; padding-left: 20px; line-height: 1.7; }
+  .ai-steps details { flex: 1; min-width: 200px; }
+  .ai-steps details textarea { margin-top: 6px; min-height: 260px; }
+  .scroll { max-height: 520px; overflow-y: auto; }
+  .alias { font-size: 11px; color: #888; }
+  .top-link { font-size: 13px; color: #2c5cc5; text-decoration: none; }
+  .top-link:hover { text-decoration: underline; }
+  tr.similar td { background: #fff8e6; }
+  select.decide { font-size: 12px; padding: 4px 6px; max-width: 320px; }
+  .name-hint { font-size: 12px; margin-top: 4px; color: #a86a00; }
+  .name-hint button { margin: 2px 4px 0 0; }
+  #simDetails { margin-bottom: 10px; }
+  #simDetails summary { cursor: pointer; font-size: 13px; font-weight: bold; color: #a86a00; }
+  .sim-pair { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 13px; }
+  .watch { background: #fff4f2; border: 1px solid #f3c6bf; border-radius: 8px; padding: 8px 12px; margin: 8px 0; font-size: 13px; line-height: 1.7; }
+  .watch b { color: #c0392b; }
+  .block-box { background: #f6f8fb; border-radius: 8px; padding: 8px 12px; margin: 8px 0; font-size: 13px; }
+  .block-row { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 4px 0; border-bottom: 1px solid #e6e9ee; }
+  tr.blocked td { background: #fff0ee; }
+  .sim-pair .names { flex: 1; min-width: 220px; }
+
+  /* ログイン画面 */
+  #loginView { max-width: 360px; margin: 80px auto; text-align: center; }
+  #loginView input { width: 100%; margin: 12px 0; }
+  #loginView button { width: 100%; }
+  #appView { display: none; }
+
+  @media (max-width: 760px) {
+    .form-grid { grid-template-columns: 1fr 1fr; }
+    .field.wide { grid-column: 1 / -1; }
+    table { display: block; overflow-x: auto; }
+    .event-card .sep { display: none; }
+    #eventSelect { min-width: 0; width: 100%; }
+  }
+
+</style>
+</head>
+<body>
+
+<div id="loginView" class="card">
+  <h2>🔒 管理者ログイン</h2>
+  <div class="hint">メンバー管理画面を開くにはパスワードを入力してください。</div>
+  <input type="password" id="pwInput" placeholder="パスワード" autocomplete="current-password">
+  <button type="button" id="loginBtn">ログイン</button>
+  <div class="msg err" id="loginMsg"></div>
+  <a href="../index.html?v=20261103000107" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
+</div>
+
+<div id="appView">
+  <h1>🕵️ 個人登録の記録</h1>
+  <div class="sub">個人登録ページからの登録・変更・取消の記録です。いたずらっぽい動きの確認やIPブロックを行います。</div>
+
+  <!-- 保存 -->
+  <div class="card save-card clean" id="saveCard">
+    <div class="save-main">
+      <div>
+        <div class="save-title" id="saveTitle"></div>
+        <div class="hint" id="saveSub"></div>
+      </div>
+      <div class="row">
+        <button type="button" class="save-btn" id="publishBtn">💾 保存する</button>
+        <button type="button" class="sub-btn" id="discardBtn">↩ 保存前の変更を取り消す</button>
+      </div>
+    </div>
+    <div class="msg" id="ghMsg"></div>
+    <details id="ghDetails">
+      <summary class="hint">その他の操作・設定</summary>
+      <div class="row" style="margin: 8px 0;">
+        <button type="button" class="small sub-btn" id="pullBtn">🔄 他の人が保存した内容を読み込む</button>
+        <button type="button" class="small sub-btn" id="exportJsonBtn">📄 データをファイルに書き出す（バックアップ）</button>
+      </div>
+      <div class="hint">
+        <b>保存のしくみ</b>：保存すると、他の人が先に保存した内容と自動でまとめてから保存します（他の人の登録は消えません）。画面を開いたときも、最新の保存内容を読み込みます。データは非公開の保存先にあり、サイトの他のツールにもすぐ反映されます。
+      </div>
+    </details>
+  </div>
+
+  <button type="button" class="float-save" id="floatSaveBtn"></button>
+
+  <!-- 個人登録の記録 -->
+  <div class="card">
+    <details id="logDetails">
+      <summary style="cursor: pointer; font-size: 16px; font-weight: bold;">🕵️ 個人登録の記録（IP）</summary>
+      <div class="hint" style="margin: 6px 0;">
+        個人登録ページからの登録・変更・取消の記録です（管理者だけが見られます。参加者の一覧や公開データには出ません）。新しい順に約2,000件まで残り、古いものから消えます。<br>
+        IPは登録した端末が調べて送った値なので、目安として見てください。
+      </div>
+      <div class="row" style="margin: 8px 0;">
+        <button type="button" class="small" id="logLoadBtn">記録を読み込む</button>
+        <input type="search" id="logFilter" placeholder="絞り込み（名前・IP・イベント）">
+        <span class="hint" id="logInfo"></span>
+      </div>
+      <div id="logWatch" class="watch" style="display: none;"></div>
+      <div class="block-box">
+        <b>🚫 ブロックするIP</b> <span class="hint">（このIPからの個人登録・変更・取消を断ります。すぐ反映され、「💾 保存する」は不要です。末尾を * にすると前方一致：例 203.0.113.*）</span>
+        <div class="row" style="margin: 6px 0;">
+          <input type="text" id="blockIpInput" placeholder="IP（例: 203.0.113.5）" style="width: 200px;" autocomplete="off">
+          <input type="text" id="blockNoteInput" placeholder="メモ（例: いたずら）" style="width: 180px;">
+          <button type="button" class="small danger" id="blockAddBtn">ブロックする</button>
+        </div>
+        <div id="blockList"></div>
+      </div>
+      <div class="scroll">
+        <table>
+          <thead><tr><th class="nosort">日時</th><th class="nosort">イベント</th><th class="nosort">名前</th><th class="nosort">操作</th><th class="nosort">IP</th><th class="nosort">端末</th></tr></thead>
+          <tbody id="logBody"></tbody>
+        </table>
+      </div>
+    </details>
+  </div>
+</div>
+
+<script src="admin-common.js"></script>
+</body>
+</html>
