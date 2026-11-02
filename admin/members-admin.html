@@ -398,12 +398,11 @@
       <div class="row" style="margin-top: 6px;">
         <span class="hint">バフ</span>
         <input type="number" id="capBuff" value="20" min="0" max="500" style="width: 80px;"><span class="hint">%</span>
-        <label class="hint"><input type="checkbox" id="capBuffRally" checked> 集結容量にかける</label>
-        <label class="hint"><input type="checkbox" id="capBuffMarch"> 出征容量にかける</label>
-        <span class="sep" style="display: inline-block; width: 1px; height: 20px; background: #e0e4ea;"></span>
-        <label class="hint"><input type="radio" name="capBuffBase" value="base" checked> スキルなしの容量にかける</label>
-        <label class="hint"><input type="radio" name="capBuffBase" value="withSkill"> スキル込みの容量にかける</label>
+        <span class="hint">出征容量に</span>
+        <label class="hint"><input type="radio" name="capBuffBase" value="base" checked> スキルなしの値にかける</label>
+        <label class="hint"><input type="radio" name="capBuffBase" value="withSkill"> スキル込みの値にかける</label>
       </div>
+      <div class="hint">※バフは出征容量にかかり、増えた分はそのまま集結容量にも入ります（出征スキルと同じ）。出征部隊数が未入力の人は、集結容量にバフの分が入りません。</div>
       <div class="hint" id="capExample" style="margin-top: 6px;"></div>
     </div>
 
@@ -1322,7 +1321,6 @@
     return {
       marchSkill: $("capMarchSkill").checked, rallySkill: $("capRallySkill").checked,
       buff: Math.max(0, Number($("capBuff").value) || 0) / 100,
-      buffRally: $("capBuffRally").checked, buffMarch: $("capBuffMarch").checked,
       buffBase: base ? base.value : "base"
     };
   }
@@ -1330,17 +1328,15 @@
   function rallyPetBonus(lv) { return lv ? 50000 + 10000 * lv : 0; }
 
   // 戻り値 { march, rally }（入力がない方は null）
+  // バフは出征容量にかかり、出征で増えた分（スキル＋バフ）はそのまま集結容量にも入る
   function calcCapacity(m, cs) {
     cs = cs || capSettings();
-    function apply(base, bonus, useBuff) {
-      if (base == null) return null;
-      var withSkill = base + bonus;
-      if (!useBuff || !cs.buff) return withSkill;
-      return Math.floor(cs.buffBase === "withSkill" ? withSkill * (1 + cs.buff) : base * (1 + cs.buff) + bonus);
-    }
-    var mBonus = cs.marchSkill ? marchPetBonus(m.marchPet) : 0;
-    var rBonus = mBonus + (cs.rallySkill ? rallyPetBonus(m.rallyPet) : 0);
-    return { march: apply(m.marchCount, mBonus, cs.buffMarch), rally: apply(m.rallyCount, rBonus, cs.buffRally) };
+    var mSkill = cs.marchSkill ? marchPetBonus(m.marchPet) : 0;
+    var mBuff = 0;
+    if (cs.buff && m.marchCount != null) mBuff = Math.floor((cs.buffBase === "withSkill" ? m.marchCount + mSkill : m.marchCount) * cs.buff);
+    var mUp = mSkill + mBuff;
+    var rSkill = cs.rallySkill ? rallyPetBonus(m.rallyPet) : 0;
+    return { march: m.marchCount != null ? m.marchCount + mUp : null, rally: m.rallyCount != null ? m.rallyCount + mUp + rSkill : null };
   }
 
   function calcText(m) {
@@ -1354,16 +1350,16 @@
     var cs = capSettings(), parts = [];
     parts.push(cs.marchSkill ? "出征スキルあり" : "出征スキルなし");
     parts.push(cs.rallySkill ? "集結スキルあり" : "集結スキルなし");
-    if (cs.buff && (cs.buffRally || cs.buffMarch)) {
-      parts.push("バフ" + Math.round(cs.buff * 100) + "%（" + [cs.buffRally ? "集結" : "", cs.buffMarch ? "出征" : ""].filter(Boolean).join("・") +
-        "、" + (cs.buffBase === "withSkill" ? "スキル込みの容量" : "スキルなしの容量") + "にかける）");
+    if (cs.buff) {
+      parts.push("出征容量バフ" + Math.round(cs.buff * 100) + "%（" + (cs.buffBase === "withSkill" ? "スキル込み" : "スキルなし") +
+        "の出征容量にかけ、増えた分は集結容量にも足す）");
     } else parts.push("バフなし");
     return parts.join("・");
   }
 
   function renderCapExample() {
     var ex = calcCapacity({ marchCount: 187910, marchPet: 10, rallyCount: 1380410, rallyPet: 10 });
-    $("capExample").textContent = "いまの設定：" + capSettingText() + "。例）出征187,910・集結1,380,410・ペットLv10 → 出征 " +
+    $("capExample").textContent = "いまの設定：" + capSettingText() + "。例）出征187,910・集結1,380,410・ペットが両方Lv10の人 → 出征 " +
       ex.march.toLocaleString() + "／集結 " + ex.rally.toLocaleString();
   }
 
@@ -1868,13 +1864,13 @@
       var saved = JSON.parse(localStorage.getItem(CAP_KEY) || "null");
       if (saved) {
         $("capMarchSkill").checked = saved.marchSkill; $("capRallySkill").checked = saved.rallySkill;
-        $("capBuff").value = saved.buffPct; $("capBuffRally").checked = saved.buffRally; $("capBuffMarch").checked = saved.buffMarch;
+        $("capBuff").value = saved.buffPct;
         document.querySelectorAll("input[name=capBuffBase]").forEach(function(r) { r.checked = r.value === saved.buffBase; });
       }
     } catch (e) {}
     renderCapExample();
   })();
-  ["capMarchSkill", "capRallySkill", "capBuff", "capBuffRally", "capBuffMarch"].forEach(function(id) {
+  ["capMarchSkill", "capRallySkill", "capBuff"].forEach(function(id) {
     $(id).addEventListener("input", onCapChange);
     $(id).addEventListener("change", onCapChange);
   });
@@ -1883,7 +1879,7 @@
     var cs = capSettings();
     try {
       localStorage.setItem(CAP_KEY, JSON.stringify({ marchSkill: cs.marchSkill, rallySkill: cs.rallySkill, buffPct: $("capBuff").value,
-        buffRally: cs.buffRally, buffMarch: cs.buffMarch, buffBase: cs.buffBase }));
+        buffBase: cs.buffBase }));
     } catch (e) {}
     renderCapExample();
     if (currentEventId) { renderEntries(); refreshAiText(); }
