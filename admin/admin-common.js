@@ -323,6 +323,7 @@
       rallyPet: petLv(m.rallyPet, "rallyPet"),
       rallySpeedPet: petLv(m.rallySpeedPet, "rallySpeedPet"),
       updatedAt: str(m.updatedAt), // 最後に登録・変更した日時（ISO）
+      proxyBy: str(m.proxyBy), // 個人登録ページで代理入力した人の名前（本人の入力なら ""）
       sameAs: str(m.sameAs) // AI変換で登録者が「同一人物」と確認した登録済みユーザー名（取り込み時のみ使う）
     }));
   }
@@ -1233,7 +1234,7 @@
       '<td><span class="tag ' + m.entry + '">' + ENTRY_SHORT[m.entry] + '</span>' +
         (m.mayChange ? ' <span class="tag new">変更かも</span>' : '') + '</td>' +
       '<td>' + escapeHtml(m.grade) + '</td>' +
-      '<td>' + escapeHtml(m.name) + '</td>' +
+      '<td>' + escapeHtml(m.name) + (m.proxyBy ? ' <span class="hint">（代理: ' + escapeHtml(m.proxyBy) + '）</span>' : '') + '</td>' +
       '<td class="marks">' + marksOf(m) + '</td>' +
       '<td>' + escapeHtml(troopText(m)) + '</td>' +
       '<td>' + escapeHtml(timeText(m)) + '</td>' +
@@ -1406,8 +1407,10 @@
   }
 
   // ---------- イベント ----------
-  $("newEventType").innerHTML = EVENT_TYPES.map(function(t) { return "<option>" + t + "</option>"; }).join("");
-  $("newEventDate").value = today();
+  if ($("newEventType")) { // イベント欄があるページだけ
+    $("newEventType").innerHTML = EVENT_TYPES.map(function(t) { return "<option>" + t + "</option>"; }).join("");
+    $("newEventDate").value = today();
+  }
 
   on("eventSelect", "change", function() {
     currentEventId = this.value;
@@ -1615,6 +1618,7 @@
       }
       var u = ensureUser(m.name, m.alliance);
       var idx = state.entries.findIndex(function(x) { return x.id === editingId; });
+      m.proxyBy = state.entries[idx].proxyBy || ""; // 管理画面で直しても、代理入力した人の記録は残す
       state.entries[idx] = toEntry(m, u.user.id, editingId);
       resetForm(false);
       commit();
@@ -2081,7 +2085,7 @@
       if (!r.ip || !r.uid || r.act === "blocked") return;
       if (!firstIp[r.uid]) { firstIp[r.uid] = r.ip; return; }
       if (r.ip !== firstIp[r.uid] && r.act !== "added") {
-        items.push({ ip: r.ip, text: formatTime(r.t) + "「" + r.name + "」の登録が、最初と違うIP " + r.ip + " から" + (LOG_ACT[r.act] || r.act) + "されました（最初は " + firstIp[r.uid] + "）" });
+        items.push({ ip: r.ip, text: formatTime(r.t) + "「" + r.name + "」の登録が、最初と違うIP " + r.ip + " から" + (LOG_ACT[r.act] || r.act) + "されました（最初は " + firstIp[r.uid] + "）" + (r.by ? "。代理: " + r.by : "") });
       }
     });
     return items;
@@ -2120,13 +2124,14 @@
     if (!$("logBody")) return;
     var q = $("logFilter").value.trim().toLowerCase();
     var rows = logRows.filter(function(r) {
-      return !q || [r.name, r.ip, r.ev].join(" ").toLowerCase().indexOf(q) >= 0;
+      return !q || [r.name, r.by, r.ip, r.ev].join(" ").toLowerCase().indexOf(q) >= 0;
     });
     $("logInfo").textContent = logRows.length ? (q ? rows.length + " / " : "") + logRows.length + "件" : "";
     $("logBody").innerHTML = rows.map(function(r) {
       var blocked = ipBlocked(r.ip);
       return '<tr' + (blocked ? ' class="blocked"' : "") + "><td style=\"white-space: nowrap;\">" + escapeHtml(formatTime(r.t)) + "</td><td>" + escapeHtml(r.ev || "") +
-        "</td><td>" + escapeHtml(r.name || "") + "</td><td>" + escapeHtml(LOG_ACT[r.act] || r.act || "") +
+        "</td><td>" + escapeHtml(r.name || "") + (r.by ? '<br><span class="hint">（代理: ' + escapeHtml(r.by) + "）</span>" : "") +
+        "</td><td>" + escapeHtml(LOG_ACT[r.act] || r.act || "") +
         "</td><td style=\"white-space: nowrap;\">" + escapeHtml(r.ip || "（不明）") +
         (r.ip && !blocked ? ' <button type="button" class="small danger" data-block="' + escapeHtml(r.ip) + '" data-name="' + escapeHtml(r.name || "") + '">ブロック</button>' : "") +
         (blocked ? ' <span class="tag new">ブロック中</span>' : "") +

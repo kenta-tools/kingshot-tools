@@ -85,6 +85,8 @@
   .who { font-size: 15px; margin: 4px 0 14px; }
   .who .rename-btn { padding: 4px 10px; font-size: 13px; margin-left: 8px; }
   .rename-box { background: #f6f8fb; border-radius: 8px; padding: 10px; margin: -6px 0 14px; }
+  .proxy-box { background: #f6f8fb; border-radius: 8px; padding: 10px; margin: -6px 0 14px; }
+  .proxy-tag { font-size: 12px; color: #777; font-weight: normal; }
   .rename-box .row input { flex: 1; min-width: 140px; }
   .list-warn { color: #c0392b; font-size: 13px; font-weight: bold; margin-top: 8px; line-height: 1.6; }
   .banner { background: #fff1d6; color: #8a5600; border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; font-size: 14px; }
@@ -191,6 +193,14 @@
       </div>
       <div class="msg" id="renameMsg"></div>
     </div>
+    <!-- 代理入力: 入力している人の名前を残す（本人の登録には出ない） -->
+    <div class="proxy-box">
+      <label class="chip"><input type="checkbox" id="fProxyOn"><span>代理で入力している（本人ではない）</span></label>
+      <div id="proxyField" style="display: none; margin-top: 8px;">
+        <span class="cap">入力している人（あなた）のゲーム内の名前<span class="req">必須</span></span>
+        <input type="text" id="fProxyBy" maxlength="30" autocomplete="off" list="nameList">
+      </div>
+    </div>
     <div class="banner" id="registeredBanner" style="display: none;">登録済みです。直して「変更を保存する」か、いちばん下の「登録を取り消す」を押してください。<span id="registeredAt"></span></div>
     <div class="banner" id="prevBanner" style="display: none;"></div>
 
@@ -258,7 +268,7 @@
     </div>
 
     <div class="field">
-      <span class="cap">出征部隊数<span class="req">必須</span><button type="button" class="sub-btn howto-btn" data-howto="marchHowto">確認方法</button></span>
+      <span class="cap">出征部隊数<button type="button" class="sub-btn howto-btn" data-howto="marchHowto">確認方法</button></span>
       <div class="howto-text" id="marchHowto" style="display: none;">ペットやダイヤバフなどがない状態で、野獣に<b>1軍で攻撃</b>したときの部隊数を入れてください。</div>
       <input type="number" id="fMarchCount" min="0" inputmode="numeric" style="max-width: 160px;">
     </div>
@@ -344,6 +354,8 @@
   // 中継役は、管理画面で「受付中」にしたイベントの1人分の参加情報しか変更しない。
   var GAS_URL = "https://script.google.com/macros/s/AKfycbxu5HW9uLU9pCsUs1r_45xpuofWZmQAyZFDwSLK1C_7GvA7SDXZ4ayBEJTS0sR_8oToAw/exec";
   var NAME_KEY = "ksEntryName";
+  var PROXY_KEY = "ksEntryProxyName"; // 代理で入力した人の名前（次に代理入力するときの初期値）
+  var nextProxy = ""; // 次に開く入力画面を「代理」にするときの、入力している人の名前
   var EVENT_KEY = "ksEntryEvent";
   var GRADES = ["G8", "G7", "G6", "G5", "その他"];
   // 一覧での参加の表示（データの entry と時刻から）
@@ -574,7 +586,7 @@
       var time = m.joinAt || m.leaveAt ? (m.joinAt || "") + "〜" + (m.leaveAt || "") : "";
       return '<tr class="' + (mine ? "me" : "") + (abs ? " absent" : "") + (m.prev ? " prev" : "") + '">' +
         '<td><button type="button" class="sub-btn edit" data-user="' + escapeHtml(m.userId) + '">' + (m.prev ? "登録する" : "直す") + '</button></td>' +
-        "<td>" + v(m.alliance) + "</td><td>" + v(m.name) + "</td><td>" + (m.prev ? "未登録" : entryLabel(m) + (m.mayChange ? "（変更の可能性あり）" : "")) + "</td>" +
+        "<td>" + v(m.alliance) + "</td><td>" + v(m.name) + (m.proxyBy && !m.prev ? '<br><span class="proxy-tag">（代理: ' + v(m.proxyBy) + "）</span>" : "") + "</td><td>" + (m.prev ? "未登録" : entryLabel(m) + (m.mayChange ? "（変更の可能性あり）" : "")) + "</td>" +
         (abs ? '<td colspan="9"></td>' :
           "<td>" + v(m.grade) + '</td><td class="marks">' + marksOf(m) + "</td><td>" + v(m.troops) + "</td><td>" + v(time) + "</td>" +
           "<td>" + v(m.marchCount) + "</td><td>" + pet(m.marchPet) + "</td><td>" + v(m.rallyCount) + "</td><td>" +
@@ -584,7 +596,9 @@
     $("listBody").querySelectorAll("button.edit").forEach(function(btn) {
       btn.addEventListener("click", function() {
         var u = userById(btn.dataset.user);
-        if (u) startForm(u, u.name);
+        if (!u) return;
+        if (me && me.userId !== u.id) nextProxy = proxyBy() || me.name;
+        startForm(u, u.name);
       });
     });
   }
@@ -648,6 +662,11 @@
       prev = Object.assign({}, prev, { entry: "start", joinAt: "", leaveAt: "", leaveEarly: false, note: "" });
     }
     fillForm(existing || prev || { alliance: user ? user.alliance : "", entry: "start", grade: "G7" });
+    // 代理入力の欄は毎回まっさら（「別の人を登録する」や一覧の別の人から開いたときだけ、代理にしておく）
+    $("fProxyOn").checked = !!nextProxy;
+    $("fProxyBy").value = nextProxy;
+    nextProxy = "";
+    syncProxy();
     $("formMsg").textContent = "";
     show("form");
     renderList();
@@ -742,6 +761,14 @@
     el.addEventListener("change", syncSubFields);
   });
 
+  function syncProxy() {
+    var on = $("fProxyOn").checked;
+    $("proxyField").style.display = on ? "block" : "none";
+    if (on && !str($("fProxyBy").value)) $("fProxyBy").value = stored(PROXY_KEY);
+  }
+  $("fProxyOn").addEventListener("change", syncProxy);
+  function proxyBy() { return $("fProxyOn").checked ? str($("fProxyBy").value) : ""; }
+
   function readForm() {
     var troops = "";
     document.querySelectorAll(".fTroop:checked").forEach(function(cb) { troops += cb.value; });
@@ -750,7 +777,7 @@
     if (choice === "absent") {
       return { alliance: alliance, entry: "absent", grade: radioValue("fGrade") || "その他", monthly: false, leaveEarly: false,
         vc: false, vivian4: false, mayChange: $("fMayChange").checked, troops: "", tier: null, joinAt: "", leaveAt: "", note: str($("fNote").value),
-        marchCount: null, marchPet: null, rallyCount: null, rallyPet: null, rallySpeedPet: null };
+        marchCount: null, marchPet: null, rallyCount: null, rallyPet: null, rallySpeedPet: null, proxyBy: proxyBy() };
     }
     // 一部参加: 開始時刻があれば途中参加、終了時刻があれば途中抜け（データの形は管理画面・募集フォーマットと同じ）
     var part = choice === "part", rally = $("fRallyOn").checked;
@@ -773,7 +800,8 @@
       marchPet: numValue("fMarchPet"),
       rallyCount: rally ? numValue("fRallyCount") : null,
       rallyPet: rally ? numValue("fRallyPet") : null,
-      rallySpeedPet: rally ? numValue("fRallySpeedPet") : null
+      rallySpeedPet: rally ? numValue("fRallySpeedPet") : null,
+      proxyBy: proxyBy() // 代理で入力した人の名前（本人なら空）
     };
   }
 
@@ -819,10 +847,11 @@
   // 入力の確認。問題があればメッセージを返す
   function checkForm(m) {
     function bad(v) { return v != null && !(v >= 0 && Math.floor(v) === v); }
+    if ($("fProxyOn").checked && !m.proxyBy) return "代理で入力しているときは、入力している人（あなた）の名前を入れてください";
+    if (m.proxyBy && nameKey(m.proxyBy) === nameKey(me.name)) return "代理の名前が登録する人と同じです。本人が入力するときは「代理で入力している」のチェックを外してください";
     if (!/^[A-Za-z]{3}$/.test(m.alliance)) return "同盟は英字3文字で入れてください（例: EGG）";
     if (m.entry === "absent") return "";
     if (radioValue("fEntry") === "part" && !m.joinAt && !m.leaveAt) return "一部参加のときは「何時から」か「何時まで」を入れてください";
-    if (m.marchCount == null) return "出征部隊数を入れてください";
     if (m.marchPet == null) return "出征容量ペットを選んでください";
     if (bad(m.marchCount) || bad(m.rallyCount)) return "部隊数は数字で入れてください";
     if ($("fRallyOn").checked) {
@@ -843,10 +872,13 @@
     var m = cancel ? null : readForm();
     var err = m && checkForm(m);
     if (err) { setMsg($("formMsg"), err, false); return; }
+    var by = cancel ? proxyBy() : m.proxyBy;
+    if (cancel && $("fProxyOn").checked && !by) { setMsg($("formMsg"), "代理で取り消すときは、入力している人（あなた）の名前を入れてください", false); return; }
+    if (by) store(PROXY_KEY, by);
     setSaving(true);
     setMsg($("formMsg"), cancel ? "取り消し中…" : "保存中…", true);
     var payload = { action: "selfSave", eventId: currentEventId, userId: me.userId, name: me.name, cancel: !!cancel, entry: m,
-      ua: navigator.userAgent };
+      proxyBy: by, ua: navigator.userAgent };
     // 登録の記録用に、この端末のIPを調べて一緒に送る（管理者だけが見られる記録に残る。調べられなくても登録はできる）
     lookupIp().then(function(ip) {
       payload.ip = ip;
@@ -883,6 +915,8 @@
     startForm(me.userId ? userById(me.userId) : null, me.name);
   });
   $("anotherBtn").addEventListener("click", function() {
+    // 別の人を登録する＝代理入力。入力している人は、いま代理で入れていた人か、いま登録した本人
+    nextProxy = proxyBy() || (me ? me.name : "");
     me = null;
     $("nameInput").value = "";
     $("candView").style.display = "none";

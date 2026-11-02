@@ -319,6 +319,7 @@ function selfSave_(token, p) {
           vc: row.vc, vivian4: row.vivian4, mayChange: row.mayChange, troops: row.troops, tier: row.tier, joinAt: row.joinAt, leaveAt: row.leaveAt,
           note: row.note, marchCount: row.marchCount, marchPet: row.marchPet, rallyCount: row.rallyCount,
           rallyPet: row.rallyPet, rallySpeedPet: row.rallySpeedPet, marchCap: row.marchCap, rallyCap: row.rallyCap,
+          proxyBy: clip_(p.proxyBy, 30), // 代理で入力した人の名前（本人の入力なら ""）
           updatedAt: new Date().toISOString(),
           id: existing ? existing.id : newId_("r"), eventId: ev.id, userId: user.id
         };
@@ -330,7 +331,7 @@ function selfSave_(token, p) {
       d.updated = new Date().toISOString();
       var w = writeFile_(token, d, f.sha, "Self registration: " + ev.type + " " + ev.date);
       if (w.ok) {
-        appendLog_({ t: d.updated, ev: ev.type + " " + ev.date, name: user.name, uid: user.id, act: result,
+        appendLog_({ t: d.updated, ev: ev.type + " " + ev.date, name: user.name, uid: user.id, act: result, by: clip_(p.proxyBy, 30),
           ip: String(p.ip || "").replace(/[^0-9a-fA-F:.]/g, "").slice(0, 45), ua: clip_(p.ua, 120) });
         return { ok: true, result: result, userId: user.id, name: user.name };
       }
