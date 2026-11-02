@@ -78,6 +78,12 @@
   td.result-their{ background:color-mix(in srgb, var(--their) 12%, var(--surface)); color:var(--their); }
   td.result-tie{ color:var(--tie); }
   .opp-select{ font: inherit; font-size:0.8rem; padding:4px 6px; border-radius:6px; border:1px solid var(--border); background:var(--surface); color:var(--ink); max-width:220px; }
+  .event-box{ display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 16px; margin-bottom:18px; box-shadow:var(--shadow); font-size:0.85rem; }
+  .event-box label{ color:var(--ink-dim); font-size:0.78rem; }
+  .event-box select{ font:inherit; font-size:0.84rem; padding:5px 8px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--ink); }
+  .event-box button{ font:inherit; font-size:0.82rem; padding:7px 14px; border-radius:8px; border:none; background:var(--accent); color:#fff; cursor:pointer; }
+  .event-box button:disabled{ opacity:0.45; cursor:default; }
+  .event-box .event-msg{ font-size:0.76rem; color:var(--ink-faint); }
   .legend{ font-family:"Rajdhani","Yu Gothic UI",sans-serif; font-size:0.76rem; color:var(--ink-faint); margin:0 0 14px; line-height:1.6; }
   details.prompt-box{ margin-top:28px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:4px 16px; box-shadow:var(--shadow); }
   details.prompt-box summary{ cursor:pointer; padding:12px 0; font-weight:600; font-size:0.85rem; color:var(--ink-dim); user-select:none; }
@@ -98,6 +104,13 @@
     「相手」欄のプルダウンで、組み合わせを自由に変更できます（変更するとその場で勝敗を再計算します）。
     ※各鯖の人数はAPIが1ボードあたり最大100人までしか返さない仕様のため、上位100人（秘境の試練ランキング基準）までの集計です。実際の在籍者数とは異なります。
   </p>
+
+  <div class="event-box">
+    <label for="eventSelect">イベント:</label>
+    <select id="eventSelect"><option value="">（読み込み中…）</option></select>
+    <button type="button" id="savePairsBtn" disabled>💾 この組み合わせを保存</button>
+    <span class="event-msg" id="eventMsg"></span>
+  </div>
 
   <div class="stats">
     <div class="stat our"><div class="n" id="statOurWins">8</div><div class="l">うちが勝った順位</div></div>
@@ -264,7 +277,7 @@
   </details>
 
   <footer>
-    出典：MightPulse API（<a href="https://api.mightpulse.com/">api.mightpulse.com</a>）/v1/kingdoms/{kid}/ranks エンドポイント（board=mystic_trial, master_power, pet_power）をうち鯖・相手鯖それぞれで取得・集計。データ更新日時: 2026-11-03 00:10。このページは1065鯖との突合せ記録として残しています。
+    出典：MightPulse API（<a href="https://api.mightpulse.com/">api.mightpulse.com</a>）/v1/kingdoms/{kid}/ranks エンドポイント（board=mystic_trial, master_power, pet_power）をうち鯖・相手鯖それぞれで取得・集計。データ更新日時: 2026-11-03 00:21。このページは1065鯖との突合せ記録として残しています。
   </footer>
 
 </div>
@@ -329,8 +342,65 @@ function recalcSummary() {
 document.querySelectorAll(".opp-select").forEach(sel => {
   sel.addEventListener("change", () => recalcRow(parseInt(sel.dataset.idx, 10)));
 });
+
+// --- イベントごとに組み合わせを保存（管理者のみ）。カウントダウン表の「相手の名前」欄の自動入力に使われる ---
+const OPPONENT_LABEL = "1065鯖";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxu5HW9uLU9pCsUs1r_45xpuofWZmQAyZFDwSLK1C_7GvA7SDXZ4ayBEJTS0sR_8oToAw/exec";
+const EVENT_ID_KEY = "ksMatchupEventId";
+
+function gasCall(payload) {
+  return fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) })
+    .then(r => r.json());
+}
+
+function loadEvents() {
+  const sel = document.getElementById("eventSelect");
+  gasCall({ action: "pubGet" }).then(res => {
+    if (!res.ok) { sel.innerHTML = '<option value="">（読み込めませんでした）</option>'; return; }
+    const events = (res.history && res.history.events || []).filter(e => e.type === "KVK").sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+    if (!events.length) { sel.innerHTML = '<option value="">（KVKイベントがありません）</option>'; return; }
+    let saved = "";
+    try { saved = localStorage.getItem(EVENT_ID_KEY) || ""; } catch (e) {}
+    sel.innerHTML = '<option value="">（未選択）</option>' + events.map(e =>
+      `<option value="${e.id}"${e.id === saved ? " selected" : ""}>${e.date}</option>`
+    ).join("");
+    document.getElementById("savePairsBtn").disabled = !sel.value;
+  });
+}
+
+document.getElementById("eventSelect").addEventListener("change", function() {
+  try { localStorage.setItem(EVENT_ID_KEY, this.value); } catch (e) {}
+  document.getElementById("savePairsBtn").disabled = !this.value;
+  document.getElementById("eventMsg").textContent = "";
+});
+
+document.getElementById("savePairsBtn").addEventListener("click", function() {
+  const eventId = document.getElementById("eventSelect").value;
+  const msg = document.getElementById("eventMsg");
+  if (!eventId) { msg.textContent = "イベントを選んでください"; return; }
+  let password = "";
+  try { password = sessionStorage.getItem("ksAdminPw") || ""; } catch (e) {}
+  const pairs = [];
+  document.querySelectorAll(".opp-select").forEach(sel => {
+    const idx = sel.value === "" ? null : parseInt(sel.value, 10);
+    if (idx == null) return;
+    const o = OUR[parseInt(sel.dataset.idx, 10)];
+    const t = THEIR[idx];
+    pairs.push({ ourName: o.name, ourTag: o.tag, theirName: t.name, theirTag: t.tag });
+  });
+  this.disabled = true;
+  msg.textContent = "保存中…";
+  gasCall({ action: "matchupSave", password, eventId, opponentLabel: OPPONENT_LABEL, pairs }).then(res => {
+    if (!res.ok) { msg.textContent = "保存できませんでした: " + (res.error || res.status); return; }
+    msg.textContent = `保存しました（${pairs.length}人分）。カウントダウン表に反映されます`;
+  }).catch(() => {
+    msg.textContent = "通信エラーで保存できませんでした";
+  }).then(() => { this.disabled = false; });
+});
+
+loadEvents();
 </script>
 
-<script src="kvk-auth-gate.js?v=20261103001247"></script>
+<script src="kvk-auth-gate.js?v=20261103002236"></script>
 </body>
 </html>

@@ -139,7 +139,7 @@
     <button type="button" class="ks-toggle-btn" id="ksToggleBtn" onclick="ksToggleSidebar()" aria-label="メニュー開閉">←</button>
   </div>
   <nav>
-    <a href="../index.html?v=20261103001247" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261103001247" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261103001247" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261103001247" class="ks-link ks-active" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261103001247" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a>
+    <a href="../index.html?v=20261103002236" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261103002236" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261103002236" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261103002236" class="ks-link ks-active" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261103002236" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -184,7 +184,11 @@
   </div>
   <div class="cfg-row">
     <button type="button" class="btn secondary small" id="importBtn">選択中イベントの集結参加者を取り込む（名簿を上書き）</button>
-    <span class="save-note">ユーザー登録で「集結の指示があった」に数を入れた人だけを、名前・速度ペットLvつきで取り込みます（到着秒数・グループは未入力のまま）</span>
+    <span class="save-note">ユーザー登録で「集結の指示があった」に数を入れた人だけを、名前・速度ペットLvつきで取り込みます（KvK相手突合せで保存済みの組み合わせがあれば、相手の名前も自動で入ります）</span>
+  </div>
+  <div class="cfg-row">
+    <button type="button" class="btn secondary small" id="fillOpponentBtn">相手の名前を自動入力（突合せから）</button>
+    <span class="save-note">名簿はそのままに、空欄の「相手の名前」だけをKvK相手突合せで保存済みの組み合わせから埋めます</span>
   </div>
 </div>
 
@@ -331,6 +335,7 @@ function fetchRegData(){
     if(!res.ok) throw new Error(res.error || "読み込めませんでした");
     regData = {
       events: res.events || [], users: res.users || [], entries: res.entries || [], kvkRosters: res.kvkRosters || [],
+      matchupPairs: res.matchupPairs || [],
       history: res.history || { events: [], entries: [] },
     };
     refreshEventSelect();
@@ -609,6 +614,14 @@ document.getElementById("sharedSaveBtn").addEventListener("click", () => {
   });
 });
 
+// KvK相手突合せで保存済みの組み合わせから、この名前の「相手」を探す（このイベント分のみ）
+function opponentFromMatchup(name){
+  const rec = (regData.matchupPairs || []).find(r => r.eventId === currentEventId);
+  if(!rec) return "";
+  const pair = (rec.pairs || []).find(p => p.ourName === name);
+  return pair ? pair.theirName : "";
+}
+
 document.getElementById("importBtn").addEventListener("click", () => {
   if(!currentEventId){ alert("イベントを選んでください"); return; }
   if(mode === "shared" && !isEventOpen(currentEventId)){ alert("このイベントは終了しているため更新できません"); return; }
@@ -617,8 +630,23 @@ document.getElementById("importBtn").addEventListener("click", () => {
   if(!confirm(`名簿を一旦クリアして、${targets.length}人を取り込みます。よろしいですか？`)) return;
   rosterRows = targets.map(e => {
     const u = regData.users.find(x => x.id === e.userId);
-    return newRow({ name: u ? u.name : "?", march: 0, adj: 0, petLevel: e.rallySpeedPet || 0, usePet: true, group: "", opponentName: "", opponentSec: "" });
+    const name = u ? u.name : "?";
+    return newRow({ name, march: 0, adj: 0, petLevel: e.rallySpeedPet || 0, usePet: true, group: "", opponentName: opponentFromMatchup(name), opponentSec: "" });
   });
+  renderRoster();
+  persistState();
+  compute();
+});
+
+document.getElementById("fillOpponentBtn").addEventListener("click", () => {
+  if(!currentEventId){ alert("イベントを選んでください"); return; }
+  let filled = 0;
+  rosterRows.forEach(row => {
+    if(row.opponentName) return;
+    const opp = opponentFromMatchup(row.name.trim());
+    if(opp){ row.opponentName = opp; filled++; }
+  });
+  if(!filled){ alert("突合せの保存済みデータに、該当する名前が見つかりませんでした"); return; }
   renderRoster();
   persistState();
   compute();

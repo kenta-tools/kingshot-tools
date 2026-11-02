@@ -71,6 +71,8 @@ function handle_(p) {
     if (p.action === "setBlocklist") return json_(writeBlocklist_(p.list));
     // Discord の招待リンク（GitHub Actions が毎朝作って送ってくる）
     if (p.action === "setDiscordInvite") return json_(setDiscordInvite_(p.invite));
+    // KvK相手突合せの「うちの誰が相手の誰と対戦するか」の保存（管理者のみ）。イベントID単位で1件、まるごと上書き
+    if (p.action === "matchupSave") return json_(matchupSave_(token, p));
 
     // 管理画面とのやりとりは GitHub 時代と同じ形（content=Base64のJSON、sha=版番号）
     if (p.action === "get") {
@@ -121,6 +123,8 @@ function pubGet_(token) {
     // 更新を締め切るかどうかはクライアント側で「そのイベントがopenか」を見て判断する）
     kvkRosters: d.kvkRosters || [],
     flameRosters: d.flameRosters || [],
+    // KvK相手突合せで保存した「うちの誰が相手の誰と対戦するか」（名前のペアのみ。管理者のみ保存可、閲覧はパスワード不要）
+    matchupPairs: d.matchupPairs || [],
     history: {
       events: (d.events || []).map(function(e) { return { id: e.id, type: e.type, date: e.date }; }),
       entries: d.entries || []
@@ -241,6 +245,48 @@ function flameSave_(token, p) {
 
       d.updated = new Date().toISOString();
       var w = writeFile_(token, d, f.sha, "Flame dragon shared roster saved");
+      if (w.ok) return { ok: true };
+      if (w.status !== 409 && w.status !== 422) return w;
+      // 直前に他の人が保存した → 取り直してもう一度
+    }
+    return { ok: false, status: 409, error: "混み合っています。もう一度押してください" };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// KvK相手突合せ（管理者のみ・パスワード必須）の「うちの誰が相手の誰と対戦するか」の保存。
+// イベントID単位で1件、名前のペアまるごと上書き（kvkSave_と同じ形）。
+// p: { eventId, opponentLabel, pairs: [{ourName, ourTag, theirName, theirTag}, ...] }
+function matchupSave_(token, p) {
+  if (!p.eventId) return { ok: false, status: 400, error: "イベントが選ばれていません" };
+  var pairs = (Array.isArray(p.pairs) ? p.pairs : []).slice(0, 200).map(function(x) {
+    return {
+      ourName: clip_(x.ourName, 30),
+      ourTag: clip_(x.ourTag, 10),
+      theirName: clip_(x.theirName, 30),
+      theirTag: clip_(x.theirTag, 10)
+    };
+  }).filter(function(x) { return x.ourName && x.theirName; });
+
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) return { ok: false, status: 503, error: "混み合っています。少し待ってからもう一度押してください" };
+  try {
+    for (var attempt = 0; attempt < 3; attempt++) {
+      var f = readFile_(token);
+      if (!f.ok) return f;
+      var d = f.data;
+      if (!(d.events || []).some(function(e) { return e.id === p.eventId; })) {
+        return { ok: false, status: 400, error: "そのイベントが見つかりません" };
+      }
+      d.matchupPairs = d.matchupPairs || [];
+      var existing = d.matchupPairs.filter(function(x) { return x.eventId === p.eventId; })[0];
+      var record = { eventId: p.eventId, opponentLabel: clip_(p.opponentLabel, 40), pairs: pairs, updatedAt: new Date().toISOString() };
+      if (existing) d.matchupPairs[d.matchupPairs.indexOf(existing)] = record;
+      else d.matchupPairs.push(record);
+
+      d.updated = new Date().toISOString();
+      var w = writeFile_(token, d, f.sha, "KvK matchup pairs saved");
       if (w.ok) return { ok: true };
       if (w.status !== 409 && w.status !== 422) return w;
       // 直前に他の人が保存した → 取り直してもう一度
