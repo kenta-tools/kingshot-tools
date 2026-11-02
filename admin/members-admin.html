@@ -289,7 +289,7 @@
       <div class="msg" id="bulkMsg"></div>
       <div id="previewWrap" style="display:none; margin-top: 10px;">
         <table>
-          <thead><tr><th class="nosort">同盟</th><th class="nosort">参加</th><th class="nosort">G</th><th class="nosort">名前</th><th class="nosort">印</th><th class="nosort">兵種</th><th class="nosort">時間</th><th class="nosort">部隊・ペット</th><th class="nosort">備考</th><th class="nosort">更新日時</th><th class="nosort">ユーザー判定</th></tr></thead>
+          <thead><tr><th class="nosort">同盟</th><th class="nosort">参加</th><th class="nosort">G</th><th class="nosort">名前</th><th class="nosort">印</th><th class="nosort">兵種</th><th class="nosort">時間</th><th class="nosort">部隊・ペット</th><th class="nosort">容量（計算後）</th><th class="nosort">備考</th><th class="nosort">更新日時</th><th class="nosort">ユーザー判定</th></tr></thead>
           <tbody id="previewBody"></tbody>
         </table>
       </div>
@@ -387,6 +387,26 @@
       <div class="msg" id="formMsg"></div>
     </div>
 
+    <!-- 容量の計算 -->
+    <div class="card">
+      <h2>🧮 容量の計算</h2>
+      <div class="hint">入力された出征部隊数・集結部隊数（スキルやバフなしの値）に、ペットのスキルとバフを足した容量を計算します。下の参加者一覧の「容量（計算後）」と「AIに渡す用のデータ」がこの設定の数字になります（設定はこの端末に保存されます）。</div>
+      <div class="row" style="margin-top: 8px;">
+        <label class="hint"><input type="checkbox" id="capMarchSkill" checked> 出征スキル（巨大蛮牛：Lv×1,500。集結容量にも入る）</label>
+        <label class="hint"><input type="checkbox" id="capRallySkill" checked> 集結スキル（巨大ヘラジカ：50,000＋Lv×10,000）</label>
+      </div>
+      <div class="row" style="margin-top: 6px;">
+        <span class="hint">バフ</span>
+        <input type="number" id="capBuff" value="20" min="0" max="500" style="width: 80px;"><span class="hint">%</span>
+        <label class="hint"><input type="checkbox" id="capBuffRally" checked> 集結容量にかける</label>
+        <label class="hint"><input type="checkbox" id="capBuffMarch"> 出征容量にかける</label>
+        <span class="sep" style="display: inline-block; width: 1px; height: 20px; background: #e0e4ea;"></span>
+        <label class="hint"><input type="radio" name="capBuffBase" value="base" checked> スキルなしの容量にかける</label>
+        <label class="hint"><input type="radio" name="capBuffBase" value="withSkill"> スキル込みの容量にかける</label>
+      </div>
+      <div class="hint" id="capExample" style="margin-top: 6px;"></div>
+    </div>
+
     <!-- 参加者一覧 -->
     <div class="card">
       <div class="row" style="justify-content: space-between; margin-bottom: 10px;">
@@ -408,7 +428,7 @@
             <th class="nosort">印</th>
             <th data-key="tier">兵種</th>
             <th class="nosort">時間</th>
-            <th class="nosort">部隊・ペット</th>
+            <th class="nosort">部隊・ペット</th><th class="nosort">容量（計算後）</th>
             <th class="nosort">備考</th>
             <th class="nosort">更新日時</th>
             <th class="nosort"></th>
@@ -1295,6 +1315,58 @@
   }
 
   // 「出征3部隊 Lv50／集結1部隊 Lv40」
+  // ---------- 容量の計算（スキル・バフの組み合わせは「容量の計算」欄で選ぶ） ----------
+  var CAP_KEY = "ksCapSettings";
+  function capSettings() {
+    var base = document.querySelector("input[name=capBuffBase]:checked");
+    return {
+      marchSkill: $("capMarchSkill").checked, rallySkill: $("capRallySkill").checked,
+      buff: Math.max(0, Number($("capBuff").value) || 0) / 100,
+      buffRally: $("capBuffRally").checked, buffMarch: $("capBuffMarch").checked,
+      buffBase: base ? base.value : "base"
+    };
+  }
+  function marchPetBonus(lv) { return lv ? 1500 * lv : 0; }
+  function rallyPetBonus(lv) { return lv ? 50000 + 10000 * lv : 0; }
+
+  // 戻り値 { march, rally }（入力がない方は null）
+  function calcCapacity(m, cs) {
+    cs = cs || capSettings();
+    function apply(base, bonus, useBuff) {
+      if (base == null) return null;
+      var withSkill = base + bonus;
+      if (!useBuff || !cs.buff) return withSkill;
+      return Math.floor(cs.buffBase === "withSkill" ? withSkill * (1 + cs.buff) : base * (1 + cs.buff) + bonus);
+    }
+    var mBonus = cs.marchSkill ? marchPetBonus(m.marchPet) : 0;
+    var rBonus = mBonus + (cs.rallySkill ? rallyPetBonus(m.rallyPet) : 0);
+    return { march: apply(m.marchCount, mBonus, cs.buffMarch), rally: apply(m.rallyCount, rBonus, cs.buffRally) };
+  }
+
+  function calcText(m) {
+    var c = calcCapacity(m);
+    return [c.march != null ? "出征 " + c.march.toLocaleString() : "", c.rally != null ? "集結 " + c.rally.toLocaleString() : ""]
+      .filter(Boolean).join("／");
+  }
+
+  // いまの設定の説明（AI用データの見出しにも使う）
+  function capSettingText() {
+    var cs = capSettings(), parts = [];
+    parts.push(cs.marchSkill ? "出征スキルあり" : "出征スキルなし");
+    parts.push(cs.rallySkill ? "集結スキルあり" : "集結スキルなし");
+    if (cs.buff && (cs.buffRally || cs.buffMarch)) {
+      parts.push("バフ" + Math.round(cs.buff * 100) + "%（" + [cs.buffRally ? "集結" : "", cs.buffMarch ? "出征" : ""].filter(Boolean).join("・") +
+        "、" + (cs.buffBase === "withSkill" ? "スキル込みの容量" : "スキルなしの容量") + "にかける）");
+    } else parts.push("バフなし");
+    return parts.join("・");
+  }
+
+  function renderCapExample() {
+    var ex = calcCapacity({ marchCount: 187910, marchPet: 10, rallyCount: 1380410, rallyPet: 10 });
+    $("capExample").textContent = "いまの設定：" + capSettingText() + "。例）出征187,910・集結1,380,410・ペットLv10 → 出征 " +
+      ex.march.toLocaleString() + "／集結 " + ex.rally.toLocaleString();
+  }
+
   function capText(m) {
     function part(label, count, pet) {
       if (count == null && pet == null) return "";
@@ -1637,6 +1709,7 @@
       '<td>' + escapeHtml(troopText(m)) + '</td>' +
       '<td>' + escapeHtml(timeText(m)) + '</td>' +
       '<td class="num">' + escapeHtml(capText(m)) + '</td>' +
+      '<td class="num" style="white-space: nowrap;">' + escapeHtml(calcText(m)) + '</td>' +
       '<td>' + escapeHtml(m.note) + '</td>' +
       '<td style="white-space: nowrap;">' + escapeHtml(m.updatedAt ? formatTime(m.updatedAt) : "") + '</td>' +
       (withOps
@@ -1665,7 +1738,7 @@
       html.push('<tr data-id="' + m.id + '"' + (m.id === editingId ? ' class="editing"' : "") + '>' + memberRowHtml(m, true) + '</tr>');
     });
     if (!rows.length) {
-      html.push('<tr><td colspan="11" class="hint" style="text-align:center;">このイベントにはまだ参加者が登録されていません</td></tr>');
+      html.push('<tr><td colspan="12" class="hint" style="text-align:center;">このイベントにはまだ参加者が登録されていません</td></tr>');
     }
     $("memberBody").innerHTML = html.join("");
     $("countText").textContent = (q || fa) ? "（" + shown + " / " + rows.length + "人）" : "（" + rows.length + "人）";
@@ -1788,6 +1861,33 @@
   });
   $("filterInput").addEventListener("input", renderEntries);
   $("filterAlliance").addEventListener("change", renderEntries);
+
+  // 容量の計算の設定（この端末に保存）
+  (function() {
+    try {
+      var saved = JSON.parse(localStorage.getItem(CAP_KEY) || "null");
+      if (saved) {
+        $("capMarchSkill").checked = saved.marchSkill; $("capRallySkill").checked = saved.rallySkill;
+        $("capBuff").value = saved.buffPct; $("capBuffRally").checked = saved.buffRally; $("capBuffMarch").checked = saved.buffMarch;
+        document.querySelectorAll("input[name=capBuffBase]").forEach(function(r) { r.checked = r.value === saved.buffBase; });
+      }
+    } catch (e) {}
+    renderCapExample();
+  })();
+  ["capMarchSkill", "capRallySkill", "capBuff", "capBuffRally", "capBuffMarch"].forEach(function(id) {
+    $(id).addEventListener("input", onCapChange);
+    $(id).addEventListener("change", onCapChange);
+  });
+  document.querySelectorAll("input[name=capBuffBase]").forEach(function(r) { r.addEventListener("change", onCapChange); });
+  function onCapChange() {
+    var cs = capSettings();
+    try {
+      localStorage.setItem(CAP_KEY, JSON.stringify({ marchSkill: cs.marchSkill, rallySkill: cs.rallySkill, buffPct: $("capBuff").value,
+        buffRally: cs.buffRally, buffMarch: cs.buffMarch, buffBase: cs.buffBase }));
+    } catch (e) {}
+    renderCapExample();
+    if (currentEventId) { renderEntries(); refreshAiText(); }
+  }
   $("userFilterInput").addEventListener("input", renderUsers);
 
   function setMsg(el, text, ok) {
@@ -2385,7 +2485,8 @@
       "マンスリー": m.monthly, "途中抜け": m.leaveEarly, "VC": m.vc, "ビビアン星4以上": m.vivian4, "変更の可能性": m.mayChange,
       "兵種": m.troops, "T": m.tier, "参加開始": m.joinAt, "抜ける時刻": m.leaveAt, "備考": m.note,
       "出征部隊数": m.marchCount, "出征容量ペットLv": m.marchPet, "集結部隊数": m.rallyCount, "集結容量ペットLv": m.rallyPet,
-      "行軍速度ペットLv": m.rallySpeedPet
+      "行軍速度ペットLv": m.rallySpeedPet,
+      "出征容量（計算後）": calcCapacity(m).march, "集結容量（計算後）": calcCapacity(m).rally
     };
   }
 
@@ -2409,13 +2510,15 @@
       "- 出征部隊数・出征容量ペットLv: 出せる部隊の数と、出征容量を上げるペットのレベル（全員が登録）",
       "- 集結部隊数・集結容量ペットLv・行軍速度ペットLv: 集結の部隊の数と、集結容量・行軍速度を上げるペットのレベル（集結の指示があった人だけ登録。空欄は対象外）",
       "- ペットLvの効果（0は持っていない）: 出征容量ペット Lv×1,500（最大Lv10で+15,000）／集結容量ペット 50,000＋Lv×10,000（Lv1で+60,000、最大Lv10で+150,000）／行軍速度ペット Lv1で+15%・Lv7まで1つ上がるごとに+2%（Lv7で+27%）・最大Lv8で+30%",
+      "- 出征部隊数・集結部隊数: ペットのスキルやバフがない状態で、野獣に1軍で攻撃（集結攻撃）したときの数",
+      "- 出征容量（計算後）・集結容量（計算後）: 上の部隊数にスキルとバフを加えた容量。計算の条件: " + capSettingText(),
       "",
       "## データ（" + (format === "csv" ? "CSV" : "JSON") + "）"
     ];
     var body;
     if (format === "csv") {
       var cols = ["同盟", "名前", "参加", "区分", "マンスリー", "途中抜け", "VC", "ビビアン星4以上", "変更の可能性", "兵種", "T", "参加開始", "抜ける時刻", "備考",
-        "出征部隊数", "出征容量ペットLv", "集結部隊数", "集結容量ペットLv", "行軍速度ペットLv"];
+        "出征部隊数", "出征容量ペットLv", "集結部隊数", "集結容量ペットLv", "行軍速度ペットLv", "出征容量（計算後）", "集結容量（計算後）"];
       body = [cols.join(",")].concat(rows.map(function(m) {
         var r = aiRecord(m);
         return cols.map(function(c) {
