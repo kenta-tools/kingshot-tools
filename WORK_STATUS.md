@@ -106,3 +106,4 @@ Kingshot関連の単体HTMLツールのうち、ゲームプレイの実務で�
 - 2026-11-02: 登録ページにDiscord参加の案内（招待リンク https://discord.gg/NZj5xSpbY は30日で期限切れ＝12/1頃。無期限リンクができたら entry/index.html の href を差し替え）。何時から/まではtime入力（保存は21時/21時30分）
 - 2026-11-02: Discord招待リンクのbot自動更新（GAS refreshDiscordInvite/setupDiscordInvite、@14）は作成済み。ユーザーがサーバー管理者でないためbot追加・プロパティ設定は保留。予備リンク https://discord.gg/NZj5xSpbY は12/1頃期限切れ
 - 2026-11-02: 容量（計算後）を entries の marchCap / rallyCap に保存（GAS cleanEntry_→calcCap_、管理画面 normalizeRow/toEntry→withCap）。条件は固定：両ペットスキルあり・バフ20%をスキルなしの出征容量にかけ、出征で増えた分（スキル＋バフ）を集結容量にも足す。管理画面の容量設定欄は削除、「1人ずつ登録」欄は一覧の「変更」時だけ表示。GASの部隊数上限 99,999→99,999,999 に修正。GAS @15
+- 2026-11-02: TOPに「📘 仕様まとめ」（spec/index.html が spec/spec.md を読み込んで表示、AIに渡す用コピー・URLコピー）。**サイトを更新したら必ず spec/spec.md も同じコミットで更新する**（ユーザー指示）。登録ページの一覧を「登録状況を見る」にし、今回未登録の人を前回イベントの内容で灰色表示（参加・時間・ひとこと・更新日時は空欄、ボタンは「登録する」）。管理画面の受付ボタンを「受付を始める」に
