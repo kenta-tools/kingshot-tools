@@ -528,13 +528,18 @@ function importFromGitHub_(token) {
 // 初回だけ: エディタで関数「setupDiscordInvite」を実行 → 毎日朝5時台に作り直すトリガーができ、すぐ1回作る
 var DISCORD_INVITE_DAYS = 7; // 1つのリンクの有効日数（古いリンクは作り直すたびに消すので、消せなかったときの保険）
 
+// Discord は bot の通信に「DiscordBot (URL, バージョン)」形式の User-Agent を求める（ないと 40333 で断られることがある）
+function discordHeaders_(token) {
+  return { Authorization: "Bot " + token, "User-Agent": "DiscordBot (https://kenta-tools.github.io/kingshot-tools/, 1.0)" };
+}
+
 function refreshDiscordInvite() {
   var props = PropertiesService.getScriptProperties();
   var token = props.getProperty("DISCORD_BOT_TOKEN"), channel = props.getProperty("DISCORD_CHANNEL_ID");
   if (!token || !channel) throw new Error("スクリプトプロパティ DISCORD_BOT_TOKEN と DISCORD_CHANNEL_ID を設定してください");
   var r = UrlFetchApp.fetch("https://discord.com/api/v10/channels/" + encodeURIComponent(channel) + "/invites", {
     method: "post", contentType: "application/json", muteHttpExceptions: true,
-    headers: { Authorization: "Bot " + token },
+    headers: discordHeaders_(token),
     payload: JSON.stringify({ max_age: DISCORD_INVITE_DAYS * 86400, max_uses: 0, temporary: false, unique: true })
   });
   var code = r.getResponseCode();
@@ -554,7 +559,7 @@ function refreshDiscordInvite() {
 
 // 有効なリンクを1つにするため、このチャンネルで bot が作った古い招待リンクを消す（失敗しても新しいリンクはそのまま使える）
 function deleteOldDiscordInvites_(token, channel, keepCode, prevUrl) {
-  var headers = { Authorization: "Bot " + token };
+  var headers = discordHeaders_(token);
   var codes = [];
   try {
     var me = JSON.parse(UrlFetchApp.fetch("https://discord.com/api/v10/users/@me", { headers: headers }).getContentText());
