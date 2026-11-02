@@ -95,6 +95,7 @@
   td.note { white-space: normal; min-width: 120px; }
   td .edit { padding: 4px 10px; font-size: 13px; }
   tr.absent td { color: #999; }
+  tr.prev td { color: #8a94a3; background: #fafbfc; }
   .list-filter { margin-top: 10px; max-width: 200px; }
   th { background: #f0f2f5; white-space: nowrap; }
   td.marks { letter-spacing: 2px; white-space: nowrap; }
@@ -106,7 +107,7 @@
 
 <div class="row" style="justify-content: space-between;">
   <h1>📝 イベント参加登録</h1>
-  <a href="../index.html?v=20261102221958" class="top-link">← TOP</a>
+  <a href="../index.html?v=20261102222710" class="top-link">← TOP</a>
 </div>
 <div class="howto">
   ① 名前を入れて「次へ」<br>
@@ -298,8 +299,9 @@
   <!-- 登録済みの人 -->
   <div class="card">
     <details id="listDetails">
-      <summary>登録済みの人を見る <span id="listCount"></span></summary>
-      <div class="list-warn">⚠ 代理で入力するとき以外は、別の人の「直す」を押さないでください（開くだけなら問題ありませんが、誤って登録しないよう注意してください）。</div>
+      <summary>登録状況を見る <span id="listCount"></span></summary>
+      <div class="list-warn">⚠ 代理で入力するとき以外は、別の人の「直す」「登録する」を押さないでください（開くだけなら問題ありませんが、誤って登録しないよう注意してください）。</div>
+      <div style="font-size: 12px; color: #666; margin: 4px 0;">今回まだ登録していない人は、灰色で前回のイベントの内容を表示しています（参加・時間・ひとこと・更新日時は空欄）。</div>
       <select id="listAlliance" class="list-filter"></select>
       <div class="table-wrap">
         <table>
@@ -489,11 +491,24 @@
     var rows = data.entries.filter(function(e) { return e.eventId === currentEventId; }).map(function(e) {
       var u = userById(e.userId);
       return Object.assign({}, e, { name: u ? u.name : "?" });
-    }).sort(function(a, b) {
-      return (a.entry === "absent") - (b.entry === "absent") || a.alliance.localeCompare(b.alliance) || GRADES.indexOf(a.grade) - GRADES.indexOf(b.grade) || a.name.localeCompare(b.name);
+    });
+    // 今回まだ登録していない人は、前回のイベントの内容を出す（参加・時間・ひとこと・更新日時など今回の分は空欄）
+    var done = {};
+    rows.forEach(function(m) { done[m.userId] = true; });
+    data.users.forEach(function(u) {
+      if (done[u.id]) return;
+      var p = previousEntry(u.id);
+      if (p) rows.push(Object.assign({}, p, { name: u.name, alliance: u.alliance || p.alliance, prev: true,
+        entry: "", joinAt: "", leaveAt: "", leaveEarly: false, mayChange: false, note: "", updatedAt: "" }));
+    });
+    function rank(m) { return m.prev ? 2 : m.entry === "absent" ? 1 : 0; }
+    rows.sort(function(a, b) {
+      return rank(a) - rank(b) || a.alliance.localeCompare(b.alliance) || GRADES.indexOf(a.grade) - GRADES.indexOf(b.grade) || a.name.localeCompare(b.name);
     });
     var absent = rows.filter(function(m) { return m.entry === "absent"; }).length;
-    $("listCount").textContent = "（参加" + (rows.length - absent) + "人" + (absent ? "・不参加" + absent + "人" : "") + "）";
+    var notYet = rows.filter(function(m) { return m.prev; }).length;
+    $("listCount").textContent = "（参加" + (rows.length - absent - notYet) + "人" + (absent ? "・不参加" + absent + "人" : "") +
+      (notYet ? "・未登録" + notYet + "人" : "") + "）";
 
     // 同盟で絞り込み（選んでいた同盟は残す）
     var sel = $("listAlliance"), picked = sel.value, alliances = [];
@@ -509,9 +524,9 @@
     $("listBody").innerHTML = shown.length ? shown.map(function(m) {
       var mine = me && me.userId === m.userId, abs = m.entry === "absent";
       var time = m.joinAt || m.leaveAt ? (m.joinAt || "") + "〜" + (m.leaveAt || "") : "";
-      return '<tr class="' + (mine ? "me" : "") + (abs ? " absent" : "") + '">' +
-        '<td><button type="button" class="sub-btn edit" data-user="' + escapeHtml(m.userId) + '">直す</button></td>' +
-        "<td>" + v(m.alliance) + "</td><td>" + v(m.name) + "</td><td>" + entryLabel(m) + (m.mayChange ? "（変更の可能性あり）" : "") + "</td>" +
+      return '<tr class="' + (mine ? "me" : "") + (abs ? " absent" : "") + (m.prev ? " prev" : "") + '">' +
+        '<td><button type="button" class="sub-btn edit" data-user="' + escapeHtml(m.userId) + '">' + (m.prev ? "登録する" : "直す") + '</button></td>' +
+        "<td>" + v(m.alliance) + "</td><td>" + v(m.name) + "</td><td>" + (m.prev ? "未登録" : entryLabel(m) + (m.mayChange ? "（変更の可能性あり）" : "")) + "</td>" +
         (abs ? '<td colspan="9"></td>' :
           "<td>" + v(m.grade) + '</td><td class="marks">' + marksOf(m) + "</td><td>" + v(m.troops) + "</td><td>" + v(time) + "</td>" +
           "<td>" + v(m.marchCount) + "</td><td>" + pet(m.marchPet) + "</td><td>" + v(m.rallyCount) + "</td><td>" +

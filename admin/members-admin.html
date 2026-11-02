@@ -165,14 +165,14 @@
   <input type="password" id="pwInput" placeholder="パスワード" autocomplete="current-password">
   <button type="button" id="loginBtn">ログイン</button>
   <div class="msg err" id="loginMsg"></div>
-  <a href="../index.html?v=20261102221958" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
+  <a href="../index.html?v=20261102222710" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
 </div>
 
 <div id="appView">
   <div class="row" style="justify-content: space-between;">
     <h1>👥 メンバー管理（管理者）</h1>
     <div class="row">
-      <a href="../index.html?v=20261102221958" class="top-link">← TOP</a>
+      <a href="../index.html?v=20261102222710" class="top-link">← TOP</a>
       <button type="button" class="sub-btn small" id="logoutBtn">ログアウト</button>
     </div>
   </div>
@@ -1620,7 +1620,7 @@
     $("openState").textContent = STATUS_LABEL[st] || "";
     $("openState").className = "pill " + ({ open: "saved", running: "running", done: "done" }[st] || "");
     $("toggleOpenBtn").style.display = cur && st !== "done" ? "inline-block" : "none";
-    $("toggleOpenBtn").textContent = st === "open" ? "受付を締め切る（進行中にする）" : "受付を再開する";
+    $("toggleOpenBtn").textContent = st === "open" ? "受付を締め切る（進行中にする）" : "受付を始める";
     $("doneBtn").style.display = cur && st !== "open" ? "inline-block" : "none";
     $("doneBtn").textContent = st === "done" ? "進行中に戻す" : "完了にする";
 
@@ -1852,7 +1852,7 @@
     } else {
       ev = { id: newId("e"), type: type, date: date };
       state.events.push(ev);
-      setMsg($("eventMsg"), "「" + eventLabel(ev) + "」を作成しました", true);
+      setMsg($("eventMsg"), "「" + eventLabel(ev) + "」を作成しました。個人登録ページに出すには「受付を始める」→「💾 保存する」を押してください", true);
     }
     currentEventId = ev.id;
     resetForm(false);
