@@ -50,6 +50,16 @@
   .discord summary { cursor: pointer; font-weight: bold; color: #4752c4; }
   .discord .dc-head { font-weight: bold; margin-top: 8px; color: #333; }
   .discord a.join { display: inline-block; margin: 6px 0 4px; padding: 10px 18px; border-radius: 8px; background: #5865f2; color: #fff; font-weight: bold; text-decoration: none; }
+  .discord .dc-apps { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 8px; }
+  .discord a.dc-app { display: block; padding: 9px 14px; border-radius: 8px; background: #fff; border: 1px solid #c9cdfb; color: #333; font-weight: bold; text-decoration: none; }
+  .discord a.dc-app.mine { border: 2px solid #5865f2; background: #f4f5ff; }
+  .discord a.dc-app .mine-tag { display: none; margin-left: 6px; padding: 1px 8px; border-radius: 10px; background: #5865f2; color: #fff; font-size: 12px; }
+  .discord a.dc-app.mine .mine-tag { display: inline-block; }
+  /* PCのときだけ、スマホで読み取るQRコードを出す */
+  .discord .dc-qr { display: none; }
+  .discord.pc .dc-qr { display: flex; align-items: center; gap: 10px; margin: 0 0 4px 4px; font-size: 12px; color: #555; }
+  .discord .dc-qr .qr { width: 104px; height: 104px; background: #fff; padding: 4px; border-radius: 6px; flex: none; }
+  .discord .dc-qr .qr img, .discord .dc-qr .qr canvas { width: 96px !important; height: 96px !important; }
 
   .field { margin-bottom: 16px; }
   .cap { display: block; font-size: 14px; font-weight: bold; margin-bottom: 6px; }
@@ -125,14 +135,23 @@
   ① 下の「Discordに参加する」を押す<br>
   ② Discordが開いたら「招待を受ける」（または「参加する」）を押す<br>
   ③ 参加できたら、このページに戻って登録する<br>
+  <a class="join" href="https://discord.gg/NZj5xSpbY" target="_blank" rel="noopener">Discordに参加する</a>
   <div class="dc-head">Discordのアカウントを持っていない人</div>
-  ① スマホなら、App Store（iPhone）か Google Play（Android）で「Discord」を検索してアプリを入れる（PCならそのまま②へ）<br>
-  ② 下の「Discordに参加する」を押し、「登録」（アカウント作成）を選ぶ<br>
+  ① 使っているものに合わせて、どれか1つを押す<br>
+  <div class="dc-apps">
+    <a class="dc-app" data-os="ios" href="https://apps.apple.com/jp/app/discord/id985746746" target="_blank" rel="noopener">🍎 iPhone・iPad：App Store でアプリを入れる<span class="mine-tag">この端末</span></a>
+    <div class="dc-qr" data-os="ios"><div class="qr" data-qr="https://apps.apple.com/jp/app/discord/id985746746"></div>iPhoneのカメラで読み取ると、App Store のDiscordのページが開きます</div>
+    <a class="dc-app" data-os="android" href="https://play.google.com/store/apps/details?id=com.discord" target="_blank" rel="noopener">🤖 Android：Google Play でアプリを入れる<span class="mine-tag">この端末</span></a>
+    <div class="dc-qr" data-os="android"><div class="qr" data-qr="https://play.google.com/store/apps/details?id=com.discord"></div>Androidのカメラ（またはQRコードの読み取り）で読み取ると、Google Play のDiscordのページが開きます</div>
+    <a class="dc-app" data-os="web" href="https://discord.com/register" target="_blank" rel="noopener">🌐 PC・アプリを入れない人：ブラウザで登録する<span class="mine-tag">この端末</span></a>
+  </div>
+  ② アプリを入れた人は、アプリを開いて「登録」（アカウント作成）を押す（ブラウザの人は、開いた画面でそのまま次へ）<br>
   ③ メールアドレス（または電話番号）・表示名・ユーザー名・パスワード・生年月日を入れて登録する<br>
   ④ 届いたメールの「メールアドレスを認証」を押す<br>
-  ⑤ もう一度「Discordに参加する」を押し、「招待を受ける」を押す<br>
-  ⑥ 参加できたら、このページに戻って登録する<br>
+  ⑤ このページに戻って、下の「Discordに参加する」を押し、「招待を受ける」を押す<br>
+  ⑥ 参加できたら、このページで参加登録をする<br>
   <a class="join" href="https://discord.gg/NZj5xSpbY" target="_blank" rel="noopener">Discordに参加する</a>
+  <div class="dc-qr"><div class="qr" id="joinQr"></div>スマホでDiscordに参加するときは、このQRコードを読み取ってください</div>
 </details>
 
 <div class="card center" id="loadingView">読み込み中…</div>
@@ -346,6 +365,35 @@
   var saving = false;
 
   function $(id) { return document.getElementById(id); }
+
+  // Discordの案内: この端末に合うボタン（App Store／Google Play／ブラウザ）を目立たせる
+  (function() {
+    var ua = navigator.userAgent || "";
+    var os = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) ? "ios"
+      : /Android/.test(ua) ? "android" : "web";
+    var mine = document.querySelector('a.dc-app[data-os="' + os + '"]');
+    if (os !== "web") { mine.classList.add("mine"); mine.parentNode.insertBefore(mine, mine.parentNode.firstChild); return; }
+    // PC: 3つとも出したまま、スマホで読み取るQRコードを付ける
+    mine.classList.add("mine");
+    document.querySelector(".discord").classList.add("pc");
+    var sc = document.createElement("script");
+    sc.src = "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js";
+    sc.onload = function() {
+      document.querySelectorAll(".discord .qr[data-qr]").forEach(function(el) { drawQr(el, el.dataset.qr); });
+      drawJoinQr();
+    };
+    document.head.appendChild(sc);
+  })();
+  function drawQr(el, text) {
+    if (!window.QRCode) return;
+    el.innerHTML = "";
+    new QRCode(el, { text: text, width: 96, height: 96, correctLevel: QRCode.CorrectLevel.M });
+  }
+  // 招待リンクのQRコード（中継役から新しいリンクが届いたら描き直す）
+  function drawJoinQr() {
+    var a = document.querySelector("a.join");
+    if (a && document.querySelector(".discord.pc")) drawQr($("joinQr"), a.href);
+  }
   function str(v) { return String(v == null ? "" : v).trim(); }
   function nameKey(name) { return String(name).trim().toLowerCase(); }
   function escapeHtml(s) {
@@ -550,6 +598,7 @@
       history = res.history || { events: [], entries: [] };
       // 中継役が毎日作り直している Discord の招待リンクがあれば、それを使う（なければページに書いてあるリンク）
       if (res.discordInvite) document.querySelectorAll("a.join").forEach(function(a) { a.href = res.discordInvite; });
+      drawJoinQr();
       data = { events: res.events || [], users: res.users || [], entries: res.entries || [] };
       $("loadingView").style.display = "none";
       if (!data.events.length) {
