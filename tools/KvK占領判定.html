@@ -144,7 +144,7 @@
     <button type="button" class="ks-toggle-btn" id="ksToggleBtn" onclick="ksToggleSidebar()" aria-label="メニュー開閉">←</button>
   </div>
   <nav>
-    <a href="../index.html?v=20261103003135" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261103003135" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261103003135" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261103003135" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261103003135" class="ks-link ks-active" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a>
+    <a href="../index.html?v=20261103103427" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261103103427" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261103103427" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261103103427" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261103103427" class="ks-link ks-active" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -178,6 +178,7 @@
     <label>試合時間：</label>
     <input type="number" id="matchHours" value="5" min="0" step="0.5">
     <span>時間（変更可）</span>
+    <button type="button" id="resetBtn" style="margin-left:auto; padding:7px 14px; border:1px solid #ddd; border-radius:6px; background:#fff; color:#c0392b; font-size:13px; cursor:pointer;">🔄 リセット</button>
   </div>
 </div>
 
@@ -356,6 +357,16 @@ if (savedState && Array.isArray(savedState.alliances) && savedState.alliances.le
   renderRows(DEFAULT_ALLIANCES);
 }
 matchHoursInput.addEventListener("input", () => { recalc(); saveState(); });
+
+document.getElementById("resetBtn").addEventListener("click", () => {
+  if (!confirm("入力内容をリセットします。よろしいですか？")) return;
+  try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+  matchHoursInput.value = 5;
+  renderRows(DEFAULT_ALLIANCES.map(a => ({ ...a })));
+  recalc();
+  saveState();
+});
+
 recalc();
 fetchAllianceNames();
 </script>
