@@ -116,3 +116,6 @@ Kingshot関連の単体HTMLツールのうち、ゲームプレイの実務で�
 - 既存ファイルへの最小変更：ADMIN_NAV に teams.html（admin-common.js・inquiries.html・kvk-matchup/kvk-auth-gate.js）、TOPにカード、entry/index.html に独立した表示欄 #teamsBanner＋末尾の別script（teamsGetだけ使う。既存処理は不変）
 - テスト：GAS関数14項目（Node）、画面60項目（headless Chrome＋偽GAS）すべて合格
 - 今後の検討：参加時間の使い方（時間帯ごとの割り当て等）、応援・遅れて出撃、セット（同じ隊にする組）、カウントダウン表のグループ列への連携
+
+## 2026-11-03 「Kingshotツール作成」から引継ぎ（担当: tools/・admin/(teams除く)・kvk-matchup/・ランキング・TOP・spec・自動更新系）
+- ②速度ペットのボーナス%を画面から編集：共通部品 `tools/pet-bonus.js`（localStorage `ksMarchPetBonus`、無ければ初期値 [0,15,17,19,21,23,25,27,30]）。KvK同着スタート カウントダウン表・炎龍 集結タイムライン計算の名簿/メンバー表の下に `<details>` の編集欄。変更時は表を再描画し、結果表示中なら再計算。閲覧モードでも使える（ve-exempt）。headless Chromeで両ページ確認済み

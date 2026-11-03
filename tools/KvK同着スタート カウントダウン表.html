@@ -139,7 +139,7 @@
     <button type="button" class="ks-toggle-btn" id="ksToggleBtn" onclick="ksToggleSidebar()" aria-label="メニュー開閉">←</button>
   </div>
   <nav>
-    <a href="../index.html?v=20261103154356" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261103154356" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261103154356" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261103154356" class="ks-link ks-active" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261103154356" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a>
+    <a href="../index.html?v=20261103155826" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261103155826" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261103155826" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261103155826" class="ks-link ks-active" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261103155826" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -213,6 +213,7 @@
   <div class="row-actions">
     <button type="button" class="btn secondary small" onclick="addRow()">＋行を追加</button>
   </div>
+  <div id="petBonusEditor"></div>
   <div class="cfg-row" style="margin-top:14px;">
     <label>最大カウント秒（表示上限、最後の出発を超える分は自動でカット）: <input type="number" id="maxSec" value="120" min="1" max="600"></label>
     <button type="button" class="btn" onclick="compute()">計算する</button>
@@ -227,6 +228,7 @@
   <div class="result-wrap"><table id="result-table"></table></div>
 </div>
 
+<script src="pet-bonus.js?v=20261103155826"></script>
 <script>
 const SAMPLE = [
   { name: "じろ", march: 36, adj: 0, group: "じろ" },
@@ -238,7 +240,8 @@ const SAMPLE = [
 const NO_GROUP = new Set(["", "ー", "未所属", "-", "なし"]);
 
 // --- 速度ペット（恐怖の咆哮）：炎龍 集結タイムライン計算ページと同じ定義・表記 ---
-const MARCH_PET_BONUS = [0, 15, 17, 19, 21, 23, 25, 27, 30];
+// 値は tools/pet-bonus.js（画面から編集・このブラウザに保存、無ければ初期値）から読む
+let MARCH_PET_BONUS = KsPetBonus.load();
 function buildPetOptions(selectedLv){
   let html = `<option value="0"${selectedLv === 0 ? " selected" : ""}>持っていない</option>`;
   for(let lv = MARCH_PET_BONUS.length - 1; lv >= 1; lv--){
@@ -821,12 +824,19 @@ document.getElementById("maxSec").addEventListener("input", () => {
   try { localStorage.setItem(MAXSEC_KEY, document.getElementById("maxSec").value); } catch(e){}
 });
 
+// 速度ペットのボーナス%編集（炎龍 集結タイムライン計算と共通、このブラウザに保存）
+KsPetBonus.mount(document.getElementById("petBonusEditor"), arr => {
+  MARCH_PET_BONUS = arr;
+  renderRoster();
+  if(document.getElementById("result-table").innerHTML) compute();
+});
+
 // init：まずローカルのサンプル/保存データで即座に表示し、裏でユーザー登録データを取得する
 loadPersonalIntoState();
 fetchRegData();
 fetchOpponentNames();
 </script>
 
-<script src="view-edit-gate.js?v=20261103154356"></script>
+<script src="view-edit-gate.js?v=20261103155826"></script>
 </body>
 </html>
