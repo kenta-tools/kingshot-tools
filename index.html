@@ -75,6 +75,7 @@
     <div style="font-size:14px; font-weight:bold; margin-bottom:10px;">🔐 管理者ログイン</div>
     <div style="font-size:12px; color:#666; margin-bottom:10px;">ログインすると、このタブではtools/・管理画面・KvK相手突合せが編集可になります。</div>
     <input type="password" id="loginPwInput" placeholder="パスワード" autocomplete="current-password">
+    <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#555;margin:0 0 10px;cursor:pointer;"><input type="checkbox" id="loginRemember" style="width:auto;margin:0;"> パスワードを保存する（次回から入力不要。共用の端末ではチェックしない）</label>
     <div class="row">
       <button type="button" class="ok-btn" id="loginOkBtn">ログイン</button>
       <button type="button" class="cancel-btn" id="loginCancelBtn">キャンセル</button>
@@ -84,17 +85,17 @@
 </div>
 
 <div class="grid">
-  <a class="tool-card" href="tools/tools-index.html?v=20261103160254">
+  <a class="tool-card" href="tools/tools-index.html?v=20261103160557">
     <div class="icon">🛠️</div>
     <div class="title">ツール一覧</div>
     <div class="desc">KvK同着スタート・占領判定・周期ウェーブタイマーなどの計算ツール</div>
   </a>
-  <a class="tool-card" href="flame-dragon/flame-dragon-index.html?v=20261103160254">
+  <a class="tool-card" href="flame-dragon/flame-dragon-index.html?v=20261103160557">
     <div class="icon">🐲</div>
     <div class="title">炎龍の覇者 ランキングまとめ</div>
     <div class="desc">炎龍の覇者イベントの総合ランキングHTML一覧</div>
   </a>
-  <a class="tool-card" href="holy-sword-league/holy-sword-league-index.html?v=20261103160254">
+  <a class="tool-card" href="holy-sword-league/holy-sword-league-index.html?v=20261103160557">
     <div class="icon">⚔️</div>
     <div class="title">聖剣リーグ ランキングまとめ</div>
     <div class="desc">聖剣リーグのシーズン・ブロックごとの総合ランキングHTML一覧</div>
@@ -114,7 +115,7 @@
     <div class="title">問い合わせ・質問</div>
     <div class="desc">サイトやゲームについての質問・意見を送る。回答済みの質問も見られます</div>
   </a>
-  <a class="tool-card" href="admin/events.html?v=20261103160254">
+  <a class="tool-card" href="admin/events.html?v=20261103160557">
     <div class="icon">🔐</div>
     <div class="title">メンバー管理（管理者）</div>
     <div class="desc">イベント参加メンバーの登録・編成管理（要パスワード）</div>
@@ -129,6 +130,8 @@
 <script>
 (function() {
   var PW_KEY = "ksAdminPw";
+  var PW_SAVED_KEY = "ksAdminPwSaved"; // 「パスワードを保存する」にチェックしてログインしたときだけ使う（タブを閉じても残る）
+  try { if (!sessionStorage.getItem(PW_KEY) && localStorage.getItem(PW_SAVED_KEY)) sessionStorage.setItem(PW_KEY, localStorage.getItem(PW_SAVED_KEY)); } catch (e) {}
   var GAS_URL = "https://script.google.com/macros/s/AKfycbxu5HW9uLU9pCsUs1r_45xpuofWZmQAyZFDwSLK1C_7GvA7SDXZ4ayBEJTS0sR_8oToAw/exec";
 
   function isLoggedIn() {
@@ -140,7 +143,7 @@
     if (isLoggedIn()) {
       box.innerHTML = '<span class="logged-in">🔓 管理者ログイン中</span> <button type="button" id="logoutBtn">ログアウト</button>';
       document.getElementById("logoutBtn").addEventListener("click", function() {
-        try { sessionStorage.removeItem(PW_KEY); } catch (e) {}
+        try { sessionStorage.removeItem(PW_KEY); localStorage.removeItem(PW_SAVED_KEY); } catch (e) {}
         renderLoginBox();
       });
     } else {
@@ -173,7 +176,7 @@
       .then(function(r) { return r.json(); })
       .then(function(res) {
         if (res.ok) {
-          try { sessionStorage.setItem(PW_KEY, pw); } catch (e) {}
+          try { sessionStorage.setItem(PW_KEY, pw); if (document.getElementById("loginRemember").checked) localStorage.setItem(PW_SAVED_KEY, pw); else localStorage.removeItem(PW_SAVED_KEY); } catch (e) {}
           closePrompt();
           renderLoginBox();
         } else if (res.status === 401) {

@@ -2,11 +2,13 @@
 // admin/配下（events.html・participants.html・users.html・logs.html）と同じ中継役（GAS）・同じパスワード・同じsessionStorageキーを使うので、
 // 同じタブでadmin側から遷移してきた場合は再ログイン不要（sessionStorageはタブ単位で同一オリジンなら引き継がれる）。
 // 使い方：対応ページの<head>先頭に
-//   <script>(function(){try{if(!sessionStorage.getItem('ksAdminPw'))document.documentElement.style.visibility='hidden';}catch(e){document.documentElement.style.visibility='hidden';}})();</script>
+//   <script>(function(){try{if(!sessionStorage.getItem('ksAdminPw')&&!localStorage.getItem('ksAdminPwSaved'))document.documentElement.style.visibility='hidden';}catch(e){document.documentElement.style.visibility='hidden';}})();</script>
 // を入れ、</body>の直前に <script src="kvk-auth-gate.js"></script> を入れる。
 (function () {
   "use strict";
   var PW_KEY = "ksAdminPw";
+  var PW_SAVED_KEY = "ksAdminPwSaved"; // 「パスワードを保存する」にチェックしてログインしたときだけ使う（タブを閉じても残る）
+  try { if (!sessionStorage.getItem(PW_KEY) && localStorage.getItem(PW_SAVED_KEY)) sessionStorage.setItem(PW_KEY, localStorage.getItem(PW_SAVED_KEY)); } catch (e) {}
   var GAS_URL = "https://script.google.com/macros/s/AKfycbxu5HW9uLU9pCsUs1r_45xpuofWZmQAyZFDwSLK1C_7GvA7SDXZ4ayBEJTS0sR_8oToAw/exec";
 
   function isAuthed() {
@@ -110,7 +112,7 @@
     var logoutBtn = document.getElementById("ksLogoutBtn");
     if (logoutBtn) {
       logoutBtn.addEventListener("click", function () {
-        try { sessionStorage.removeItem(PW_KEY); } catch (e) {}
+        try { sessionStorage.removeItem(PW_KEY); localStorage.removeItem(PW_SAVED_KEY); } catch (e) {}
         location.reload();
       });
     }
@@ -137,6 +139,7 @@
     '<div style="font-size:13px;color:#666;margin-bottom:12px;">KvK相手突合せを見るにはパスワードを入力してください。</div>' +
     '<input type="password" id="kvkGatePw" placeholder="パスワード" autocomplete="current-password" ' +
     'style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:14px;margin-bottom:10px;box-sizing:border-box;">' +
+    '<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#555;margin:0 0 10px;cursor:pointer;"><input type="checkbox" id="kvkGateRemember" style="width:auto;margin:0;"> パスワードを保存する（次回から入力不要。共用の端末ではチェックしない）</label>' +
     '<button type="button" id="kvkGateBtn" style="width:100%;padding:9px;background:#4a6cf7;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;">ログイン</button>' +
     '<div id="kvkGateMsg" style="font-size:13px;margin-top:8px;min-height:1em;"></div>';
   document.body.appendChild(gate);
@@ -163,6 +166,7 @@
         if (res.ok) {
           try {
             sessionStorage.setItem(PW_KEY, pw);
+            if (document.getElementById("kvkGateRemember").checked) localStorage.setItem(PW_SAVED_KEY, pw); else localStorage.removeItem(PW_SAVED_KEY);
           } catch (e) {}
           gate.remove();
           realChildren.forEach(function (el) {

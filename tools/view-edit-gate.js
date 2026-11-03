@@ -17,6 +17,8 @@
 (function () {
   "use strict";
   var PW_KEY = "ksAdminPw";
+  var PW_SAVED_KEY = "ksAdminPwSaved"; // 「パスワードを保存する」にチェックしてログインしたときだけ使う（タブを閉じても残る）
+  try { if (!sessionStorage.getItem(PW_KEY) && localStorage.getItem(PW_SAVED_KEY)) sessionStorage.setItem(PW_KEY, localStorage.getItem(PW_SAVED_KEY)); } catch (e) {}
   var GAS_URL = "https://script.google.com/macros/s/AKfycbxu5HW9uLU9pCsUs1r_45xpuofWZmQAyZFDwSLK1C_7GvA7SDXZ4ayBEJTS0sR_8oToAw/exec";
 
   var STYLE = [
@@ -70,6 +72,7 @@
         logoutBtn.addEventListener("click", function () {
           try {
             sessionStorage.removeItem(PW_KEY);
+            localStorage.removeItem(PW_SAVED_KEY);
           } catch (e) {}
           applyMode();
           renderBadge();
@@ -92,6 +95,7 @@
       '<div style="font-size:14px; font-weight:bold; margin-bottom:10px;">🔓 編集可モードにする</div>' +
       '<div style="font-size:12px; color:#666; margin-bottom:10px;">管理画面と同じパスワードを入力してください。</div>' +
       '<input type="password" class="ve-exempt" id="vePwInput" placeholder="パスワード" autocomplete="current-password" style="width:100%; padding:8px 10px; border:1px solid #ddd; border-radius:6px; font-size:14px; margin-bottom:10px; box-sizing:border-box;">' +
+      '<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#555;margin:0 0 10px;cursor:pointer;"><input type="checkbox" id="vePwRemember" class="ve-exempt" style="width:auto;margin:0;"> パスワードを保存する（次回から入力不要。共用の端末ではチェックしない）</label>' +
       '<div style="display:flex; gap:8px;">' +
       '<button type="button" class="ve-exempt" id="vePwOkBtn" style="flex:1; padding:9px; background:#4a6cf7; color:#fff; border:none; border-radius:8px; font-size:14px; cursor:pointer;">編集可にする</button>' +
       '<button type="button" class="ve-exempt" id="vePwCancelBtn" style="padding:9px 14px; background:#fff; color:#555; border:1px solid #ccc; border-radius:8px; font-size:14px; cursor:pointer;">キャンセル</button>' +
@@ -125,6 +129,7 @@
           if (res.ok) {
             try {
               sessionStorage.setItem(PW_KEY, pw);
+              if (document.getElementById("vePwRemember").checked) localStorage.setItem(PW_SAVED_KEY, pw); else localStorage.removeItem(PW_SAVED_KEY);
             } catch (e) {}
             close();
             applyMode();

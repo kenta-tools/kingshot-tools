@@ -2,6 +2,8 @@
   // ログインパスワードはこのページには持たず、中継役（GAS のスクリプトプロパティ EDIT_PASSWORD）で確認する。
   // ソースを見てもパスワードの手がかりはなく、保存も中継役が毎回パスワードを確認する。
   var PW_KEY = "ksAdminPw";
+  var PW_SAVED_KEY = "ksAdminPwSaved"; // 「パスワードを保存する」にチェックしてログインしたときだけ使う（タブを閉じても残る）
+  try { if (!sessionStorage.getItem(PW_KEY) && localStorage.getItem(PW_SAVED_KEY)) sessionStorage.setItem(PW_KEY, localStorage.getItem(PW_SAVED_KEY)); } catch (e) {}
   var DRAFT_KEY = "ksMembersDraftV2";
   var EVENT_KEY = "ksAdminEvent";
 
@@ -230,7 +232,7 @@
       .then(function(r) { return r.json(); })
       .then(function(res) {
         if (res.ok) {
-          try { sessionStorage.setItem(PW_KEY, pw); } catch (e) {} // このタブを閉じると消える
+          try { sessionStorage.setItem(PW_KEY, pw); if (document.getElementById("pwRemember").checked) localStorage.setItem(PW_SAVED_KEY, pw); else localStorage.removeItem(PW_SAVED_KEY); } catch (e) {} // 保存しない場合はこのタブを閉じると消える
           $("loginMsg").textContent = "";
           showApp();
         } else if (res.status === 401) {
@@ -246,10 +248,11 @@
       .then(function() { $("loginBtn").disabled = false; });
   }
 
+  if ($("loginBtn") && !$("pwRemember")) $("loginBtn").insertAdjacentHTML("beforebegin", '<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#555;margin:0 0 10px;cursor:pointer;"><input type="checkbox" id="pwRemember" style="width:auto;margin:0;"> パスワードを保存する（次回から入力不要。共用の端末ではチェックしない）</label>');
   on("loginBtn", "click", tryLogin);
   on("pwInput", "keydown", function(e) { if (e.key === "Enter") tryLogin(); });
   on("logoutBtn", "click", function() {
-    try { sessionStorage.removeItem(PW_KEY); sessionStorage.removeItem("ksAdminAuth"); } catch (e) {}
+    try { sessionStorage.removeItem(PW_KEY); sessionStorage.removeItem("ksAdminAuth"); localStorage.removeItem(PW_SAVED_KEY); } catch (e) {}
     location.reload();
   });
 
