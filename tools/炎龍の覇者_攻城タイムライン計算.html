@@ -210,7 +210,7 @@
     <button type="button" class="ks-toggle-btn" id="ksToggleBtn" onclick="ksToggleSidebar()" aria-label="メニュー開閉">←</button>
   </div>
   <nav>
-    <a href="../index.html?v=20261103105033" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261103105033" class="ks-link ks-active" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261103105033" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261103105033" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261103105033" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a>
+    <a href="../index.html?v=20261103111015" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261103111015" class="ks-link ks-active" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261103111015" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261103111015" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261103111015" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -368,6 +368,7 @@ let mode = "personal"; // "personal" | "shared"
 document.body.classList.add("ve-personal-mode"); // 初期状態（閲覧モードでも自分用は常に使える）
 let currentEventId = "";
 let sharedDirty = false;
+let sharedSnapshot = null; // 共有用を読み込んだ直後の内容（JSON文字列）。本当に変更があったかの確認用
 
 function gasCall(payload) {
   return fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) })
@@ -738,6 +739,7 @@ function loadSharedIntoState() {
   memberSeq = Math.max(0, ...members.map(m => parseInt(String(m.id).replace(/\D/g, ""), 10) || 0), 0);
   patternSeq = Math.max(0, ...patterns.map(p => parseInt(String(p.id).replace(/\D/g, ""), 10) || 0), 0);
   sharedDirty = false;
+  sharedSnapshot = JSON.stringify({ members, patterns: serializedPatterns(), settings: currentSettings() });
   renderMembers();
   renderPatterns();
   const note = document.getElementById("sharedNote");
@@ -750,7 +752,10 @@ function loadSharedIntoState() {
 
 function setMode(newMode) {
   if (mode === newMode) return;
-  if (mode === "shared" && sharedDirty) {
+  // sharedDirtyだけでなく、実際に内容が変わったか（JSON比較）も確認する。
+  const currentSnapshot = JSON.stringify({ members, patterns: serializedPatterns(), settings: currentSettings() });
+  const reallyChanged = mode === "shared" && sharedSnapshot !== null && currentSnapshot !== sharedSnapshot;
+  if (mode === "shared" && sharedDirty && reallyChanged) {
     if (!confirm("共有用の保存していない変更があります。保存せずに切り替えますか？")) return;
   }
   mode = newMode;
@@ -788,6 +793,7 @@ document.getElementById("sharedSaveBtn").addEventListener("click", () => {
   }).then(res => {
     if (!res.ok) throw new Error(res.error || "保存できませんでした");
     sharedDirty = false;
+    sharedSnapshot = JSON.stringify({ members, patterns: serializedPatterns(), settings: currentSettings() });
     const updatedAt = new Date().toISOString();
     const idx = regData.flameRosters.findIndex(r => r.eventId === currentEventId);
     const rec = { eventId: currentEventId, members, patterns: serializedPatterns(), settings: currentSettings(), updatedAt };
@@ -992,6 +998,6 @@ renderMembers();
 renderPatterns();
 </script>
 
-<script src="view-edit-gate.js?v=20261103105033"></script>
+<script src="view-edit-gate.js?v=20261103111015"></script>
 </body>
 </html>

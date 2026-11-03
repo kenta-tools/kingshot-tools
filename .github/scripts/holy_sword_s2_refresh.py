@@ -38,6 +38,7 @@ SEASON = "Season2"
 THRESHOLD = 2900
 THRESHOLD_BOARD = "mystic_trial"
 FREEZE_DATE = date(2026, 11, 6)
+END_DATE = date(2026, 12, 6)  # イベント終了日（仮）。実際の終了日が分かったら合わせて直す。この日以降は自動更新を止める
 
 # 2026-11-01にゲーム内画面から書き起こしたブロック分け（759〜927鯖を3ブロックに分割。非連続）
 BLOCKS = {
@@ -579,7 +580,7 @@ def write_report(block_id, label, kid_list, people, truncated, is_first):
         '<a class="back-top" href="../holy-sword-league-index.html">← 聖剣リーグ ランキングまとめ</a>'
     )
     freeze_note = (
-        f"（{FREEZE_DATE.isoformat()}にメンバー・同盟を確定し、以降は毎日9時に数値だけを自動更新しています）"
+        f"（{FREEZE_DATE.isoformat()}にメンバー・同盟を確定し、{END_DATE.isoformat()}まで毎日9時に数値だけを自動更新しています）"
     )
     html_text = render_html(label, len(kid_list), people, alliance_list, truncated, back_links_html, freeze_note)
     out_path.write_text(html_text, encoding="utf-8")
@@ -603,6 +604,9 @@ def main():
     # HSL_S2_FORCE=1: 動作確認用に名簿確定日より前でも実行する（本番ワークフローでは設定しない）
     if today < FREEZE_DATE and os.getenv("HSL_S2_FORCE") != "1":
         print(f"ℹ️ まだ名簿確定日（{FREEZE_DATE.isoformat()}）前なので、何もしません（今日: {today.isoformat()}）")
+        return
+    if today >= END_DATE:
+        print(f"ℹ️ イベント終了日（{END_DATE.isoformat()}）を過ぎたため、自動更新を停止しました（今日: {today.isoformat()}）")
         return
     if not API_KEY:
         print("❌ MIGHTPULSE_API_KEY が設定されていません。")
