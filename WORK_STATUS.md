@@ -108,3 +108,11 @@ Kingshot関連の単体HTMLツールのうち、ゲームプレイの実務で�
 - 2026-11-02: 容量（計算後）を entries の marchCap / rallyCap に保存（GAS cleanEntry_→calcCap_、管理画面 normalizeRow/toEntry→withCap）。条件は固定：両ペットスキルあり・バフ20%をスキルなしの出征容量にかけ、出征で増えた分（スキル＋バフ）を集結容量にも足す。管理画面の容量設定欄は削除、「1人ずつ登録」欄は一覧の「変更」時だけ表示。GASの部隊数上限 99,999→99,999,999 に修正。GAS @15
 - 2026-11-02: TOPに「📘 仕様まとめ」（spec/index.html が spec/spec.md を読み込んで表示、AIに渡す用コピー・URLコピー）。**サイトを更新したら必ず spec/spec.md も同じコミットで更新する**（ユーザー指示）。登録ページの一覧を「登録状況を見る」にし、今回未登録の人を前回イベントの内容で灰色表示（参加・時間・ひとこと・更新日時は空欄、ボタンは「登録する」）。管理画面の受付ボタンを「受付を始める」に
 - 2026-11-02: Discord招待リンクの自動更新は、DiscordがGASからの通信を403(40333)で断るため GitHub Actions（.github/workflows/discord-invite.yml＋.github/scripts/discord_invite.py、毎日20:00UTC＝5:00JST、手動実行可）に移行。7日有効のリンクを作り、botの古いリンクを削除、中継役 action=setDiscordInvite（パスワード必須）で保存→pubGet discordInvite。Secrets: DISCORD_BOT_TOKEN / DISCORD_CHANNEL_ID / RELAY_PASSWORD（ユーザーがGitHubの画面で登録）。GASの refreshDiscordInvite はトリガーの後始末だけ
+
+## 2026-11-03 チーム分け機能（担当: claude-76 セッション）
+- ヒアリングで決めた方針：KVK＝集結リーダー＋乗り手（集結容量に収まるように詰める、人数8〜10は警告のみ、参考ルール kakeoProduct/KvK-Team-Builder を簡略化して取り入れ）／聖剣・聖剣リーグ＝「集結主」チーム＋乗り手チーム（出征容量の合計をそろえる）／三盟＝上・中・下を手動。分け方（ボード／自動→ボード／表）は全部作って使いながら決める。参加時間の使い方は未定（時間帯タブで表示だけ）
+- 追加ファイル：`admin/teams.html`（管理、軽量方式＝認証＋サイドバー自前、admin-common.js非依存）、`teams/index.html`（公開閲覧、パスワードなし）
+- GAS：`teamSave`（パスワード必須。d.teams にイベントごと {draft, updatedAt, published, publishedAt}。baseUpdatedAt が違えば conflict を返し force で上書き）、`teamsGet`（パスワード不要、公開分のみ・draftなし）。既存の pubGet・put は変更なし（管理画面の保存は d.teams を残す作り）
+- 既存ファイルへの最小変更：ADMIN_NAV に teams.html（admin-common.js・inquiries.html・kvk-matchup/kvk-auth-gate.js）、TOPにカード、entry/index.html に独立した表示欄 #teamsBanner＋末尾の別script（teamsGetだけ使う。既存処理は不変）
+- テスト：GAS関数14項目（Node）、画面60項目（headless Chrome＋偽GAS）すべて合格
+- 今後の検討：参加時間の使い方（時間帯ごとの割り当て等）、応援・遅れて出撃、セット（同じ隊にする組）、カウントダウン表のグループ列への連携

@@ -124,7 +124,7 @@
 
 <div class="row" style="justify-content: space-between;">
   <h1>📝 イベント参加登録</h1>
-  <a href="../index.html?v=20261103125033" class="top-link">← TOP</a>
+  <a href="../index.html?v=20261103154153" class="top-link">← TOP</a>
 </div>
 <div class="howto">
   ① 名前を入れて「次へ」<br>
@@ -185,6 +185,8 @@
 
 <div class="card center" id="loadingView">読み込み中…</div>
 <div class="card center" id="emptyView" style="display: none;">いま受付中のイベントはありません。</div>
+<!-- チーム分けが公開されていれば出す（teamsGet。この下の別scriptだけで動く。受付を締め切ったイベントも対象） -->
+<div class="banner" id="teamsBanner" style="display: none;"></div>
 
 <div id="appView" style="display: none;">
   <!-- ① イベントと名前 -->
@@ -1005,6 +1007,55 @@
   $("nameInput").value = stored(NAME_KEY);
   renderProxy();
   load();
+})();
+</script>
+<script>
+// チーム分けの公開分を出す（admin/teams.html で「公開する」を押したもの）。名前は入力欄か、この端末で前に登録した名前で探す
+(function() {
+  "use strict";
+  var GAS_URL = "https://script.google.com/macros/s/AKfycbxu5HW9uLU9pCsUs1r_45xpuofWZmQAyZFDwSLK1C_7GvA7SDXZ4ayBEJTS0sR_8oToAw/exec";
+  var box = document.getElementById("teamsBanner");
+  var input = document.getElementById("nameInput");
+  var teams = [];
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function(c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function norm(s) { return String(s || "").normalize("NFKC").toLowerCase().replace(/\s+/g, ""); }
+  function myName() {
+    var v = input && input.value.trim();
+    if (v) return v;
+    try { return localStorage.getItem("ksEntryName") || ""; } catch (e) { return ""; }
+  }
+  function render() {
+    if (!teams.length) { box.style.display = "none"; return; }
+    var me = norm(myName());
+    var lines = teams.map(function(t) {
+      var label = t.type + " " + t.date, where = [];
+      var v = t.view || {};
+      (v.teams || []).forEach(function(team) {
+        (team.members || []).forEach(function(p) { if (me && norm(p.name) === me) where.push(team.name); });
+      });
+      (v.standby || []).forEach(function(p) { if (me && norm(p.name) === me) where.push("待機"); });
+      (v.pending || []).forEach(function(p) { if (me && norm(p.name) === me) where.push("時間未定"); });
+      var url = "../teams/?event=" + encodeURIComponent(t.eventId) + (me ? "&name=" + encodeURIComponent(myName()) : "");
+      return "🧩 <b>" + esc(label) + "</b> のチーム分けが出ています" +
+        (where.length ? "：あなたは <b>" + esc(where.join("・")) + "</b> です" : "") +
+        "　<a href=\"" + esc(url) + "\">チーム分けを見る</a>";
+    });
+    box.innerHTML = lines.join("<br>");
+    box.style.display = "block";
+  }
+  fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "teamsGet" }) })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (!res.ok) return;
+      teams = (res.teams || []).filter(function(t) { return !t.done; });
+      render();
+    })
+    .catch(function() {});
+  if (input) input.addEventListener("input", render);
 })();
 </script>
 </body>

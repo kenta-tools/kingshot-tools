@@ -63,6 +63,8 @@ function handle_(p) {
     if (p.action === "flameSave") return json_(flameSave_(token, p));
     // 問い合わせ・質問フォーム用（パスワード不要）
     if (p.action === "askSave") return json_(askSave_(token, p));
+    // チーム分けの公開分（teams/ の閲覧ページ・個人登録ページ用。パスワード不要、公開ボタンを押したものだけ）
+    if (p.action === "teamsGet") return json_(teamsGet_(token));
 
     if (p.password !== password) {
       Utilities.sleep(1000); // 総当たり対策
@@ -86,6 +88,8 @@ function handle_(p) {
     if (p.action === "getInquiries") return json_(getInquiries_(token));
     // 問い合わせへの回答を保存（管理者のみ）
     if (p.action === "answerInquiry") return json_(answerInquiry_(token, p));
+    // チーム分け（admin/teams.html、管理者のみ）の下書き保存・公開・非公開。イベントID単位で1件
+    if (p.action === "teamSave") return json_(teamSave_(token, p));
 
     // 管理画面とのやりとりは GitHub 時代と同じ形（content=Base64のJSON、sha=版番号）
     if (p.action === "get") {
@@ -397,6 +401,81 @@ function answerInquiry_(token, p) {
   } finally {
     lock.releaseLock();
   }
+}
+
+// ---------- チーム分け ----------
+// d.teams: [{ eventId, draft, updatedAt, updatedBy, published, publishedAt }]
+//   draft     : 管理画面（admin/teams.html）の編集内容そのまま（ユーザーIDで持つ。非公開）
+//   published : 公開ボタンを押した時点の表示用データ（名前・印・時間などを埋め込み済み）。teamsGet で誰でも見られる
+var TEAM_JSON_MAX = 300 * 1024;
+
+// チーム分けの保存（管理者のみ）。p: { eventId, draft, baseUpdatedAt, publish: "keep"|"publish"|"unpublish", view?, by? }
+// baseUpdatedAt は読み込んだ時点の updatedAt。違えば他の管理者が先に保存しているので、上書きせず最新を返す（force で上書き）
+function teamSave_(token, p) {
+  if (!p.eventId) return { ok: false, status: 400, error: "イベントが選ばれていません" };
+  if (!p.draft || typeof p.draft !== "object") return { ok: false, status: 400, error: "チーム分けの内容がありません" };
+  if (JSON.stringify(p.draft).length > TEAM_JSON_MAX) return { ok: false, status: 413, error: "データが大きすぎます" };
+  var publish = p.publish === "publish" || p.publish === "unpublish" ? p.publish : "keep";
+  if (publish === "publish") {
+    if (!p.view || typeof p.view !== "object") return { ok: false, status: 400, error: "公開する内容がありません" };
+    if (JSON.stringify(p.view).length > TEAM_JSON_MAX) return { ok: false, status: 413, error: "データが大きすぎます" };
+  }
+
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) return { ok: false, status: 503, error: "混み合っています。少し待ってからもう一度押してください" };
+  try {
+    for (var attempt = 0; attempt < 3; attempt++) {
+      var f = readFile_(token);
+      if (!f.ok) return f;
+      var d = f.data;
+      if (!(d.events || []).some(function(e) { return e.id === p.eventId; })) {
+        return { ok: false, status: 400, error: "そのイベントが見つかりません" };
+      }
+      d.teams = d.teams || [];
+      var existing = d.teams.filter(function(x) { return x.eventId === p.eventId; })[0];
+      if (existing && !p.force && (p.baseUpdatedAt || "") !== (existing.updatedAt || "")) {
+        return { ok: false, status: 409, conflict: true, error: "ほかの人が先に保存しています", record: existing };
+      }
+      var now = new Date().toISOString();
+      var record = {
+        eventId: p.eventId,
+        draft: p.draft,
+        updatedAt: now,
+        updatedBy: clip_(p.by, 30),
+        published: existing ? existing.published || null : null,
+        publishedAt: existing ? existing.publishedAt || "" : ""
+      };
+      if (publish === "publish") { record.published = p.view; record.publishedAt = now; }
+      if (publish === "unpublish") { record.published = null; record.publishedAt = ""; }
+      if (existing) d.teams[d.teams.indexOf(existing)] = record;
+      else d.teams.push(record);
+
+      d.updated = now;
+      var w = writeFile_(token, d, f.sha, "Teams saved");
+      if (w.ok) return { ok: true, record: record };
+      if (w.status !== 409 && w.status !== 422) return w;
+      // 直前に他の人が保存した → 取り直してもう一度
+    }
+    return { ok: false, status: 409, error: "混み合っています。もう一度押してください" };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// 公開済みのチーム分けだけを返す（パスワード不要）。下書き（draft）は返さない
+function teamsGet_(token) {
+  var f = readFile_(token);
+  if (!f.ok) return f;
+  var d = f.data;
+  var events = {};
+  (d.events || []).forEach(function(e) { events[e.id] = e; });
+  return {
+    ok: true,
+    teams: (d.teams || []).filter(function(t) { return t.published && events[t.eventId]; }).map(function(t) {
+      var e = events[t.eventId];
+      return { eventId: t.eventId, type: e.type, date: e.date, done: e.done === true, publishedAt: t.publishedAt, view: t.published };
+    })
+  };
 }
 
 // 1人分の参加登録・変更・取消。受付中のイベントだけ。

@@ -60,6 +60,7 @@
     var links = [
       ["../admin/events.html", "📅", "イベント"],
       ["../admin/participants.html", "👥", "参加者一覧"],
+      ["../admin/teams.html", "🧩", "チーム分け"],
       ["../admin/users.html", "🗂️", "ユーザー管理"],
       ["../admin/logs.html", "🕵️", "個人登録の記録"],
       ["../admin/inquiries.html", "📨", "問い合わせ・質問"],

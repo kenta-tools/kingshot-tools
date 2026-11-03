@@ -116,6 +116,7 @@
   var ADMIN_NAV = [
     ["events.html", "📅", "イベント"],
     ["participants.html", "👥", "参加者一覧"],
+    ["teams.html", "🧩", "チーム分け"],
     ["users.html", "🗂️", "ユーザー管理"],
     ["logs.html", "🕵️", "個人登録の記録"],
     ["inquiries.html", "📨", "問い合わせ・質問"],

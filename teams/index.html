@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>チーム分け</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+    background: #f4f5f7;
+    color: #222;
+    max-width: 1000px;
+    margin: 30px auto;
+    padding: 0 16px 40px;
+    line-height: 1.6;
+  }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .sub { color: #666; font-size: 13px; margin-bottom: 18px; }
+  .card { background: #fff; border-radius: 12px; padding: 16px 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 14px; }
+  .top-link { color: #2d6cdf; text-decoration: none; font-size: 13px; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  select, input[type=text] { font: inherit; font-size: 14px; padding: 6px 9px; border: 1px solid #ccd2db; border-radius: 6px; background: #fff; }
+  input[type=text] { width: 200px; }
+  button { font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 6px; border: 1px solid #ccd2db; background: #fff; cursor: pointer; }
+  .note { font-size: 12px; color: #777; }
+  .empty { color: #999; font-size: 13px; }
+  .found { background: #fff6cc; border-radius: 10px; padding: 10px 14px; font-size: 15px; margin-top: 10px; display: none; }
+
+  .teams { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+  .team { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); padding: 12px 14px; }
+  .team h3 { font-size: 15px; margin: 0 0 2px; }
+  .team .lead { font-size: 12.5px; color: #8a5a10; margin-bottom: 6px; }
+  .team ul { list-style: none; padding: 0; margin: 0; }
+  .team li { font-size: 13.5px; padding: 3px 0; border-bottom: 1px solid #f1f2f4; }
+  .team li:last-child { border-bottom: none; }
+  .team li .m { color: #2c5cc5; }
+  .team li .a { color: #888; font-size: 11.5px; }
+  .team li .t { color: #b4441c; font-size: 11.5px; }
+  .team li.me { background: #fff6cc; border-radius: 4px; padding-left: 4px; font-weight: bold; }
+  .team.extra { background: #f8f9fb; }
+  pre { white-space: pre-wrap; font-size: 12.5px; background: #f6f7f9; border-radius: 8px; padding: 10px; margin: 0; }
+</style>
+</head>
+<body>
+
+<div style="display:flex; justify-content:space-between; align-items:center;">
+  <h1>🧩 チーム分け</h1>
+  <a href="../index.html?v=20261103154153" class="top-link">← TOP</a>
+</div>
+<div class="sub">管理者が公開したイベントのチーム分けです。イベントを選ぶと見られます。</div>
+
+<div class="card">
+  <div class="row">
+    <label>イベント <select id="eventSel"><option>読み込み中…</option></select></label>
+    <label>自分の名前で探す <input type="text" id="nameInput" placeholder="ゲーム内の名前"></label>
+  </div>
+  <div class="found" id="found"></div>
+  <div class="note" id="info" style="margin-top:6px;"></div>
+</div>
+
+<div id="area" class="empty">読み込み中…</div>
+
+<script>
+(function() {
+  "use strict";
+  var GAS_URL = "https://script.google.com/macros/s/AKfycbxu5HW9uLU9pCsUs1r_45xpuofWZmQAyZFDwSLK1C_7GvA7SDXZ4ayBEJTS0sR_8oToAw/exec";
+  var NAME_KEY = "ksTeamsMyName";
+  var $ = function(id) { return document.getElementById(id); };
+  var list = [];
+
+  function escapeHtml(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function(c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  // 全角半角・大小文字の違いを無視して名前を比べる
+  function norm(s) { return String(s || "").normalize("NFKC").toLowerCase().replace(/\s+/g, ""); }
+  function formatTime(iso) {
+    var d = new Date(iso);
+    if (!iso || isNaN(d)) return "";
+    return (d.getMonth() + 1) + "/" + d.getDate() + " " + d.getHours() + ":" + (d.getMinutes() < 10 ? "0" : "") + d.getMinutes();
+  }
+
+  function current() { return list.filter(function(t) { return t.eventId === $("eventSel").value; })[0]; }
+
+  function render() {
+    var rec = current();
+    if (!rec) { $("area").className = "empty"; $("area").textContent = "公開されているチーム分けはありません。"; return; }
+    var v = rec.view, me = norm($("nameInput").value);
+    try { localStorage.setItem(NAME_KEY, $("nameInput").value); } catch (e) {}
+    $("info").textContent = "公開: " + formatTime(rec.publishedAt) + (v.battle ? "　戦闘時間: " + v.battle : "") + (rec.done ? "　（このイベントは終わっています）" : "");
+    var hit = [];
+    function li(p) {
+      var isMe = me && norm(p.name) === me;
+      return "<li" + (isMe ? ' class="me"' : "") + ">" + (p.leader ? "👑 " : "") + escapeHtml(p.name) +
+        ' <span class="m">' + escapeHtml(p.marks) + "</span>" +
+        ' <span class="a">' + escapeHtml(p.alliance) + "・" + escapeHtml(p.grade) + "</span>" +
+        (p.time ? ' <span class="t">' + escapeHtml(p.time) + "</span>" : "") + "</li>";
+    }
+    function box(name, lead, members, extra) {
+      members.forEach(function(p) { if (me && norm(p.name) === me) hit.push(name); });
+      return '<div class="team' + (extra ? " extra" : "") + '"><h3>' + escapeHtml(name) + ' <span class="note">' + members.length + "人</span></h3>" +
+        (lead ? '<div class="lead">リーダー: ' + escapeHtml(lead) + "</div>" : "") +
+        "<ul>" + (members.length ? members.map(li).join("") : '<li class="note">（なし）</li>') + "</ul></div>";
+    }
+    var html = '<div class="teams">';
+    v.teams.forEach(function(t) { html += box(t.name, t.leader, t.members, false); });
+    if (v.standby && v.standby.length) html += box("待機", "", v.standby, true);
+    if (v.pending && v.pending.length) html += box("時間未定", "", v.pending, true);
+    html += "</div>";
+    html += '<div class="card" style="margin-top:14px;"><div class="note" style="margin-bottom:6px;">Discordに貼られたものと同じテキスト ／ ◇=VC参加OK ◆=ビビアン星4以上 ◯=マンスリー、色付きの時刻は参加時間</div><pre>' + escapeHtml(v.text || "") + "</pre></div>";
+    $("area").className = "";
+    $("area").innerHTML = html;
+    var found = $("found");
+    if (me) {
+      found.style.display = "block";
+      found.textContent = hit.length ? "あなたは「" + hit.join("・") + "」です" : "この名前はこのイベントのチーム分けにありません（名前を確認してください）";
+    } else {
+      found.style.display = "none";
+    }
+  }
+
+  fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "teamsGet" }) })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (!res.ok) throw new Error(res.error || "読み込めませんでした");
+      // 終わっていないイベントを先に、新しい順
+      list = (res.teams || []).sort(function(a, b) {
+        if (a.done !== b.done) return a.done ? 1 : -1;
+        return String(b.date).localeCompare(String(a.date));
+      });
+      if (!list.length) {
+        $("eventSel").innerHTML = "<option>（公開中のチーム分けはありません）</option>";
+        $("area").className = "empty";
+        $("area").textContent = "公開されているチーム分けはありません。管理者が公開するまでお待ちください。";
+        return;
+      }
+      $("eventSel").innerHTML = list.map(function(t) {
+        return '<option value="' + escapeHtml(t.eventId) + '">' + escapeHtml(t.type + " " + t.date) + (t.done ? "（終了）" : "") + "</option>";
+      }).join("");
+      var want = new URLSearchParams(location.search).get("event");
+      if (want && list.some(function(t) { return t.eventId === want; })) $("eventSel").value = want;
+      try { $("nameInput").value = new URLSearchParams(location.search).get("name") || localStorage.getItem(NAME_KEY) || ""; } catch (e) {}
+      render();
+    })
+    .catch(function(e) {
+      $("area").className = "empty";
+      $("area").textContent = "読み込めませんでした: " + e.message;
+    });
+
+  $("eventSel").addEventListener("change", render);
+  $("nameInput").addEventListener("input", render);
+})();
+</script>
+</body>
+</html>
