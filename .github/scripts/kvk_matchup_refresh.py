@@ -251,7 +251,7 @@ def build_rows(our_people, their_people):
         rows.append(
             f'<tr>'
             f'<td class="num rankcell">{i + 1}</td>'
-            f'<td><span class="tag">{esc(o["tag"])}</span> {esc(o["name"])}</td>'
+            f'<td><span class="tag">{esc(o["tag"])}</span> {esc(o["name"])}<span class="entry-badge" id="entry-{i}"></span></td>'
             f'{"".join(cells)}'
             f'{result_html}'
             f'<td>{opp_select}</td>'
@@ -338,6 +338,12 @@ HEAD = """<!DOCTYPE html>
   tbody tr:hover td{ background:var(--surface-2); }
   td.rankcell{ font-family:"JetBrains Mono", ui-monospace, monospace; font-weight:700; }
   .tag{ display:inline-block; font-family:"Rajdhani","Yu Gothic UI",sans-serif; font-weight:600; font-size:0.74rem; background:var(--gold-bg); color:var(--gold); padding:1px 8px; border-radius:6px; }
+  .entry-badge{ display:inline-block; margin-left:6px; font-size:0.72rem; padding:0 7px; border-radius:6px; white-space:nowrap; }
+  .entry-badge:empty{ display:none; }
+  .entry-badge.entry-start{ background:color-mix(in srgb, #4cc38a 20%, var(--surface-2)); color:#4cc38a; }
+  .entry-badge.entry-late{ background:color-mix(in srgb, var(--accent) 20%, var(--surface-2)); color:var(--accent); }
+  .entry-badge.entry-absent{ background:color-mix(in srgb, var(--their) 18%, var(--surface-2)); color:var(--their); }
+  .entry-badge.entry-none{ border:1px dashed var(--ink-faint); color:var(--ink-faint); }
   .tag.their-tag{ background:color-mix(in srgb, var(--their) 18%, var(--surface-2)); color:var(--their); }
   td.cmp{ font-family:"JetBrains Mono", ui-monospace, monospace; font-size:0.78rem; }
   td.cmp .our-v{ color:var(--our); font-weight:700; }
@@ -396,7 +402,7 @@ BODY = """<body>
 
   <div class="layout-flex">
     <div class="layout-main">
-      <p class="legend">各ボードのセルは「うちの実数値 vs 相手の実数値」。多く勝ったボード数（0〜3）で、その順位の勝敗を決めています。</p>
+      <p class="legend">各ボードのセルは「うちの実数値 vs 相手の実数値」。多く勝ったボード数（0〜3）で、その順位の勝敗を決めています。上の「イベント」を選ぶと、うちの名前の横にそのイベントの参加登録（最初から／途中参加／不参加／未登録）が出ます。</p>
       <div class="table-wrap">
       <table>
       <thead>
@@ -525,10 +531,40 @@ function gasCall(payload) {
     .then(r => r.json());
 }
 
+// --- 参加可否：選んだイベントのイベント参加登録（entries.entry）を、うちの名前で照合して表示 ---
+// 名前一致はKvK同着スタート カウントダウン表の nameKey()/findRegUser() と同じ（前後空白除去＋小文字化、旧名も見る）
+const ENTRY_SHORT = { start: "最初から", late: "途中参加", absent: "不参加" };
+let REG = { users: [], entries: [] };
+
+function nameKey(s) { return String(s).trim().toLowerCase(); }
+
+function findRegUser(name) {
+  const k = nameKey(name);
+  if (!k) return null;
+  return REG.users.find(u => nameKey(u.name) === k)
+    || REG.users.find(u => (u.aliases || []).some(a => nameKey(a) === k))
+    || null;
+}
+
+function renderEntryBadges() {
+  const eventId = document.getElementById("eventSelect").value;
+  OUR.forEach((o, i) => {
+    const el = document.getElementById("entry-" + i);
+    if (!el) return;
+    if (!eventId) { el.textContent = ""; el.className = "entry-badge"; return; }
+    const u = findRegUser(o.name);
+    const e = u && REG.entries.find(x => x.eventId === eventId && x.userId === u.id);
+    const kind = e ? (ENTRY_SHORT[e.entry] ? e.entry : "start") : "none";
+    el.textContent = kind === "none" ? "未登録" : ENTRY_SHORT[kind];
+    el.className = "entry-badge entry-" + kind;
+  });
+}
+
 function loadEvents() {
   const sel = document.getElementById("eventSelect");
   gasCall({ action: "pubGet" }).then(res => {
     if (!res.ok) { sel.innerHTML = '<option value="">（読み込めませんでした）</option>'; return; }
+    REG = { users: res.users || [], entries: (res.history && res.history.entries) || [] };
     const events = (res.history && res.history.events || []).filter(e => e.type === "KVK").sort((a, b) => (b.date || "").localeCompare(a.date || ""));
     if (!events.length) { sel.innerHTML = '<option value="">（KVKイベントがありません）</option>'; return; }
     let saved = "";
@@ -537,6 +573,7 @@ function loadEvents() {
       `<option value="${e.id}"${e.id === saved ? " selected" : ""}>${e.date}</option>`
     ).join("");
     document.getElementById("savePairsBtn").disabled = !sel.value;
+    renderEntryBadges();
   });
 }
 
@@ -544,6 +581,7 @@ document.getElementById("eventSelect").addEventListener("change", function() {
   try { localStorage.setItem(EVENT_ID_KEY, this.value); } catch (e) {}
   document.getElementById("savePairsBtn").disabled = !this.value;
   document.getElementById("eventMsg").textContent = "";
+  renderEntryBadges();
 });
 
 document.getElementById("savePairsBtn").addEventListener("click", function() {
