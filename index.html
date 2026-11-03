@@ -40,24 +40,61 @@
   .tool-card .icon { font-size: 32px; margin-bottom: 10px; }
   .tool-card .title { font-size: 16px; font-weight: bold; margin-bottom: 6px; }
   .tool-card .desc { font-size: 12px; color: #777; line-height: 1.5; }
+
+  .top-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+  .login-box { font-size: 12px; }
+  .login-box a, .login-box button {
+    font: inherit; font-size: 12px; padding: 7px 14px; border-radius: 999px; border: 1px solid #ccc;
+    background: #fff; color: #555; cursor: pointer; text-decoration: none; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .login-box .logged-in { color: #1e7d3a; font-weight: bold; border-color: #cfe8d8; }
+  #loginPromptBox {
+    position: fixed; inset: 0; z-index: 100001; background: rgba(0,0,0,0.3);
+    display: none; align-items: center; justify-content: center;
+  }
+  #loginPromptBox.show { display: flex; }
+  #loginPromptBox .box { background: #fff; border-radius: 12px; padding: 22px; width: 300px; max-width: 90vw; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+  #loginPromptBox input[type="password"] { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; margin-bottom: 10px; box-sizing: border-box; }
+  #loginPromptBox .row { display: flex; gap: 8px; }
+  #loginPromptBox .ok-btn { flex: 1; padding: 9px; background: #4a6cf7; color: #fff; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; }
+  #loginPromptBox .cancel-btn { padding: 9px 14px; background: #fff; color: #555; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; cursor: pointer; }
+  #loginMsg { font-size: 12px; margin-top: 8px; min-height: 1em; }
 </style>
 </head>
 <body>
-<h1>⚔️ キングショット ツール・ランキングまとめ</h1>
-<div class="sub">カテゴリを選んでください。</div>
+<div class="top-row">
+  <div>
+    <h1>⚔️ キングショット ツール・ランキングまとめ</h1>
+    <div class="sub">カテゴリを選んでください。</div>
+  </div>
+  <div class="login-box" id="loginBox"></div>
+</div>
+
+<div id="loginPromptBox">
+  <div class="box">
+    <div style="font-size:14px; font-weight:bold; margin-bottom:10px;">🔐 管理者ログイン</div>
+    <div style="font-size:12px; color:#666; margin-bottom:10px;">ログインすると、このタブではtools/・管理画面・KvK相手突合せが編集可になります。</div>
+    <input type="password" id="loginPwInput" placeholder="パスワード" autocomplete="current-password">
+    <div class="row">
+      <button type="button" class="ok-btn" id="loginOkBtn">ログイン</button>
+      <button type="button" class="cancel-btn" id="loginCancelBtn">キャンセル</button>
+    </div>
+    <div id="loginMsg"></div>
+  </div>
+</div>
 
 <div class="grid">
-  <a class="tool-card" href="tools/tools-index.html?v=20261103104332">
+  <a class="tool-card" href="tools/tools-index.html?v=20261103105033">
     <div class="icon">🛠️</div>
     <div class="title">ツール一覧</div>
     <div class="desc">KvK同着スタート・占領判定・周期ウェーブタイマーなどの計算ツール</div>
   </a>
-  <a class="tool-card" href="flame-dragon/flame-dragon-index.html?v=20261103104332">
+  <a class="tool-card" href="flame-dragon/flame-dragon-index.html?v=20261103105033">
     <div class="icon">🐲</div>
     <div class="title">炎龍の覇者 ランキングまとめ</div>
     <div class="desc">炎龍の覇者イベントの総合ランキングHTML一覧</div>
   </a>
-  <a class="tool-card" href="holy-sword-league/holy-sword-league-index.html?v=20261103104332">
+  <a class="tool-card" href="holy-sword-league/holy-sword-league-index.html?v=20261103105033">
     <div class="icon">⚔️</div>
     <div class="title">聖剣リーグ ランキングまとめ</div>
     <div class="desc">聖剣リーグのシーズン・ブロックごとの総合ランキングHTML一覧</div>
@@ -67,7 +104,7 @@
     <div class="title">イベント参加登録</div>
     <div class="desc">受付中のイベントに、自分の参加情報を登録・変更・取消</div>
   </a>
-  <a class="tool-card" href="admin/events.html?v=20261103104332">
+  <a class="tool-card" href="admin/events.html?v=20261103105033">
     <div class="icon">🔐</div>
     <div class="title">メンバー管理（管理者）</div>
     <div class="desc">イベント参加メンバーの登録・編成管理（要パスワード）</div>
@@ -78,6 +115,79 @@
     <div class="desc">このサイトの使い方まとめ。AIに読み込ませて使い方を質問できます</div>
   </a>
 </div>
+
+<script>
+(function() {
+  var PW_KEY = "ksAdminPw";
+  var GAS_URL = "https://script.google.com/macros/s/AKfycbxu5HW9uLU9pCsUs1r_45xpuofWZmQAyZFDwSLK1C_7GvA7SDXZ4ayBEJTS0sR_8oToAw/exec";
+
+  function isLoggedIn() {
+    try { return !!sessionStorage.getItem(PW_KEY); } catch (e) { return false; }
+  }
+
+  function renderLoginBox() {
+    var box = document.getElementById("loginBox");
+    if (isLoggedIn()) {
+      box.innerHTML = '<span class="logged-in">🔓 管理者ログイン中</span> <button type="button" id="logoutBtn">ログアウト</button>';
+      document.getElementById("logoutBtn").addEventListener("click", function() {
+        try { sessionStorage.removeItem(PW_KEY); } catch (e) {}
+        renderLoginBox();
+      });
+    } else {
+      box.innerHTML = '<button type="button" id="loginBtn">🔐 管理者ログイン</button>';
+      document.getElementById("loginBtn").addEventListener("click", openPrompt);
+    }
+  }
+
+  function openPrompt() {
+    document.getElementById("loginPromptBox").classList.add("show");
+    var pwEl = document.getElementById("loginPwInput");
+    pwEl.value = "";
+    document.getElementById("loginMsg").textContent = "";
+    pwEl.focus();
+  }
+
+  function closePrompt() {
+    document.getElementById("loginPromptBox").classList.remove("show");
+  }
+
+  function tryLogin() {
+    var pw = document.getElementById("loginPwInput").value;
+    if (!pw) return;
+    var okBtn = document.getElementById("loginOkBtn");
+    var msg = document.getElementById("loginMsg");
+    okBtn.disabled = true;
+    msg.style.color = "#666";
+    msg.textContent = "確認中…";
+    fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "get", password: pw }) })
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (res.ok) {
+          try { sessionStorage.setItem(PW_KEY, pw); } catch (e) {}
+          closePrompt();
+          renderLoginBox();
+        } else if (res.status === 401) {
+          msg.style.color = "#d9435e";
+          msg.textContent = "パスワードが違います";
+        } else {
+          msg.style.color = "#d9435e";
+          msg.textContent = "確認できませんでした（" + (res.error || res.status) + "）";
+        }
+      })
+      .catch(function() {
+        msg.style.color = "#d9435e";
+        msg.textContent = "接続できませんでした。時間をおいてもう一度試してください";
+      })
+      .then(function() { okBtn.disabled = false; });
+  }
+
+  document.getElementById("loginOkBtn").addEventListener("click", tryLogin);
+  document.getElementById("loginCancelBtn").addEventListener("click", closePrompt);
+  document.getElementById("loginPwInput").addEventListener("keydown", function(e) { if (e.key === "Enter") tryLogin(); });
+
+  renderLoginBox();
+})();
+</script>
 
 </body>
 </html>
