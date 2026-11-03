@@ -125,7 +125,7 @@
   <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#555;margin:0 0 10px;cursor:pointer;"><input type="checkbox" id="pwRemember" style="width:auto;margin:0;"> パスワードを保存する（次回から入力不要。共用の端末ではチェックしない）</label>
   <button type="button" id="loginBtn">ログイン</button>
   <div class="msg err" id="loginMsg"></div>
-  <a href="../index.html?v=20261103161528" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
+  <a href="../index.html?v=20261103161711" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
 </div>
 
 <div id="appView">
@@ -242,21 +242,42 @@
     "body.ks-collapsed .ks-title-row { justify-content: center; }",
     "body.ks-collapsed .ks-sidebar .ks-label { display: none; }",
     "body.ks-collapsed .ks-sidebar .ks-link { justify-content: center; padding: 8px 0; }",
+    ".ks-menu-btn { display: none; }",
     "@media (max-width: 760px) {",
-    "  .ks-sidebar { width: 100% !important; height: auto; max-height: none; top: 0; left: 0; padding: 8px 10px !important; overflow-y: hidden; display: flex; align-items: center; gap: 8px; transition: transform 0.2s ease; }",
-    "  .ks-title-row { margin-bottom: 0; }",
-    "  .ks-sidebar .ks-title { font-size: 12px; flex: 0 0 auto; }",
-    "  .ks-sidebar nav { flex-direction: row; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; gap: 4px; }",
-    "  .ks-sidebar .ks-link { flex: 0 0 auto; white-space: nowrap; margin-bottom: 0; padding: 6px 10px; font-size: 12px; }",
-    "  .ks-sidebar .ks-label { display: inline !important; }",
-    "  .ks-sidebar .ks-group { display: none; }",
-    "  body.has-admin-sidebar { margin-left: 0 !important; padding-top: 56px !important; }",
-    "  body.has-admin-sidebar.ks-collapsed .ks-sidebar { transform: translateY(-100%); width: 100% !important; }",
-    "  body.has-admin-sidebar.ks-collapsed { margin-left: 0 !important; padding-top: 0 !important; }",
-    "  body.ks-collapsed .ks-open-btn { display: flex; }",
-    "  .ks-open-btn { top: 8px; left: 8px; }",
+    "  .ks-sidebar, body.ks-collapsed .ks-sidebar { width: 100% !important; height: 48px; padding: 0 12px !important; overflow: visible; }",
+    "  .ks-title-row, body.ks-collapsed .ks-title-row { height: 48px; margin-bottom: 0; justify-content: flex-start; }",
+    "  .ks-sidebar .ks-title, body.ks-collapsed .ks-sidebar .ks-title { display: block; font-size: 14px; }",
+    "  .ks-toggle-btn, .ks-open-btn, body.ks-collapsed .ks-open-btn { display: none !important; }",
+    "  .ks-menu-btn { display: flex; margin-left: auto; flex: 0 0 auto; width: 40px; height: 34px; border-radius: 6px; border: 1px solid #3a4a63; background: transparent; color: #fff; font-size: 18px; line-height: 1; cursor: pointer; align-items: center; justify-content: center; }",
+    "  .ks-sidebar nav { display: none; position: absolute; top: 48px; left: 0; right: 0; max-height: calc(100vh - 48px); overflow-y: auto; background: #1a2332; padding: 6px 10px 12px; box-sizing: border-box; box-shadow: 0 8px 18px rgba(0,0,0,0.35); }",
+    "  body.ks-menu-open .ks-sidebar nav { display: flex; }",
+    "  .ks-sidebar .ks-link, body.ks-collapsed .ks-sidebar .ks-link { justify-content: flex-start; padding: 10px; font-size: 14px; }",
+    "  .ks-sidebar .ks-label, body.ks-collapsed .ks-sidebar .ks-label { display: inline; }",
+    "  .ks-sidebar .ks-group, body.ks-collapsed .ks-sidebar .ks-group { display: block; margin: 10px 4px; }",
+    "  body.has-admin-sidebar, body.has-admin-sidebar.ks-collapsed { margin-left: 0 !important; padding-top: 56px !important; }",
     "}",
   ].join("\n");
+
+  // スマホ幅のメニュー：☰で開閉。開いているときにメニューの外をタップしたら閉じ、そのタップは下の画面に通さない
+  function bindMobileMenu() {
+    if (window.__ksMenuBound) return;
+    window.__ksMenuBound = true;
+    function setMenuOpen(open) {
+      document.body.classList.toggle("ks-menu-open", open);
+      document.querySelectorAll(".ks-menu-btn").forEach(function(b) {
+        b.textContent = open ? "✕" : "☰";
+        b.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+    }
+    function outsideMenu(t) {
+      return document.body.classList.contains("ks-menu-open") && !(t.closest && (t.closest(".ks-sidebar nav") || t.closest(".ks-menu-btn")));
+    }
+    window.addEventListener("mousedown", function(e) { if (outsideMenu(e.target)) e.preventDefault(); }, true);
+    window.addEventListener("click", function(e) {
+      if (e.target.closest && e.target.closest(".ks-menu-btn")) { setMenuOpen(!document.body.classList.contains("ks-menu-open")); return; }
+      if (outsideMenu(e.target)) { e.preventDefault(); e.stopPropagation(); setMenuOpen(false); }
+    }, true);
+  }
 
   function renderAdminSidebar() {
     if ($("ksAdminSidebar")) return;
@@ -275,11 +296,12 @@
     wrap.innerHTML =
       '<div class="ks-sidebar" id="ksAdminSidebar">' +
         '<div class="ks-title-row"><span class="ks-title">🔐 管理画面</span>' +
-          '<button type="button" class="ks-toggle-btn" id="ksToggleBtn">←</button></div>' +
+          '<button type="button" class="ks-toggle-btn" id="ksToggleBtn">←</button>' +
+          '<button type="button" class="ks-menu-btn" aria-label="メニュー" aria-expanded="false">☰</button></div>' +
         "<nav>" + links +
           '<div class="ks-group"></div>' +
-          '<a href="../kvk-matchup/kvk-matchup-index.html?v=20261103161528" class="ks-link" title="KvK相手突合せ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ</span></a>' +
-          '<a href="../index.html?v=20261103161528" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a>' +
+          '<a href="../kvk-matchup/kvk-matchup-index.html?v=20261103161711" class="ks-link" title="KvK相手突合せ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ</span></a>' +
+          '<a href="../index.html?v=20261103161711" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a>' +
           '<button type="button" class="ks-link" id="logoutBtn" title="ログアウト"><span class="ks-icon">🚪</span><span class="ks-label">ログアウト</span></button>' +
         "</nav>" +
       "</div>" +
@@ -295,6 +317,7 @@
     }
     if (collapsed) document.body.classList.add("ks-collapsed");
     applyBtn();
+    bindMobileMenu();
     function toggle() {
       var next = !document.body.classList.contains("ks-collapsed");
       document.body.classList.toggle("ks-collapsed", next);
