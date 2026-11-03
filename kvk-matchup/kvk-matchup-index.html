@@ -89,17 +89,21 @@
       <label>表示名（省略可）</label>
       <input type="text" id="oppLabelInput" placeholder="例: 123鯖連合">
     </div>
+    <div class="field">
+      <label>紐づけるKVKイベント</label>
+      <select id="eventSelect"><option value="">（読み込み中…）</option></select>
+    </div>
     <button type="button" id="makePromptBtn">プロンプトを作る</button>
   </div>
   <div class="prompt-out" id="promptOut"></div>
   <div class="row" id="promptCopyRow" style="display:none; margin-top:0;">
     <button type="button" class="copy-btn" id="copyPromptBtn">コピー</button>
   </div>
-  <div class="note">ここで作ったプロンプトをClaudeに渡すと、相手鯖との突合せレポートを作成・公開します（このページ上では自動実行されません）。</div>
+  <div class="note">ここで作ったプロンプトをClaudeに渡すと、相手鯖との突合せレポートを作成・公開します（このページ上では自動実行されません）。イベントを選ぶと、そのイベントが「完了」になるまで毎日9時に数値だけ自動更新されます。</div>
 </div>
 
 <div class="grid">
-  <a class="tool-card" href="KvK相手突合せ_1065鯖_20261103.html?v=20261103113701">
+  <a class="tool-card" href="KvK相手突合せ_1065鯖_20261103.html?v=20261103115724">
     <div class="icon">⚔️</div>
     <div class="title">1065鯖</div>
     <div class="desc">12人 vs 12人の突合せ／6勝6敗</div>
@@ -108,9 +112,30 @@
 </div>
 
 <script>
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxu5HW9uLU9pCsUs1r_45xpuofWZmQAyZFDwSLK1C_7GvA7SDXZ4ayBEJTS0sR_8oToAw/exec";
+
+function loadEvents() {
+  const sel = document.getElementById("eventSelect");
+  fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "pubGet" }) })
+    .then(r => r.json())
+    .then(res => {
+      if (!res.ok) { sel.innerHTML = '<option value="">（読み込めませんでした）</option>'; return; }
+      const events = (res.history && res.history.events || []).filter(e => e.type === "KVK" && !e.done)
+        .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+      sel.innerHTML = '<option value="">（紐づけない）</option>' + events.map(e =>
+        `<option value="${e.id}" data-date="${e.date}">${e.date}</option>`
+      ).join("");
+    })
+    .catch(() => { sel.innerHTML = '<option value="">（読み込めませんでした）</option>'; });
+}
+loadEvents();
+
 document.getElementById("makePromptBtn").addEventListener("click", () => {
   const kids = document.getElementById("oppKidsInput").value.trim();
   const label = document.getElementById("oppLabelInput").value.trim();
+  const eventSel = document.getElementById("eventSelect");
+  const eventId = eventSel.value;
+  const eventDate = eventId ? eventSel.selectedOptions[0].dataset.date : "";
   const out = document.getElementById("promptOut");
   if (!kids) {
     out.style.display = "block";
@@ -120,6 +145,7 @@ document.getElementById("makePromptBtn").addEventListener("click", () => {
   }
   let prompt = `相手鯖 ${kids} とのKvK相手突合せを作って`;
   if (label) prompt += `（表示名: ${label}）`;
+  if (eventId) prompt += `（紐づけるイベント: ${eventDate}開催分、イベントID ${eventId}）`;
   out.style.display = "block";
   out.textContent = prompt;
   document.getElementById("promptCopyRow").style.display = "flex";
@@ -136,6 +162,6 @@ document.getElementById("copyPromptBtn").addEventListener("click", () => {
 });
 </script>
 
-<script src="kvk-auth-gate.js?v=20261103113701"></script>
+<script src="kvk-auth-gate.js?v=20261103115724"></script>
 </body>
 </html>

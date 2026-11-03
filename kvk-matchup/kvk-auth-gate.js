@@ -62,6 +62,7 @@
       ["../admin/participants.html", "👥", "参加者一覧"],
       ["../admin/users.html", "🗂️", "ユーザー管理"],
       ["../admin/logs.html", "🕵️", "個人登録の記録"],
+      ["../admin/kvk-matchup-guide.html", "📋", "KvK相手突合せ 運用メモ"],
     ].map(function (item) {
       return '<a href="' + item[0] + '" class="ks-link" title="' + item[2] + '">' +
         '<span class="ks-icon">' + item[1] + '</span><span class="ks-label">' + item[2] + "</span></a>";
