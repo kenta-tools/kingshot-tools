@@ -2058,7 +2058,7 @@
 
   // ---------- 個人登録の記録 ----------
   var logRows = [];
-  var LOG_ACT = { added: "登録", updated: "変更", canceled: "取消", blocked: "ブロック" };
+  var LOG_ACT = { added: "登録", updated: "変更", canceled: "取消", blocked: "ブロック", reverted: "元に戻した（管理者）" };
   var blocklist = [];
 
   function ipBlocked(ip) {
