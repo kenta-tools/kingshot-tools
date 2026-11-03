@@ -352,6 +352,14 @@ function selfSave_(token, p) {
       if (!user) user = findUser_(d.users, name);
       d.selfUndo = d.selfUndo || [];
       var proxyBy = clip_(p.proxyBy, 30);
+      // 代理入力モードの入力者は、先にこのイベントに自分を登録している人だけ（名前は登録済みの今の名前にそろえる）
+      if (proxyBy) {
+        var pu = findUser_(d.users, proxyBy);
+        if (!pu || !d.entries.some(function(x) { return x.eventId === ev.id && x.userId === pu.id; })) {
+          return { ok: false, status: 403, error: "代理入力モードを使う前に、まず自分を登録してください" };
+        }
+        proxyBy = pu.name;
+      }
       // 代理入力モードでないのに、同じIPから短い時間に別の人の登録が続く → 断る（家族などは代理入力モードで）
       if (ip && !proxyBy) {
         var since = Date.now() - SELF_SAME_IP_MIN * 60000, uid = user ? user.id : "";
