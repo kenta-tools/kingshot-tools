@@ -83,30 +83,28 @@
   body.ks-collapsed .ks-sidebar .ks-link { justify-content: center; padding: 8px 0; }
   body.ks-collapsed { margin-left: 76px !important; }
 
-  /* --- モバイル対応：サイドバーを上部の横スクロールバーに変形 --- */
+  /* --- モバイル対応：上部に固定バー（右上の☰で下にメニューを開く）。PCの折りたたみ状態は無視 --- */
+  .ks-menu-btn { display: none; }
   @media (max-width: 760px) {
-    .ks-sidebar {
-      width: 100% !important; height: auto; max-height: none; top: 0; left: 0;
-      padding: 8px 10px !important; overflow-y: hidden;
-      display: flex; align-items: center; gap: 8px;
-      transition: transform 0.2s ease;
+    .ks-sidebar, body.ks-collapsed .ks-sidebar { width: 100% !important; height: 48px; padding: 0 12px !important; overflow: visible; }
+    .ks-title-row, body.ks-collapsed .ks-title-row { height: 48px; margin-bottom: 0; justify-content: flex-start; }
+    .ks-sidebar .ks-title, body.ks-collapsed .ks-sidebar .ks-title { display: block; font-size: 14px; }
+    .ks-toggle-btn, .ks-open-btn, body.ks-collapsed .ks-open-btn { display: none !important; }
+    .ks-menu-btn {
+      display: flex; margin-left: auto; flex: 0 0 auto; width: 40px; height: 34px; border-radius: 6px;
+      border: 1px solid #3a4a63; background: transparent; color: #fff; font-size: 18px; line-height: 1;
+      cursor: pointer; align-items: center; justify-content: center;
     }
-    .ks-title-row { margin-bottom: 0; }
-    .ks-sidebar .ks-title { font-size: 12px; flex: 0 0 auto; }
     .ks-sidebar nav {
-      flex-direction: row; flex-wrap: nowrap; overflow-x: auto;
-      -webkit-overflow-scrolling: touch; gap: 4px;
+      display: none; position: absolute; top: 48px; left: 0; right: 0; max-height: calc(100vh - 48px);
+      overflow-y: auto; background: #1a2332; padding: 6px 10px 12px; box-sizing: border-box;
+      box-shadow: 0 8px 18px rgba(0,0,0,0.35);
     }
-    .ks-sidebar .ks-link {
-      flex: 0 0 auto; white-space: nowrap; margin-bottom: 0;
-      padding: 6px 10px; font-size: 12px;
-    }
-    .ks-sidebar .ks-label { display: inline !important; }
-    body { margin-left: 0 !important; padding-top: 56px !important; }
-    body.ks-collapsed .ks-sidebar { transform: translateY(-100%); width: 100% !important; }
-    body.ks-collapsed { margin-left: 0 !important; padding-top: 0 !important; }
-    body.ks-collapsed .ks-open-btn { display: flex; }
-    .ks-open-btn { top: 8px; left: 8px; }
+    body.ks-menu-open .ks-sidebar nav { display: flex; }
+    .ks-sidebar .ks-link, body.ks-collapsed .ks-sidebar .ks-link { justify-content: flex-start; padding: 10px; font-size: 14px; }
+    .ks-sidebar .ks-label, body.ks-collapsed .ks-sidebar .ks-label { display: inline; }
+    .ks-sidebar .ks-group, body.ks-collapsed .ks-sidebar .ks-group { display: block; }
+    body, body.ks-collapsed { margin-left: 0 !important; padding-top: 56px !important; }
   }
 
   /* --- テーブル等の横はみ出し対策（モバイル幅のみ） --- */
@@ -120,9 +118,10 @@
   <div class="ks-title-row">
     <span class="ks-title">⚔️ キングショット</span>
     <button type="button" class="ks-toggle-btn" id="ksToggleBtn" onclick="ksToggleSidebar()" aria-label="メニュー開閉">←</button>
+    <button type="button" class="ks-menu-btn" aria-label="メニュー" aria-expanded="false">☰</button>
   </div>
   <nav>
-    <a href="../index.html?v=20261103160757" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261103160757" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="王城到着同期カウントアップ.html?v=20261103160757" class="ks-link ks-active" title="KvK同着スタート カウントアップ表"><span class="ks-icon">⏱️</span><span class="ks-label">KvK同着スタート カウントアップ表</span></a><a href="KvK同着スタート カウントダウン表.html?v=20261103160757" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261103160757" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="周期ウェーブタイマー.html?v=20261103160757" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><a href="音声アナウンス付きストップウォッチ.html?v=20261103160757" class="ks-link" title="音声ストップウォッチ（工事中）"><span class="ks-icon">🔊</span><span class="ks-label">音声ストップウォッチ（工事中）</span></a>
+    <a href="../index.html?v=20261103161528" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261103161528" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="王城到着同期カウントアップ.html?v=20261103161528" class="ks-link ks-active" title="KvK同着スタート カウントアップ表"><span class="ks-icon">⏱️</span><span class="ks-label">KvK同着スタート カウントアップ表</span></a><a href="KvK同着スタート カウントダウン表.html?v=20261103161528" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261103161528" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="周期ウェーブタイマー.html?v=20261103161528" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><a href="音声アナウンス付きストップウォッチ.html?v=20261103161528" class="ks-link" title="音声ストップウォッチ（工事中）"><span class="ks-icon">🔊</span><span class="ks-label">音声ストップウォッチ（工事中）</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -143,6 +142,22 @@
     try { localStorage.setItem("ksSidebarCollapsed", next ? "1" : "0"); } catch (e) {}
     applyBtn();
   };
+  // スマホ幅のメニュー：☰で開閉。開いているときにメニューの外をタップしたら閉じ、そのタップは下の画面に通さない
+  function setMenuOpen(open) {
+    document.body.classList.toggle("ks-menu-open", open);
+    document.querySelectorAll(".ks-menu-btn").forEach(function(b) {
+      b.textContent = open ? "✕" : "☰";
+      b.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+  }
+  function outsideMenu(t) {
+    return document.body.classList.contains("ks-menu-open") && !(t.closest && (t.closest(".ks-sidebar nav") || t.closest(".ks-menu-btn")));
+  }
+  window.addEventListener("mousedown", function(e) { if (outsideMenu(e.target)) e.preventDefault(); }, true);
+  window.addEventListener("click", function(e) {
+    if (e.target.closest && e.target.closest(".ks-menu-btn")) { setMenuOpen(!document.body.classList.contains("ks-menu-open")); return; }
+    if (outsideMenu(e.target)) { e.preventDefault(); e.stopPropagation(); setMenuOpen(false); }
+  }, true);
 })();
 </script>
 <!-- ks-sidebar:end -->
