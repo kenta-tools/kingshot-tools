@@ -26,6 +26,8 @@ var MAX_BYTES = 5 * 1024 * 1024; // 保存データの上限（いたずら対�
 var DATA_FILE_NAME = "Kingshot メンバー管理データ（非公開）.json";
 var GRADES = ["G8", "G7", "G6", "G5", "その他"];
 var SELF_LIMIT_PER_MIN = 60; // 個人登録の受付上限（全体で1分あたり。いたずら連打対策）
+var SELF_SAME_IP_MIN = 30;   // 代理入力モードでないとき、同じIPから別の人の登録が続くのを断る時間（分）
+var SELF_UNDO_MAX = 400;     // 個人登録の「変更前の内容」を残す件数（いたずらを元に戻すため。d.selfUndo、非公開）
 
 function doPost(e) {
   var p;
@@ -71,6 +73,8 @@ function handle_(p) {
     if (p.action === "setBlocklist") return json_(writeBlocklist_(p.list));
     // Discord の招待リンク（GitHub Actions が毎朝作って送ってくる）
     if (p.action === "setDiscordInvite") return json_(setDiscordInvite_(p.invite));
+    // いたずらの取り消し: 指定IP（末尾 * で前方一致）からの個人登録を、新しい順に元へ戻す（dryRun なら一覧だけ）
+    if (p.action === "revertByIp") return json_(revertByIp_(token, p));
     // KvK相手突合せの「うちの誰が相手の誰と対戦するか」の保存（管理者のみ）。イベントID単位で1件、まるごと上書き
     if (p.action === "matchupSave") return json_(matchupSave_(token, p));
 
@@ -334,6 +338,7 @@ function selfSave_(token, p) {
 
       // ユーザーを決める: 候補から選んだ人 → 名前（旧名含む）が一致する人 → 新規
       var user = p.userId ? d.users.filter(function(u) { return u.id === p.userId; })[0] : null;
+      var userSnap = user ? snapUser_(user) : null; // 名前を変える前の状態（元に戻すため）
       if (user && key_(user.name) !== key_(name)) {
         var taken = findUser_(d.users, name);
         if (taken && taken.id !== user.id) return { ok: false, status: 409, error: "「" + name + "」はすでに別の人の名前として登録されています" };
@@ -345,6 +350,21 @@ function selfSave_(token, p) {
         user.name = name;
       }
       if (!user) user = findUser_(d.users, name);
+      d.selfUndo = d.selfUndo || [];
+      var proxyBy = clip_(p.proxyBy, 30);
+      // 代理入力モードでないのに、同じIPから短い時間に別の人の登録が続く → 断る（家族などは代理入力モードで）
+      if (ip && !proxyBy) {
+        var since = Date.now() - SELF_SAME_IP_MIN * 60000, uid = user ? user.id : "";
+        var other = d.selfUndo.filter(function(r) {
+          return r.ip === ip && !r.by && !r.reverted && r.uid !== uid && Date.parse(r.t) >= since;
+        })[0];
+        if (other) return { ok: false, status: 429, error: "他の人を入力する場合は、代理入力モードからお願いします" };
+      }
+      // 変更前の内容（いたずらを元に戻すため）
+      var undo = { t: "", ip: ip, by: proxyBy, uid: "", ev: ev.id, act: "",
+        userBefore: userSnap || (user ? snapUser_(user) : null), entryBefore: null, afterAt: "", userAfterName: "" };
+      var nowEntry = user && d.entries.filter(function(x) { return x.eventId === ev.id && x.userId === user.id; })[0];
+      if (nowEntry) undo.entryBefore = JSON.parse(JSON.stringify(nowEntry));
       var result;
       if (p.cancel) {
         if (!user) return { ok: false, status: 404, error: "このイベントに登録がありません" };
@@ -365,7 +385,7 @@ function selfSave_(token, p) {
           vc: row.vc, vivian4: row.vivian4, mayChange: row.mayChange, troops: row.troops, tier: row.tier, joinAt: row.joinAt, leaveAt: row.leaveAt,
           note: row.note, marchCount: row.marchCount, marchPet: row.marchPet, rallyCount: row.rallyCount,
           rallyPet: row.rallyPet, rallySpeedPet: row.rallySpeedPet, marchCap: row.marchCap, rallyCap: row.rallyCap,
-          proxyBy: clip_(p.proxyBy, 30), // 代理で入力した人の名前（本人の入力なら ""）
+          proxyBy: proxyBy, // 代理で入力した人の名前（本人の入力なら ""）
           updatedAt: new Date().toISOString(),
           id: existing ? existing.id : newId_("r"), eventId: ev.id, userId: user.id
         };
@@ -375,9 +395,13 @@ function selfSave_(token, p) {
       }
 
       d.updated = new Date().toISOString();
+      undo.t = d.updated; undo.uid = user.id; undo.act = result; undo.userAfterName = user.name;
+      undo.afterAt = result === "canceled" ? "" : e.updatedAt;
+      d.selfUndo.unshift(undo); // 新しい順
+      if (d.selfUndo.length > SELF_UNDO_MAX) d.selfUndo.length = SELF_UNDO_MAX;
       var w = writeFile_(token, d, f.sha, "Self registration: " + ev.type + " " + ev.date);
       if (w.ok) {
-        appendLog_({ t: d.updated, ev: ev.type + " " + ev.date, name: user.name, uid: user.id, act: result, by: clip_(p.proxyBy, 30),
+        appendLog_({ t: d.updated, ev: ev.type + " " + ev.date, name: user.name, uid: user.id, act: result, by: proxyBy,
           ip: String(p.ip || "").replace(/[^0-9a-fA-F:.]/g, "").slice(0, 45), ua: clip_(p.ua, 120) });
         return { ok: true, result: result, userId: user.id, name: user.name };
       }
@@ -385,6 +409,68 @@ function selfSave_(token, p) {
       // 直前に他の人が保存した → 取り直してもう一度
     }
     return { ok: false, status: 409, error: "混み合っています。もう一度押してください" };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function snapUser_(u) {
+  return { name: u.name, alliance: u.alliance, aliases: (u.aliases || []).slice(), nameHistory: (u.nameHistory || []).slice() };
+}
+
+// いたずらの取り消し（管理者が指示したときだけ。パスワード必須）
+// p: { ip: "203.0.113.5" または "203.0.113.*", since: ISO（省略可）, dryRun: true/false }
+// 新しい順に「その登録の直前の状態」へ戻す。そのあとに別の登録・変更があったものは戻さずに「スキップ」と返す。
+function revertByIp_(token, p) {
+  var pat = String(p.ip || "").trim();
+  if (!pat) return { ok: false, status: 400, error: "IPを指定してください" };
+  function hit(ip) { return pat.slice(-1) === "*" ? String(ip).indexOf(pat.slice(0, -1)) === 0 : ip === pat; }
+  var since = p.since ? Date.parse(p.since) : 0;
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) return { ok: false, status: 503, error: "混み合っています" };
+  try {
+    for (var attempt = 0; attempt < 3; attempt++) {
+      var f = readFile_(token);
+      if (!f.ok) return f;
+      var d = f.data;
+      d.users = d.users || []; d.events = d.events || []; d.entries = d.entries || [];
+      d.selfUndo = d.selfUndo || [];
+      var report = [], changed = 0;
+      d.selfUndo.forEach(function(r) { // 新しい順に並んでいる
+        if (r.reverted || !r.ip || !hit(r.ip) || Date.parse(r.t) < since) return;
+        var user = d.users.filter(function(u) { return u.id === r.uid; })[0];
+        var ev = d.events.filter(function(e) { return e.id === r.ev; })[0];
+        var item = { t: r.t, ip: r.ip, by: r.by || "", name: r.userAfterName || (user && user.name) || "?",
+          ev: ev ? ev.type + " " + ev.date : r.ev, act: r.act };
+        var cur = d.entries.filter(function(x) { return x.eventId === r.ev && x.userId === r.uid; })[0];
+        var unchanged = r.act === "canceled" ? !cur : !!cur && cur.updatedAt === r.afterAt;
+        if (!unchanged) { item.result = "スキップ（そのあと別の登録・変更があった）"; report.push(item); return; }
+        d.entries = d.entries.filter(function(x) { return x !== cur; });
+        if (r.entryBefore) d.entries.push(r.entryBefore);
+        item.result = r.entryBefore ? (r.act === "canceled" ? "取消を戻す" : "変更前の内容に戻す") : "登録を消す";
+        if (user && r.userBefore && user.name === r.userAfterName) {
+          if (r.userBefore.name !== user.name) item.result += "・名前を「" + r.userBefore.name + "」に戻す";
+          user.name = r.userBefore.name; user.alliance = r.userBefore.alliance;
+          user.aliases = r.userBefore.aliases; user.nameHistory = r.userBefore.nameHistory;
+        }
+        if (user && !r.userBefore && !d.entries.some(function(x) { return x.userId === user.id; })) {
+          d.users = d.users.filter(function(u) { return u !== user; });
+          item.result += "・この登録で新しく作られた人なので、ユーザーも消す";
+        }
+        if (!p.dryRun) r.reverted = new Date().toISOString();
+        changed++;
+        report.push(item);
+      });
+      if (p.dryRun || !changed) return { ok: true, dryRun: !!p.dryRun, items: report };
+      d.updated = new Date().toISOString();
+      var w = writeFile_(token, d, f.sha, "Revert by IP " + pat);
+      if (w.ok) {
+        appendLog_({ t: d.updated, ev: "", name: "（管理者が元に戻した）", uid: "", act: "reverted", by: "", ip: pat, ua: changed + "件を戻した" });
+        return { ok: true, dryRun: false, items: report };
+      }
+      if (w.status !== 409 && w.status !== 422) return w;
+    }
+    return { ok: false, status: 409, error: "混み合っています。もう一度実行してください" };
   } finally {
     lock.releaseLock();
   }

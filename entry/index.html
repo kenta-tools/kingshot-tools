@@ -87,7 +87,10 @@
   .who { font-size: 15px; margin: 4px 0 14px; }
   .who .rename-btn { padding: 4px 10px; font-size: 13px; margin-left: 8px; }
   .rename-box { background: #f6f8fb; border-radius: 8px; padding: 10px; margin: -6px 0 14px; }
-  .proxy-box { background: #f6f8fb; border-radius: 8px; padding: 10px; margin: -6px 0 14px; }
+  .proxy-box { background: #fff4e5; border: 1px solid #f0c27b; border-radius: 8px; padding: 8px 10px; margin: -6px 0 14px; font-size: 14px; }
+  .proxy-mode { background: #fff; border-radius: 10px; padding: 10px 14px; margin: 0 0 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); font-size: 14px; }
+  .proxy-mode.on { background: #fff4e5; border: 2px solid #f0a030; }
+  .proxy-mode .row { margin-top: 6px; }
   .proxy-tag { font-size: 12px; color: #777; font-weight: normal; }
   .rename-box .row input { flex: 1; min-width: 140px; }
   .list-warn { color: #c0392b; font-size: 13px; font-weight: bold; margin-top: 8px; line-height: 1.6; }
@@ -129,6 +132,28 @@
   ③「登録しました」と出たら完了<br>
   <span style="font-size: 13px; color: #555;">変更・取消も、同じ名前を入れて「次へ」でできます。</span>
   <div class="warn" style="margin-top: 6px;">⚠ 登録した参加時間に参加できなそうなときは、必ず連絡してください。</div>
+</div>
+
+<!-- 代理入力モード: ほかの人の分を入力するときにオンにする（この端末に覚えておき、やめるまで続く） -->
+<div class="proxy-mode" id="proxyBar">
+  <div id="proxyOffView">
+    <button type="button" class="sub-btn" id="proxyStartBtn">👥 代理入力モードにする</button>
+    <span style="font-size: 12px; color: #666;">ほかの人の分を入力するとき</span>
+    <div id="proxySetup" style="display: none; margin-top: 8px;">
+      <span class="cap">入力する人（あなた）のゲーム内の名前</span>
+      <div class="row">
+        <input type="text" id="proxyNameInput" maxlength="30" autocomplete="off" list="nameList" style="max-width: 220px;">
+        <button type="button" class="sub-btn" id="proxyOkBtn">開始</button>
+        <button type="button" class="sub-btn" id="proxyCancelBtn">やめる</button>
+      </div>
+    </div>
+  </div>
+  <div id="proxyOnView" style="display: none;">
+    👥 <b>代理入力モード中</b>：入力者「<b id="proxyNameText"></b>」
+    <button type="button" class="sub-btn" id="proxyEndBtn" style="margin-left: 6px;">代理入力モードをやめる</button>
+    <div style="font-size: 12px; color: #666; margin-top: 4px;">このモードの間に登録した分には、入力者として「<span id="proxyNameText2"></span>」が記録されます。自分の分を登録するときはやめてください。</div>
+  </div>
+  <div class="msg" id="proxyMsg"></div>
 </div>
 
 <!-- Discordへの案内。リンクは中継役（pubGet の discordInvite）が毎日作り直したものに自動で差し替わる。
@@ -195,14 +220,8 @@
       </div>
       <div class="msg" id="renameMsg"></div>
     </div>
-    <!-- 代理入力: 入力している人の名前を残す（本人の登録には出ない） -->
-    <div class="proxy-box">
-      <label class="chip"><input type="checkbox" id="fProxyOn"><span>代理で入力している（本人ではない）</span></label>
-      <div id="proxyField" style="display: none; margin-top: 8px;">
-        <span class="cap">入力している人（あなた）のゲーム内の名前<span class="req">必須</span></span>
-        <input type="text" id="fProxyBy" maxlength="30" autocomplete="off" list="nameList">
-      </div>
-    </div>
+    <!-- 代理入力モードのときだけ出す -->
+    <div class="proxy-box" id="proxyNow" style="display: none;">👥 代理入力モード：入力者「<b id="proxyNowName"></b>」として記録されます</div>
     <div class="banner" id="registeredBanner" style="display: none;">登録済みです。直して「変更を保存する」か、いちばん下の「登録を取り消す」を押してください。<span id="registeredAt"></span></div>
     <div class="banner" id="prevBanner" style="display: none;"></div>
 
@@ -325,6 +344,7 @@
       <button type="button" class="sub-btn" id="editAgainBtn">内容を直す</button>
       <button type="button" class="sub-btn" id="anotherBtn">別の人を登録する</button>
     </div>
+    <div class="msg" id="doneMsg"></div>
   </div>
 
   <!-- 登録済みの人 -->
@@ -356,8 +376,9 @@
   // 中継役は、管理画面で「受付中」にしたイベントの1人分の参加情報しか変更しない。
   var GAS_URL = "https://script.google.com/macros/s/AKfycbxu5HW9uLU9pCsUs1r_45xpuofWZmQAyZFDwSLK1C_7GvA7SDXZ4ayBEJTS0sR_8oToAw/exec";
   var NAME_KEY = "ksEntryName";
-  var PROXY_KEY = "ksEntryProxyName"; // 代理で入力した人の名前（次に代理入力するときの初期値）
-  var nextProxy = ""; // 次に開く入力画面を「代理」にするときの、入力している人の名前
+  var PROXY_KEY = "ksEntryProxyName"; // 代理入力モードの入力者の名前（あればモード中。やめるまで続く）
+  var SELF_KEY = "ksEntrySelf";       // この端末で代理入力モードでなく登録した人（ユーザーID）。別の人を続けて登録しないため
+  var OTHER_MSG = "他の人を入力する場合は、上の「代理入力モード」からお願いします";
   var EVENT_KEY = "ksEntryEvent";
   var GRADES = ["G8", "G7", "G6", "G5", "その他"];
   // 一覧での参加の表示（データの entry と時刻から）
@@ -598,9 +619,7 @@
     $("listBody").querySelectorAll("button.edit").forEach(function(btn) {
       btn.addEventListener("click", function() {
         var u = userById(btn.dataset.user);
-        if (!u) return;
-        if (me && me.userId !== u.id) nextProxy = proxyBy() || me.name;
-        startForm(u, u.name);
+        if (u) startForm(u, u.name);
       });
     });
   }
@@ -664,11 +683,7 @@
       prev = Object.assign({}, prev, { entry: "start", joinAt: "", leaveAt: "", leaveEarly: false, note: "" });
     }
     fillForm(existing || prev || { alliance: user ? user.alliance : "", entry: "start", grade: "G7" });
-    // 代理入力の欄は毎回まっさら（「別の人を登録する」や一覧の別の人から開いたときだけ、代理にしておく）
-    $("fProxyOn").checked = !!nextProxy;
-    $("fProxyBy").value = nextProxy;
-    nextProxy = "";
-    syncProxy();
+    renderProxy();
     $("formMsg").textContent = "";
     show("form");
     renderList();
@@ -763,13 +778,41 @@
     el.addEventListener("change", syncSubFields);
   });
 
-  function syncProxy() {
-    var on = $("fProxyOn").checked;
-    $("proxyField").style.display = on ? "block" : "none";
-    if (on && !str($("fProxyBy").value)) $("fProxyBy").value = stored(PROXY_KEY);
+  // ---------- 代理入力モード ----------
+  function proxyBy() { return stored(PROXY_KEY); }
+  function renderProxy() {
+    var name = proxyBy();
+    $("proxyBar").classList.toggle("on", !!name);
+    $("proxyOffView").style.display = name ? "none" : "block";
+    $("proxyOnView").style.display = name ? "block" : "none";
+    $("proxyNameText").textContent = $("proxyNameText2").textContent = name;
+    $("proxyNow").style.display = name ? "block" : "none";
+    $("proxyNowName").textContent = name;
   }
-  $("fProxyOn").addEventListener("change", syncProxy);
-  function proxyBy() { return $("fProxyOn").checked ? str($("fProxyBy").value) : ""; }
+  $("proxyStartBtn").addEventListener("click", function() {
+    $("proxySetup").style.display = "block";
+    $("proxyNameInput").value = stored(SELF_KEY + "Name");
+    $("proxyMsg").textContent = "";
+    $("proxyNameInput").focus();
+  });
+  $("proxyCancelBtn").addEventListener("click", function() { $("proxySetup").style.display = "none"; $("proxyMsg").textContent = ""; });
+  $("proxyOkBtn").addEventListener("click", function() {
+    var name = str($("proxyNameInput").value);
+    if (!name) { setMsg($("proxyMsg"), "あなたの名前を入れてください", false); return; }
+    store(PROXY_KEY, name);
+    $("proxySetup").style.display = "none";
+    setMsg($("proxyMsg"), "代理入力モードにしました。登録する人の名前を入れて「次へ」を押してください", true);
+    renderProxy();
+  });
+  $("proxyEndBtn").addEventListener("click", function() {
+    store(PROXY_KEY, "");
+    setMsg($("proxyMsg"), "代理入力モードをやめました", true);
+    renderProxy();
+  });
+  function askProxy(msgEl) {
+    setMsg(msgEl, OTHER_MSG, false);
+    $("proxyBar").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   function readForm() {
     var troops = "";
@@ -849,8 +892,7 @@
   // 入力の確認。問題があればメッセージを返す
   function checkForm(m) {
     function bad(v) { return v != null && !(v >= 0 && Math.floor(v) === v); }
-    if ($("fProxyOn").checked && !m.proxyBy) return "代理で入力しているときは、入力している人（あなた）の名前を入れてください";
-    if (m.proxyBy && nameKey(m.proxyBy) === nameKey(me.name)) return "代理の名前が登録する人と同じです。本人が入力するときは「代理で入力している」のチェックを外してください";
+    if (m.proxyBy && nameKey(m.proxyBy) === nameKey(me.name)) return "代理入力モードのまま、自分（入力者と同じ名前）を登録しようとしています。自分の分は、上の「代理入力モードをやめる」を押してから登録してください";
     if (!/^[A-Za-z]{3}$/.test(m.alliance)) return "同盟は英字3文字で入れてください（例: EGG）";
     if (m.entry === "absent") return "";
     if (radioValue("fEntry") === "part" && !m.joinAt && !m.leaveAt) return "一部参加のときは「何時から」か「何時まで」を入れてください";
@@ -874,9 +916,10 @@
     var m = cancel ? null : readForm();
     var err = m && checkForm(m);
     if (err) { setMsg($("formMsg"), err, false); return; }
-    var by = cancel ? proxyBy() : m.proxyBy;
-    if (cancel && $("fProxyOn").checked && !by) { setMsg($("formMsg"), "代理で取り消すときは、入力している人（あなた）の名前を入れてください", false); return; }
-    if (by) store(PROXY_KEY, by);
+    var by = proxyBy();
+    // 代理入力モードでないのに、この端末で前に登録した人とは別の人を登録・取消しようとした
+    var self = stored(SELF_KEY);
+    if (!by && self && me.userId !== self) { askProxy($("formMsg")); return; }
     setSaving(true);
     setMsg($("formMsg"), cancel ? "取り消し中…" : "保存中…", true);
     var payload = { action: "selfSave", eventId: currentEventId, userId: me.userId, name: me.name, cancel: !!cancel, entry: m,
@@ -889,18 +932,24 @@
       if (!res.ok) throw new Error(res.error || "保存できませんでした");
       me.userId = res.userId;
       me.oldName = "";
+      if (!by) { // 本人の登録として、この端末に覚えておく（取り消したら忘れる）
+        store(SELF_KEY, cancel ? "" : res.userId);
+        store(SELF_KEY + "Name", cancel ? "" : res.name);
+      }
       return load().then(function() {
         $("doneTitle").textContent = res.result === "canceled" ? "登録を取り消しました"
           : m.entry === "absent" ? "✅ 不参加で登録しました"
           : res.result === "updated" ? "✅ 変更しました" : "✅ 登録しました";
         $("doneEvent").textContent = eventLabel(eventById(currentEventId)) + "　" + me.name;
         $("editAgainBtn").textContent = cancel ? "もう一度登録する" : "内容を直す";
+        $("doneMsg").textContent = "";
         show("done");
         renderList();
         window.scrollTo(0, 0);
       });
     }).catch(function(e) {
-      setMsg($("formMsg"), e.message, false);
+      if (e.message === OTHER_MSG) askProxy($("formMsg"));
+      else setMsg($("formMsg"), e.message, false);
     }).then(function() {
       setSaving(false);
     });
@@ -917,8 +966,8 @@
     startForm(me.userId ? userById(me.userId) : null, me.name);
   });
   $("anotherBtn").addEventListener("click", function() {
-    // 別の人を登録する＝代理入力。入力している人は、いま代理で入れていた人か、いま登録した本人
-    nextProxy = proxyBy() || (me ? me.name : "");
+    // 別の人を登録するのは代理入力モードのときだけ
+    if (!proxyBy()) { askProxy($("doneMsg")); return; }
     me = null;
     $("nameInput").value = "";
     $("candView").style.display = "none";
@@ -944,6 +993,7 @@
   });
 
   $("nameInput").value = stored(NAME_KEY);
+  renderProxy();
   load();
 })();
 </script>
