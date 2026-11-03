@@ -119,3 +119,4 @@ Kingshot関連の単体HTMLツールのうち、ゲームプレイの実務で�
 
 ## 2026-11-03 「Kingshotツール作成」から引継ぎ（担当: tools/・admin/(teams除く)・kvk-matchup/・ランキング・TOP・spec・自動更新系）
 - ②速度ペットのボーナス%を画面から編集：共通部品 `tools/pet-bonus.js`（localStorage `ksMarchPetBonus`、無ければ初期値 [0,15,17,19,21,23,25,27,30]）。KvK同着スタート カウントダウン表・炎龍 集結タイムライン計算の名簿/メンバー表の下に `<details>` の編集欄。変更時は表を再描画し、結果表示中なら再計算。閲覧モードでも使える（ve-exempt）。headless Chromeで両ページ確認済み
+- ⑦KvK相手突合せの秘境の試練をK/M省略なしに：`abbreviate(n, board)`（kingshot_tools/kvk_matchup.py・.github/scripts/kvk_matchup_refresh.py・両方のSCRIPT_TEMPLATE内JS）でboard=="trial"ならカンマ区切りそのまま（試練は数千なのでMも使わない）。1065鯖レポートはrefreshスクリプトをローカル実行して再生成済み

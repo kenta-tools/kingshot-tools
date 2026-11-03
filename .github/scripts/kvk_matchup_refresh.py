@@ -159,7 +159,10 @@ def esc(s):
     return H.escape(str(s))
 
 
-def abbreviate(n):
+def abbreviate(n, board=None):
+    # 秘境の試練は数千程度の値なので、K/M に省略せずそのまま出す
+    if board == "trial":
+        return f"{n:,}"
     if n >= 1_000_000:
         return f"{n/1_000_000:.1f}M"
     if n >= 1_000:
@@ -183,10 +186,10 @@ def compare_board(a_entry, b_entry):
     return "tie"
 
 
-def board_cell(our_entry, their_entry, cell_id):
+def board_cell(our_entry, their_entry, cell_id, board=None):
     winner = compare_board(our_entry, their_entry)
-    our_txt = abbreviate(our_entry["score"]) if our_entry else "—"
-    their_txt = abbreviate(their_entry["score"]) if their_entry else "—"
+    our_txt = abbreviate(our_entry["score"], board) if our_entry else "—"
+    their_txt = abbreviate(their_entry["score"], board) if their_entry else "—"
     cls = {"a": "win-our", "b": "win-their", "tie": "win-tie", None: "win-na"}[winner]
     return f'<td class="cmp {cls}" id="{cell_id}"><span class="our-v">{our_txt}</span><span class="vs">vs</span><span class="their-v">{their_txt}</span></td>', winner
 
@@ -212,7 +215,7 @@ def build_their_ranking_rows(their_people):
         cells = []
         for short, _label in BOARD_LABELS:
             v = t.get(short)
-            cells.append(f'<td class="cmp">{abbreviate(v["score"]) if v else "—"}</td>')
+            cells.append(f'<td class="cmp">{abbreviate(v["score"], short) if v else "—"}</td>')
         rows.append(
             f'<tr>'
             f'<td class="num rankcell">{t["rank"]}</td>'
@@ -231,7 +234,7 @@ def build_rows(our_people, their_people):
         cells = []
         board_wins = {"a": 0, "b": 0}
         for short, _label in BOARD_LABELS:
-            cell_html, winner = board_cell(o.get(short), t.get(short) if t else None, f"cmp-{i}-{short}")
+            cell_html, winner = board_cell(o.get(short), t.get(short) if t else None, f"cmp-{i}-{short}", short)
             cells.append(cell_html)
             if winner in ("a", "b"):
                 board_wins[winner] += 1
@@ -455,7 +458,8 @@ const OUR = __OUR_JSON__;
 const THEIR = __THEIR_JSON__;
 const BOARD_SHORTS = ["trial", "master", "pet"];
 
-function abbreviate(n) {
+function abbreviate(n, board) {
+  if (board === "trial") return n.toLocaleString(); // 秘境の試練はK/Mに省略しない
   if (n >= 1000000) return (n / 1000000).toFixed(1) + "M";
   if (n >= 1000) return (n / 1000).toFixed(1) + "K";
   return n.toLocaleString();
@@ -481,8 +485,8 @@ function recalcRow(i) {
     const winner = compareBoard(o[short], them ? them[short] : null);
     if (winner === "a") aWins++; else if (winner === "b") bWins++;
     const cell = document.getElementById("cmp-" + i + "-" + short);
-    const ov = o[short] ? abbreviate(o[short].score) : "—";
-    const tv = them && them[short] ? abbreviate(them[short].score) : "—";
+    const ov = o[short] ? abbreviate(o[short].score, short) : "—";
+    const tv = them && them[short] ? abbreviate(them[short].score, short) : "—";
     const cls = winner === "a" ? "win-our" : winner === "b" ? "win-their" : winner === "tie" ? "win-tie" : "win-na";
     cell.className = "cmp " + cls;
     cell.innerHTML = `<span class="our-v">${ov}</span><span class="vs">vs</span><span class="their-v">${tv}</span>`;
