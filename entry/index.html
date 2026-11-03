@@ -80,6 +80,7 @@
   .sub-field { margin-top: 10px; }
   .howto-btn { padding: 3px 10px; font-size: 12px; margin-left: 8px; vertical-align: 1px; }
   .howto-text { background: #eef4ff; border-radius: 8px; padding: 8px 10px; font-size: 13px; line-height: 1.6; margin-bottom: 6px; }
+  .howto-text img { display: block; max-width: 100%; height: auto; margin-top: 8px; border-radius: 6px; border: 1px solid #c9d6ee; }
 
   .event-title { font-size: 18px; font-weight: bold; color: #2c5cc5; }
   .who { font-size: 15px; margin: 4px 0 14px; }
@@ -269,7 +270,7 @@
 
     <div class="field">
       <span class="cap">出征部隊数<button type="button" class="sub-btn howto-btn" data-howto="marchHowto">確認方法</button></span>
-      <div class="howto-text" id="marchHowto" style="display: none;">ペットやダイヤバフなどがない状態で、野獣に<b>1軍で攻撃</b>したときの部隊数を入れてください。</div>
+      <div class="howto-text" id="marchHowto" style="display: none;">ペットやダイヤバフなどがない状態で、野獣に<b>攻撃する際の部隊画面</b>の部隊数を入れてください（下の画像の赤枠）。<img src="img/march-howto.png" alt="野獣に攻撃するときの部隊画面。赤枠の部隊数を入れる" loading="lazy"></div>
       <input type="number" id="fMarchCount" min="0" inputmode="numeric" style="max-width: 160px;">
     </div>
     <div class="field">
@@ -286,7 +287,7 @@
       <div id="rallyFields" style="margin-top: 12px;">
         <div class="field">
           <span class="cap">集結部隊数<button type="button" class="sub-btn howto-btn" data-howto="rallyHowto">確認方法</button></span>
-          <div class="howto-text" id="rallyHowto" style="display: none;">ペットやダイヤバフなどがない状態で、野獣に<b>1軍で集結攻撃</b>したときの部隊数を入れてください。</div>
+          <div class="howto-text" id="rallyHowto" style="display: none;">ペットやダイヤバフなどがない状態で、巨獣に<b>1軍で集結攻撃</b>したときの部隊数を入れてください（下の画像の赤枠の「/」の右側の数字）。<br>※集結のほうは確認後にキャンセルしても大丈夫です。<img src="img/rally-howto.png" alt="巨獣に集結攻撃したときの集結画面。赤枠の部隊数を入れる" loading="lazy"></div>
           <input type="number" id="fRallyCount" min="0" inputmode="numeric" style="max-width: 160px;">
         </div>
         <div class="field">
