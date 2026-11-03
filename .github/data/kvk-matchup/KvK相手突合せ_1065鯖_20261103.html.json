@@ -1,0 +1,688 @@
+{
+  "eventId": "emvxlacjz9goas",
+  "filename": "KvK相手突合せ_1065鯖_20261103.html",
+  "opponentLabel": "1065鯖",
+  "ourKids": [
+    816
+  ],
+  "opponentKids": [
+    1065
+  ],
+  "maxRows": 12,
+  "ourRoster": [
+    {
+      "gid": 118796952,
+      "name": "城焼担当",
+      "tag": "EGG",
+      "kid": 816
+    },
+    {
+      "gid": 100817042,
+      "name": "Jaguar",
+      "tag": "EGG",
+      "kid": 816
+    },
+    {
+      "gid": 115470561,
+      "name": "かむ・x・かむ",
+      "tag": "VRC",
+      "kid": 816
+    },
+    {
+      "gid": 121025401,
+      "name": "kenta",
+      "tag": "EGG",
+      "kid": 816
+    },
+    {
+      "gid": 113617167,
+      "name": "にゃつこDX",
+      "tag": "VRC",
+      "kid": 816
+    },
+    {
+      "gid": 113618025,
+      "name": "みつばち",
+      "tag": "OLV",
+      "kid": 816
+    },
+    {
+      "gid": 109246421,
+      "name": "HIMMEL",
+      "tag": "EGG",
+      "kid": 816
+    },
+    {
+      "gid": 119159321,
+      "name": "雑用担当",
+      "tag": "EGG",
+      "kid": 816
+    },
+    {
+      "gid": 120126110,
+      "name": "あるた",
+      "tag": "EGG",
+      "kid": 816
+    },
+    {
+      "gid": 121023024,
+      "name": "わいんがーᴱᴳᴳ",
+      "tag": "EGG",
+      "kid": 816
+    },
+    {
+      "gid": 120304018,
+      "name": "こーこー",
+      "tag": "666",
+      "kid": 816
+    },
+    {
+      "gid": 118859786,
+      "name": "強欲なカボチャ",
+      "tag": "666",
+      "kid": 816
+    }
+  ],
+  "theirRoster": [
+    {
+      "gid": 154288607,
+      "name": "PAINEM",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 101957141,
+      "name": "ᏆᏒᎾᏁོ ᏞᎬᏀᏆᎾᏁ",
+      "tag": "ViP",
+      "kid": 1065
+    },
+    {
+      "gid": 188972339,
+      "name": "Abu Dhabi",
+      "tag": "ViP",
+      "kid": 1065
+    },
+    {
+      "gid": 153799993,
+      "name": "Skull",
+      "tag": "ViP",
+      "kid": 1065
+    },
+    {
+      "gid": 298698786,
+      "name": "Toxix",
+      "tag": "AMA",
+      "kid": 1065
+    },
+    {
+      "gid": 152276383,
+      "name": "Mateas",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 154519788,
+      "name": "KSA",
+      "tag": "ViP",
+      "kid": 1065
+    },
+    {
+      "gid": 152849984,
+      "name": "Apollo",
+      "tag": "S7N",
+      "kid": 1065
+    },
+    {
+      "gid": 156747783,
+      "name": "ThunderCuntsFC",
+      "tag": "BUN",
+      "kid": 1065
+    },
+    {
+      "gid": 158696996,
+      "name": "KosTRicH",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 158123542,
+      "name": "Mandy白楓",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 148690444,
+      "name": "ＢｌｉｎｄＴｉｇｅｒ",
+      "tag": "ViP",
+      "kid": 1065
+    },
+    {
+      "gid": 145999734,
+      "name": "___RÜZGAR___",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 154439403,
+      "name": "Dzejtu",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 164666116,
+      "name": "Jlo",
+      "tag": "ViP",
+      "kid": 1065
+    },
+    {
+      "gid": 150820239,
+      "name": "WALEED",
+      "tag": "ViP",
+      "kid": 1065
+    },
+    {
+      "gid": 158815454,
+      "name": "Karolina",
+      "tag": "S7N",
+      "kid": 1065
+    },
+    {
+      "gid": 148482895,
+      "name": "BooOween",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 156485437,
+      "name": "Krzychu",
+      "tag": "BUN",
+      "kid": 1065
+    },
+    {
+      "gid": 159303162,
+      "name": "Lion!",
+      "tag": "BUN",
+      "kid": 1065
+    },
+    {
+      "gid": 147281021,
+      "name": "شـمـر⑤⑤⑤ᴷˢᴬ",
+      "tag": "ViP",
+      "kid": 1065
+    },
+    {
+      "gid": 148089431,
+      "name": "DeVilMaYCrY",
+      "tag": "ViP",
+      "kid": 1065
+    },
+    {
+      "gid": 156780173,
+      "name": "Nēnē",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 124719906,
+      "name": "T E G A R",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 158386541,
+      "name": "T800",
+      "tag": "BUN",
+      "kid": 1065
+    },
+    {
+      "gid": 151325436,
+      "name": "Abdullah20i",
+      "tag": "ViP",
+      "kid": 1065
+    },
+    {
+      "gid": 151974698,
+      "name": "MareGolden",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 198426479,
+      "name": "Stimpy",
+      "tag": "SUN",
+      "kid": 1065
+    },
+    {
+      "gid": 156043238,
+      "name": "Mash",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 157157043,
+      "name": "Erebus",
+      "tag": "BUN",
+      "kid": 1065
+    },
+    {
+      "gid": 155862678,
+      "name": "HollowRex",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 158615343,
+      "name": "McArdle",
+      "tag": "BUN",
+      "kid": 1065
+    },
+    {
+      "gid": 152636896,
+      "name": "Freya",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 154848780,
+      "name": "Aws",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 155513827,
+      "name": "alpha",
+      "tag": "S7N",
+      "kid": 1065
+    },
+    {
+      "gid": 154570455,
+      "name": "Nesh",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 157386436,
+      "name": "Conq",
+      "tag": "SUN",
+      "kid": 1065
+    },
+    {
+      "gid": 187873682,
+      "name": "Errooh",
+      "tag": "ViP",
+      "kid": 1065
+    },
+    {
+      "gid": 149820882,
+      "name": "superMAX",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 155616740,
+      "name": "Azad",
+      "tag": "ViP",
+      "kid": 1065
+    },
+    {
+      "gid": 152087311,
+      "name": "Hadez",
+      "tag": "SUN",
+      "kid": 1065
+    },
+    {
+      "gid": 129139603,
+      "name": "BARLA",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 157632524,
+      "name": "Leo ali",
+      "tag": "BUN",
+      "kid": 1065
+    },
+    {
+      "gid": 155666262,
+      "name": "LuciShohoku",
+      "tag": "BUN",
+      "kid": 1065
+    },
+    {
+      "gid": 151113139,
+      "name": "Rethre",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 158222279,
+      "name": "papy daniel",
+      "tag": "BUN",
+      "kid": 1065
+    },
+    {
+      "gid": 158500178,
+      "name": "CerealKiller",
+      "tag": "BUN",
+      "kid": 1065
+    },
+    {
+      "gid": 158796026,
+      "name": "KenanAyz",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 101437226,
+      "name": "Dhe` ᵏᵅʳᵐᵅ࿐",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 156534285,
+      "name": "ADV",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 155632865,
+      "name": "BliCox",
+      "tag": "ViP",
+      "kid": 1065
+    },
+    {
+      "gid": 108431391,
+      "name": "JENNI ツ",
+      "tag": "ViP",
+      "kid": 1065
+    },
+    {
+      "gid": 156092730,
+      "name": "Aljaoharah ᵏˢᵃ",
+      "tag": "ViP",
+      "kid": 1065
+    },
+    {
+      "gid": 116676622,
+      "name": "Kaname",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 152784217,
+      "name": "iGG",
+      "tag": "ViP",
+      "kid": 1065
+    },
+    {
+      "gid": 155649272,
+      "name": "حـرب",
+      "tag": "ViP",
+      "kid": 1065
+    },
+    {
+      "gid": 150585271,
+      "name": "Aslan 5261",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 156747294,
+      "name": "보리보리",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 158038760,
+      "name": "UAEiiyah",
+      "tag": "ViP",
+      "kid": 1065
+    },
+    {
+      "gid": 153275555,
+      "name": "Viktorija_Queen",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 155567146,
+      "name": "Milos Mags",
+      "tag": "BUN",
+      "kid": 1065
+    },
+    {
+      "gid": 155532571,
+      "name": "RabarbarosssA",
+      "tag": "S7N",
+      "kid": 1065
+    },
+    {
+      "gid": 151079682,
+      "name": "《◇◇~ÖZLΣM~◇◇》",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 155436267,
+      "name": "PikaSue",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 151218768,
+      "name": "Whïps&Chaïns",
+      "tag": "SUN",
+      "kid": 1065
+    },
+    {
+      "gid": 152096532,
+      "name": "DeAnnH",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 116512888,
+      "name": "Mograine",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 155928070,
+      "name": "MrHungry",
+      "tag": "ON3",
+      "kid": 1065
+    },
+    {
+      "gid": 149558227,
+      "name": "PureKnight",
+      "tag": "ViP",
+      "kid": 1065
+    },
+    {
+      "gid": 152256816,
+      "name": "Chief Bartolom",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 152781412,
+      "name": "Sakai",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 159368630,
+      "name": "Magic Joe",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 155993734,
+      "name": "Disruptive Dude",
+      "tag": "BUN",
+      "kid": 1065
+    },
+    {
+      "gid": 157975601,
+      "name": "Grandpa",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 170065160,
+      "name": "Baby Krzychu",
+      "tag": "BUN",
+      "kid": 1065
+    },
+    {
+      "gid": 156583727,
+      "name": "JM5MA",
+      "tag": "ViP",
+      "kid": 1065
+    },
+    {
+      "gid": 155051743,
+      "name": "ibra him",
+      "tag": "ViP",
+      "kid": 1065
+    },
+    {
+      "gid": 150951413,
+      "name": "Tigres_○f_Gaul",
+      "tag": "ViP",
+      "kid": 1065
+    },
+    {
+      "gid": 158811669,
+      "name": "Mad Max",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 157927156,
+      "name": "RAIDiculous FC",
+      "tag": "BUN",
+      "kid": 1065
+    },
+    {
+      "gid": 157074850,
+      "name": "BULL",
+      "tag": "ViP",
+      "kid": 1065
+    },
+    {
+      "gid": 156026092,
+      "name": "SuperNAM",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 153751093,
+      "name": "`Aizen",
+      "tag": "S7N",
+      "kid": 1065
+    },
+    {
+      "gid": 157203231,
+      "name": "《《《°ŚŘĤŤ°》》》",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 158451900,
+      "name": "teddy",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 156043099,
+      "name": "TheBryan",
+      "tag": "BUN",
+      "kid": 1065
+    },
+    {
+      "gid": 155944552,
+      "name": "SerbukCabe",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 156845928,
+      "name": "Mini PAINEM",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 155944540,
+      "name": "WillyNilly",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 148080695,
+      "name": "Sakamoto89",
+      "tag": "ViP",
+      "kid": 1065
+    },
+    {
+      "gid": 155646838,
+      "name": "Talal515",
+      "tag": "ViP",
+      "kid": 1065
+    },
+    {
+      "gid": 141526007,
+      "name": "_FAISAL_",
+      "tag": "ViP",
+      "kid": 1065
+    },
+    {
+      "gid": 159136729,
+      "name": "ابو طيف",
+      "tag": "ViP",
+      "kid": 1065
+    },
+    {
+      "gid": 154586555,
+      "name": "Hungry Wolf",
+      "tag": "ViP",
+      "kid": 1065
+    },
+    {
+      "gid": 153472720,
+      "name": "EQE",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 154206148,
+      "name": "Maniutek",
+      "tag": "BUN",
+      "kid": 1065
+    },
+    {
+      "gid": 157779679,
+      "name": "_ᒍʘнƝ ᘈIᙅk_",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 152617507,
+      "name": "°°༺KORKUTSOFU༻°°",
+      "tag": "ETR",
+      "kid": 1065
+    },
+    {
+      "gid": 146986247,
+      "name": "ᵛ͢ᵎᵖ Gin",
+      "tag": "ViP",
+      "kid": 1065
+    },
+    {
+      "gid": 150214185,
+      "name": "ᵛ͢ᵎᵖ REGİNA",
+      "tag": "ViP",
+      "kid": 1065
+    }
+  ]
+}

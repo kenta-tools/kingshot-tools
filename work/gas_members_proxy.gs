@@ -130,7 +130,8 @@ function pubGet_(token) {
     // KvK相手突合せで保存した「うちの誰が相手の誰と対戦するか」（名前のペアのみ。管理者のみ保存可、閲覧はパスワード不要）
     matchupPairs: d.matchupPairs || [],
     history: {
-      events: (d.events || []).map(function(e) { return { id: e.id, type: e.type, date: e.date }; }),
+      // doneはKvK相手突合せ・聖剣リーグ等の自動更新が「このイベントは終わったか」を判断するのに使う（パスワード不要で見られる）
+      events: (d.events || []).map(function(e) { return { id: e.id, type: e.type, date: e.date, done: e.done === true }; }),
       entries: d.entries || []
     },
     // Discord の招待リンク（GitHub Actions が毎朝作り直して setDiscordInvite で送ってくる。未設定なら ""）
