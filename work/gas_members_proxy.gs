@@ -8,6 +8,9 @@
  *     「自分の参加登録・変更・取消（selfSave）」。受付中のイベントの、1人分の参加情報しか変えられない
  *   - KvK同着スタート カウントダウン表（tools/）の「共有用」画面:
  *     パスワードなしで「名簿の取得（pubGetに同梱）」「名簿の保存（kvkSave）」。イベントID単位で1件（名簿まるごと上書き）
+ *   - 問い合わせ・質問フォーム（inquiry/index.html）:
+ *     パスワードなしで送信（askSave）。回答済みの質問はpubGetに同梱（質問者名は含めない）。
+ *     管理画面（admin/inquiries.html）でパスワード付きで一覧取得（getInquiries）・回答の保存（answerInquiry）
  *
  * スクリプトプロパティ（プロジェクトの設定 → スクリプト プロパティ）:
  *   EDIT_PASSWORD : 管理画面のログインパスワードと同じ文字列
@@ -58,6 +61,8 @@ function handle_(p) {
     if (p.action === "kvkSave") return json_(kvkSave_(token, p));
     // 炎龍 集結タイムライン計算「共有用」画面用（パスワード不要）
     if (p.action === "flameSave") return json_(flameSave_(token, p));
+    // 問い合わせ・質問フォーム用（パスワード不要）
+    if (p.action === "askSave") return json_(askSave_(token, p));
 
     if (p.password !== password) {
       Utilities.sleep(1000); // 総当たり対策
@@ -77,6 +82,10 @@ function handle_(p) {
     if (p.action === "revertByIp") return json_(revertByIp_(token, p));
     // KvK相手突合せの「うちの誰が相手の誰と対戦するか」の保存（管理者のみ）。イベントID単位で1件、まるごと上書き
     if (p.action === "matchupSave") return json_(matchupSave_(token, p));
+    // 問い合わせ・質問の一覧（管理者のみ。未回答も含めて全部見られる）
+    if (p.action === "getInquiries") return json_(getInquiries_(token));
+    // 問い合わせへの回答を保存（管理者のみ）
+    if (p.action === "answerInquiry") return json_(answerInquiry_(token, p));
 
     // 管理画面とのやりとりは GitHub 時代と同じ形（content=Base64のJSON、sha=版番号）
     if (p.action === "get") {
@@ -129,6 +138,10 @@ function pubGet_(token) {
     flameRosters: d.flameRosters || [],
     // KvK相手突合せで保存した「うちの誰が相手の誰と対戦するか」（名前のペアのみ。管理者のみ保存可、閲覧はパスワード不要）
     matchupPairs: d.matchupPairs || [],
+    // 問い合わせ・質問のうち回答済みのものだけ（質問者の名前は含めない。未回答はgetInquiries＝管理者のみ）
+    inquiries: (d.inquiries || []).filter(function(i) { return i.answered; }).map(function(i) {
+      return { id: i.id, text: i.text, answerText: i.answerText, answeredAt: i.answeredAt };
+    }),
     history: {
       // doneはKvK相手突合せ・聖剣リーグ等の自動更新が「このイベントは終わったか」を判断するのに使う（パスワード不要で見られる）
       events: (d.events || []).map(function(e) { return { id: e.id, type: e.type, date: e.date, done: e.done === true }; }),
@@ -292,6 +305,90 @@ function matchupSave_(token, p) {
 
       d.updated = new Date().toISOString();
       var w = writeFile_(token, d, f.sha, "KvK matchup pairs saved");
+      if (w.ok) return { ok: true };
+      if (w.status !== 409 && w.status !== 422) return w;
+      // 直前に他の人が保存した → 取り直してもう一度
+    }
+    return { ok: false, status: 409, error: "混み合っています。もう一度押してください" };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// 問い合わせ・質問フォームの送信（パスワード不要）。d.inquiriesに1件追加するだけ。
+// p: { name?, text }
+function askSave_(token, p) {
+  var cache = CacheService.getScriptCache();
+  var minuteKey = "ask_" + Math.floor(Date.now() / 60000);
+  var count = Number(cache.get(minuteKey) || 0);
+  if (count >= SELF_LIMIT_PER_MIN) return { ok: false, status: 429, error: "混み合っています。1分ほど待ってからもう一度押してください" };
+  cache.put(minuteKey, String(count + 1), 120);
+
+  var text = clip_(p.text, 1000);
+  if (!text) return { ok: false, status: 400, error: "質問の内容を入力してください" };
+  var record = {
+    id: newId_("q"),
+    name: clip_(p.name, 30),
+    text: text,
+    createdAt: new Date().toISOString(),
+    answered: false,
+    answerText: "",
+    answeredAt: null
+  };
+
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) return { ok: false, status: 503, error: "混み合っています。少し待ってからもう一度押してください" };
+  try {
+    for (var attempt = 0; attempt < 3; attempt++) {
+      var f = readFile_(token);
+      if (!f.ok) return f;
+      var d = f.data;
+      d.inquiries = d.inquiries || [];
+      if (d.inquiries.length >= 1000) d.inquiries.shift(); // 古いものから間引く（いたずら・肥大化対策）
+      d.inquiries.push(record);
+
+      d.updated = new Date().toISOString();
+      var w = writeFile_(token, d, f.sha, "Inquiry submitted");
+      if (w.ok) return { ok: true };
+      if (w.status !== 409 && w.status !== 422) return w;
+      // 直前に他の人が保存した → 取り直してもう一度
+    }
+    return { ok: false, status: 409, error: "混み合っています。もう一度押してください" };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// 問い合わせ・質問の一覧（管理者のみ）。未回答も含めて全部返す。
+function getInquiries_(token) {
+  var f = readFile_(token);
+  if (!f.ok) return f;
+  var d = f.data;
+  return { ok: true, inquiries: (d.inquiries || []).slice().reverse() };
+}
+
+// 問い合わせへの回答を保存（管理者のみ）。p: { id, answerText }
+function answerInquiry_(token, p) {
+  if (!p.id) return { ok: false, status: 400, error: "質問が指定されていません" };
+  var answerText = clip_(p.answerText, 2000);
+  if (!answerText) return { ok: false, status: 400, error: "回答の内容を入力してください" };
+
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) return { ok: false, status: 503, error: "混み合っています。少し待ってからもう一度押してください" };
+  try {
+    for (var attempt = 0; attempt < 3; attempt++) {
+      var f = readFile_(token);
+      if (!f.ok) return f;
+      var d = f.data;
+      d.inquiries = d.inquiries || [];
+      var rec = d.inquiries.filter(function(x) { return x.id === p.id; })[0];
+      if (!rec) return { ok: false, status: 404, error: "その質問が見つかりません" };
+      rec.answered = true;
+      rec.answerText = answerText;
+      rec.answeredAt = new Date().toISOString();
+
+      d.updated = new Date().toISOString();
+      var w = writeFile_(token, d, f.sha, "Inquiry answered");
       if (w.ok) return { ok: true };
       if (w.status !== 409 && w.status !== 422) return w;
       // 直前に他の人が保存した → 取り直してもう一度
