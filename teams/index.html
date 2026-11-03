@@ -46,11 +46,17 @@
 
 <div style="display:flex; justify-content:space-between; align-items:center;">
   <h1>🧩 チーム分け</h1>
-  <a href="../index.html?v=20261103161711" class="top-link">← TOP</a>
+  <a href="../index.html?v=20261103162344" class="top-link">← TOP</a>
 </div>
-<div class="sub">管理者が公開したイベントのチーム分けです。イベントを選ぶと見られます。</div>
+<div class="sub" id="subText">管理者が公開したイベントのチーム分けです。イベントを選ぶと見られます。</div>
 
-<div class="card">
+<!-- 工事中の間はこれだけ出す（UNDER_CONSTRUCTION を false にすると下の本来の画面が出る） -->
+<div class="card" id="wipCard" style="display:none; text-align:center; padding:40px 20px;">
+  <div style="font-size:40px;">🚧</div>
+  <div style="font-size:15px; margin-top:8px;">工事中です。チーム分けの方法が決まったら公開します。</div>
+</div>
+
+<div class="card" id="mainCard">
   <div class="row">
     <label>イベント <select id="eventSel"><option>読み込み中…</option></select></label>
     <label>自分の名前で探す <input type="text" id="nameInput" placeholder="ゲーム内の名前"></label>
@@ -68,6 +74,15 @@
   var NAME_KEY = "ksTeamsMyName";
   var $ = function(id) { return document.getElementById(id); };
   var list = [];
+  // 2026-11-03: チーム分けの方法が確定するまで工事中（ユーザー指示）。確定したら false にする
+  var UNDER_CONSTRUCTION = true;
+  if (UNDER_CONSTRUCTION) {
+    $("wipCard").style.display = "block";
+    $("mainCard").style.display = "none";
+    $("area").style.display = "none";
+    $("subText").style.display = "none";
+    return;
+  }
 
   function escapeHtml(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function(c) {

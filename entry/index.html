@@ -124,7 +124,7 @@
 
 <div class="row" style="justify-content: space-between;">
   <h1>📝 イベント参加登録</h1>
-  <a href="../index.html?v=20261103161711" class="top-link">← TOP</a>
+  <a href="../index.html?v=20261103162344" class="top-link">← TOP</a>
 </div>
 <div class="howto">
   ① 名前を入れて「次へ」<br>
@@ -1017,6 +1017,7 @@
   var box = document.getElementById("teamsBanner");
   var input = document.getElementById("nameInput");
   var teams = [];
+  if (true) return; // 2026-11-03: チーム分けは方法が確定するまで工事中（teams/index.html の UNDER_CONSTRUCTION と一緒に外す）
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function(c) {
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
