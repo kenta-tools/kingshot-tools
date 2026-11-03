@@ -118,7 +118,6 @@
     ["participants.html", "👥", "参加者一覧"],
     ["users.html", "🗂️", "ユーザー管理"],
     ["logs.html", "🕵️", "個人登録の記録"],
-    ["kvk-matchup-guide.html", "📋", "KvK相手突合せ 運用メモ"],
   ];
   var ADMIN_SIDEBAR_CSS = [
     ".ks-sidebar { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: #1a2332; padding: 20px 14px; box-sizing: border-box; overflow-y: auto; overflow-x: hidden; font-family: 'Segoe UI','Hiragino Kaku Gothic ProN',Meiryo,sans-serif; z-index: 99999; transition: width 0.2s ease; }",
@@ -179,6 +178,7 @@
         "<nav>" + links +
           '<div class="ks-group"></div>' +
           '<a href="../kvk-matchup/kvk-matchup-index.html" class="ks-link" title="KvK相手突合せ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ</span></a>' +
+          '<a href="../spec/" class="ks-link" title="KVK運用メモ（仕様まとめ）"><span class="ks-icon">📋</span><span class="ks-label">KVK運用メモ（仕様まとめ）</span></a>' +
           '<a href="../index.html" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a>' +
           '<button type="button" class="ks-link" id="logoutBtn" title="ログアウト"><span class="ks-icon">🚪</span><span class="ks-label">ログアウト</span></button>' +
         "</nav>" +
