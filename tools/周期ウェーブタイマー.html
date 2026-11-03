@@ -191,6 +191,9 @@
     font-size: 16px; line-height: 1; cursor: pointer; color: #555;
   }
   .tab-add:hover { background: #e2e2e2; }
+  .tab-item .tab-move { color: #999; font-size: 11px; padding: 0 2px; cursor: pointer; user-select: none; }
+  .tab-item .tab-move:hover { color: #4a6cf7; }
+  .tab-item.tab-drop { outline: 2px dashed #4a6cf7; }
 
   .side-toggle-row { text-align: right; margin-bottom: 10px; }
 </style>
@@ -284,7 +287,7 @@
     <button type="button" class="ks-menu-btn" aria-label="メニュー" aria-expanded="false">☰</button>
   </div>
   <nav>
-    <a href="../index.html?v=20261103161528" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261103161528" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261103161528" class="ks-link ks-active" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261103161528" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261103161528" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a>
+    <a href="../index.html?v=20261103161711" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261103161711" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261103161711" class="ks-link ks-active" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261103161711" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261103161711" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -420,10 +423,53 @@ function escapeAttr(str) {
   return div.innerHTML.replace(/"/g, "&quot;");
 }
 
+// --- タブの並べ替え（PCはタブをドラッグ、スマホは選択中タブの ◀ ▶） ---
+let dragTabId = null;
+
+function moveTab(id, toIndex) {
+  const from = tabs.findIndex(t => t.id === id);
+  if (from < 0 || toIndex < 0 || toIndex >= tabs.length || from === toIndex) return;
+  const [tab] = tabs.splice(from, 1);
+  tabs.splice(toIndex, 0, tab);
+  saveTabs();
+  renderTabBar();
+}
+
+function attachTabReorder(el, tab, idx) {
+  el.draggable = true;
+  el.addEventListener("dragstart", e => {
+    dragTabId = tab.id;
+    e.dataTransfer.effectAllowed = "move";
+    try { e.dataTransfer.setData("text/plain", tab.id); } catch (err) {}
+  });
+  el.addEventListener("dragover", e => {
+    if (dragTabId && dragTabId !== tab.id) { e.preventDefault(); el.classList.add("tab-drop"); }
+  });
+  el.addEventListener("dragleave", () => el.classList.remove("tab-drop"));
+  el.addEventListener("drop", e => {
+    e.preventDefault();
+    el.classList.remove("tab-drop");
+    if (dragTabId) moveTab(dragTabId, idx);
+    dragTabId = null;
+  });
+  el.addEventListener("dragend", () => { dragTabId = null; });
+  if (tab.id !== currentTabId || tabs.length < 2) return;
+  [["◀", -1, "左へ移動"], ["▶", 1, "右へ移動"]].forEach(([label, d, title]) => {
+    if (idx + d < 0 || idx + d >= tabs.length) return;
+    const b = document.createElement("span");
+    b.className = "tab-move";
+    b.textContent = label;
+    b.title = title;
+    b.addEventListener("click", e => { e.stopPropagation(); moveTab(tab.id, idx + d); });
+    if (d < 0) el.insertBefore(b, el.firstChild);
+    else el.insertBefore(b, el.querySelector(".tab-close"));
+  });
+}
+
 function renderTabBar() {
   const bar = document.getElementById("tabBar");
   bar.innerHTML = "";
-  tabs.forEach(tab => {
+  tabs.forEach((tab, idx) => {
     const el = document.createElement("div");
     el.className = "tab-item" + (tab.id === currentTabId ? " active" : "");
     el.innerHTML = `
@@ -445,6 +491,7 @@ function renderTabBar() {
         deleteTab(tab.id);
       });
     }
+    attachTabReorder(el, tab, idx);
     bar.appendChild(el);
   });
   const addBtn = document.createElement("button");
@@ -1000,6 +1047,6 @@ reparseTimeline();
 autoSyncSiegeData();
 </script>
 
-<script src="view-edit-gate.js?v=20261103161528"></script>
+<script src="view-edit-gate.js?v=20261103161711"></script>
 </body>
 </html>
