@@ -93,6 +93,10 @@
       <label>紐づけるKVKイベント</label>
       <select id="eventSelect"><option value="">（読み込み中…）</option></select>
     </div>
+    <div class="field">
+      <label>突合せ人数（省略時12人）</label>
+      <input type="number" id="maxRowsInput" placeholder="12" min="1">
+    </div>
     <button type="button" id="makePromptBtn">プロンプトを作る</button>
   </div>
   <div class="prompt-out" id="promptOut"></div>
@@ -103,7 +107,7 @@
 </div>
 
 <div class="grid">
-  <a class="tool-card" href="KvK相手突合せ_1065鯖_20261103.html?v=20261103122453">
+  <a class="tool-card" href="KvK相手突合せ_1065鯖_20261103.html?v=20261103125033">
     <div class="icon">⚔️</div>
     <div class="title">1065鯖</div>
     <div class="desc">12人 vs 12人の突合せ／6勝6敗</div>
@@ -136,6 +140,8 @@ document.getElementById("makePromptBtn").addEventListener("click", () => {
   const eventSel = document.getElementById("eventSelect");
   const eventId = eventSel.value;
   const eventDate = eventId ? eventSel.selectedOptions[0].dataset.date : "";
+  const maxRowsRaw = document.getElementById("maxRowsInput").value.trim();
+  const maxRows = maxRowsRaw ? parseInt(maxRowsRaw, 10) : 12;
   const out = document.getElementById("promptOut");
   if (!kids) {
     out.style.display = "block";
@@ -146,6 +152,7 @@ document.getElementById("makePromptBtn").addEventListener("click", () => {
   let prompt = `相手鯖 ${kids} とのKvK相手突合せを作って`;
   if (label) prompt += `（表示名: ${label}）`;
   if (eventId) prompt += `（紐づけるイベント: ${eventDate}開催分、イベントID ${eventId}）`;
+  prompt += `（人数: ${maxRows}人ずつ）`;
   out.style.display = "block";
   out.textContent = prompt;
   document.getElementById("promptCopyRow").style.display = "flex";
@@ -162,6 +169,6 @@ document.getElementById("copyPromptBtn").addEventListener("click", () => {
 });
 </script>
 
-<script src="kvk-auth-gate.js?v=20261103122453"></script>
+<script src="kvk-auth-gate.js?v=20261103125033"></script>
 </body>
 </html>

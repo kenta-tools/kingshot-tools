@@ -80,7 +80,6 @@
         "<nav>" + links +
           '<div class="ks-group"></div>' +
           '<a href="kvk-matchup-index.html" class="ks-link ks-active" title="KvK相手突合せ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ</span></a>' +
-          '<a href="../spec/" class="ks-link" title="KVK運用メモ（仕様まとめ）"><span class="ks-icon">📋</span><span class="ks-label">KVK運用メモ（仕様まとめ）</span></a>' +
           '<a href="../index.html" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a>' +
           '<button type="button" class="ks-link" id="ksLogoutBtn" title="ログアウト"><span class="ks-icon">🚪</span><span class="ks-label">ログアウト</span></button>' +
         "</nav>" +
