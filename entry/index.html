@@ -113,6 +113,10 @@
   td .edit { padding: 4px 10px; font-size: 13px; }
   tr.absent td { color: #999; }
   tr.prev td { color: #8a94a3; background: #fafbfc; }
+  /* 遺跡争奪: 時間ごとに 参加／行けるかも／不参加 */
+  .ruin-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 0; border-bottom: 1px solid #eef0f3; }
+  .ruin-row .t { width: 92px; font-weight: bold; }
+  .ruin-sum { white-space: pre-wrap; background: #f6f8fb; border-radius: 8px; padding: 8px 10px; font-size: 13px; line-height: 1.7; margin: 6px 0 10px; }
   .list-filter { margin-top: 10px; max-width: 200px; }
   th { background: #f0f2f5; white-space: nowrap; }
   td.marks { letter-spacing: 2px; white-space: nowrap; }
@@ -233,7 +237,14 @@
       <datalist id="allianceList"></datalist>
     </div>
 
-    <div class="field">
+    <!-- 遺跡争奪のときだけ: 時間ごとに参加できるか -->
+    <div class="field" id="ruinField" style="display: none;">
+      <span class="cap">参加できる時間（全部の時間を選んでください）<span class="req">必須</span></span>
+      <div id="ruinSlots"></div>
+      <div style="font-size: 12px; color: #666; margin-top: 4px; line-height: 1.6;">まだわからない時間は「行けるかも」を選んでください（集計では名前の横に△が付きます）。</div>
+    </div>
+
+    <div class="field" id="entryField">
       <span class="cap">参加</span>
       <div class="chips">
         <label class="chip"><input type="radio" name="fEntry" value="full"><span>全部参加</span></label>
@@ -355,11 +366,17 @@
       <summary>登録状況を見る <span id="listCount"></span></summary>
       <div class="list-warn">⚠ 代理で入力するとき以外は、別の人の「直す」「登録する」を押さないでください（開くだけなら問題ありませんが、誤って登録しないよう注意してください）。</div>
       <div style="font-size: 12px; color: #666; margin: 4px 0;">今回まだ登録していない人は、灰色で前回のイベントの内容を表示しています（参加・時間・ひとこと・更新日時は空欄）。</div>
+      <div id="ruinSumBox" style="display: none;">
+        <div class="row" style="justify-content: space-between; margin-top: 8px;">
+          <b style="font-size: 14px;">時間ごとの参加者（Discord貼り付け用）</b>
+          <button type="button" class="sub-btn" id="ruinCopyBtn">コピー</button>
+        </div>
+        <div class="ruin-sum" id="ruinSummary"></div>
+      </div>
       <select id="listAlliance" class="list-filter"></select>
       <div class="table-wrap">
         <table>
-          <thead><tr><th></th><th>同盟</th><th>名前</th><th>参加</th><th>区分</th><th>印</th><th>T11兵種</th><th>時間</th>
-            <th>出征部隊</th><th>出征容量ペット</th><th>集結部隊</th><th>集結容量ペット</th><th>行軍速度ペット</th><th>ひとこと</th><th>更新日時</th></tr></thead>
+          <thead id="listHead"></thead>
           <tbody id="listBody"></tbody>
         </table>
       </div>
@@ -384,6 +401,16 @@
   var NEED_SELF_MSG = "代理入力モードを使う前に、まず自分を登録してください";
   var EVENT_KEY = "ksEntryEvent";
   var GRADES = ["G8", "G7", "G6", "G5", "その他"];
+  // 遺跡争奪: 登録は「どの遺跡か」ではなく「どの時間に参加できるか」（中継役の RUIN_SLOTS と同じ）
+  var RUIN_TYPE = "遺跡争奪";
+  var RUIN_SLOTS = ["12", "18", "22", "23", "25"];
+  var SLOT_CHOICES = [["yes", "参加"], ["maybe", "行けるかも"], ["no", "不参加"]];
+  function slotLabel(k) { return k + "時" + (k === "25" ? "（翌1時）" : ""); }
+  function isRuin(eventId) {
+    var ev = eventById(eventId || currentEventId);
+    return !!ev && ev.type === RUIN_TYPE;
+  }
+  var LIST_HEAD = ["", "同盟", "名前", "参加", "区分", "印", "T11兵種", "時間", "出征部隊", "出征容量ペット", "集結部隊", "集結容量ペット", "行軍速度ペット", "ひとこと", "更新日時"];
   // 一覧での参加の表示（データの entry と時刻から）
   function entryLabel(m) {
     return m.entry === "absent" ? "不参加" : m.entry === "late" || m.leaveEarly || m.joinAt || m.leaveAt ? "一部参加" : "全部参加";
@@ -581,11 +608,12 @@
     // 今回まだ登録していない人は、前回のイベントの内容を出す（参加・時間・ひとこと・更新日時など今回の分は空欄）
     var done = {};
     rows.forEach(function(m) { done[m.userId] = true; });
+    var ruin = isRuin();
     data.users.forEach(function(u) {
       if (done[u.id]) return;
-      var p = previousEntry(u.id);
+      var p = previousEntry(u.id, ruin); // 遺跡争奪は、種類を問わず前に参加した人を出す
       if (p) rows.push(Object.assign({}, p, { name: u.name, alliance: u.alliance || p.alliance, prev: true,
-        entry: "", joinAt: "", leaveAt: "", leaveEarly: false, mayChange: false, note: "", updatedAt: "" }));
+        entry: "", joinAt: "", leaveAt: "", leaveEarly: false, mayChange: false, note: "", updatedAt: "", slots: null }));
     });
     function rank(m) { return m.prev ? 2 : m.entry === "absent" ? 1 : 0; }
     rows.sort(function(a, b) {
@@ -607,7 +635,19 @@
 
     function v(x) { return x == null || x === "" ? "" : escapeHtml(x); }
     function pet(lv) { return lv == null ? "" : lv === 0 ? "なし" : "Lv" + lv; }
+    var head = ruin ? ["", "同盟", "名前"].concat(RUIN_SLOTS.map(slotLabel), ["ひとこと", "更新日時"]) : LIST_HEAD;
+    $("listHead").innerHTML = "<tr>" + head.map(function(h) { return "<th>" + escapeHtml(h) + "</th>"; }).join("") + "</tr>";
+    $("ruinSumBox").style.display = ruin ? "block" : "none";
+    if (ruin) $("ruinSummary").textContent = ruinSummary(rows);
     $("listBody").innerHTML = shown.length ? shown.map(function(m) {
+      if (ruin) {
+        var mark = { yes: "◯", maybe: "△", no: "×" };
+        return '<tr class="' + (me && me.userId === m.userId ? "me" : "") + (m.entry === "absent" ? " absent" : "") + (m.prev ? " prev" : "") + '">' +
+          '<td><button type="button" class="sub-btn edit" data-user="' + escapeHtml(m.userId) + '">' + (m.prev ? "登録する" : "直す") + '</button></td>' +
+          "<td>" + v(m.alliance) + "</td><td>" + v(m.name) + (m.proxyBy && !m.prev ? '<br><span class="proxy-tag">（代理: ' + v(m.proxyBy) + "）</span>" : "") + "</td>" +
+          RUIN_SLOTS.map(function(k) { return '<td style="text-align: center;">' + (m.prev ? "" : mark[(m.slots || {})[k]] || "") + "</td>"; }).join("") +
+          '<td class="note">' + v(m.note) + "</td><td>" + (m.updatedAt ? formatTime(m.updatedAt) : "") + "</td></tr>";
+      }
       var mine = me && me.userId === m.userId, abs = m.entry === "absent";
       var time = m.joinAt || m.leaveAt ? (m.joinAt || "") + "〜" + (m.leaveAt || "") : "";
       return '<tr class="' + (mine ? "me" : "") + (abs ? " absent" : "") + (m.prev ? " prev" : "") + '">' +
@@ -618,7 +658,7 @@
           "<td>" + v(m.marchCount) + "</td><td>" + pet(m.marchPet) + "</td><td>" + v(m.rallyCount) + "</td><td>" +
           pet(m.rallyPet) + "</td><td>" + pet(m.rallySpeedPet) + "</td>") +
         '<td class="note">' + v(m.note) + "</td><td>" + (m.updatedAt ? formatTime(m.updatedAt) : "") + "</td></tr>";
-    }).join("") : '<tr><td colspan="15" style="color: #777;">まだ誰も登録していません</td></tr>';
+    }).join("") : '<tr><td colspan="' + head.length + '" style="color: #777;">まだ誰も登録していません</td></tr>';
     $("listBody").querySelectorAll("button.edit").forEach(function(btn) {
       btn.addEventListener("click", function() {
         var u = userById(btn.dataset.user);
@@ -626,6 +666,26 @@
       });
     });
   }
+
+  // 遺跡争奪の集計（Discordに貼る形）。参加＝名前、行けるかも＝名前△
+  function ruinSummary(rows) {
+    var ev = eventById(currentEventId), lines = [eventLabel(ev)];
+    RUIN_SLOTS.forEach(function(k) {
+      var names = [];
+      rows.forEach(function(m) {
+        var s = !m.prev && (m.slots || {})[k];
+        if (s === "yes") names.push(m.name);
+        else if (s === "maybe") names.push(m.name + "△");
+      });
+      lines.push(k + "時（" + names.length + "人）：" + names.join("、"));
+    });
+    return lines.join("\n");
+  }
+  $("ruinCopyBtn").addEventListener("click", function() {
+    var text = $("ruinSummary").textContent, btn = this;
+    function done() { btn.textContent = "コピーしました"; setTimeout(function() { btn.textContent = "コピー"; }, 1500); }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, function() {});
+  });
 
   // ---------- ① 名前 ----------
   function load() {
@@ -655,12 +715,14 @@
     });
   }
 
-  // このイベント以外で、いちばん新しいイベントの入力（不参加は除く）
-  function previousEntry(userId) {
-    var dates = {};
+  // このイベント以外で、いちばん新しいイベントの入力（不参加は除く）。
+  // 遺跡争奪とそれ以外は項目が違うので、同じ種類のイベントからだけ取る（anyType なら種類を問わない）
+  function previousEntry(userId, anyType) {
+    var dates = {}, ruin = isRuin();
     history.events.forEach(function(e) { dates[e.id] = e; });
     return history.entries.filter(function(x) {
-      return x.userId === userId && x.eventId !== currentEventId && x.entry !== "absent" && dates[x.eventId];
+      return x.userId === userId && x.eventId !== currentEventId && x.entry !== "absent" && dates[x.eventId] &&
+        (anyType || (dates[x.eventId].type === RUIN_TYPE) === ruin);
     }).sort(function(a, b) {
       return dates[b.eventId].date.localeCompare(dates[a.eventId].date);
     })[0] || null;
@@ -684,6 +746,10 @@
       $("prevBanner").textContent = "前回（" + eventLabel(pe) + "）の内容を入れてあります。変わったところだけ直して「登録する」を押してください。";
       // 時刻・途中で抜ける・ひとことはイベントごとに違うので引き継がない
       prev = Object.assign({}, prev, { entry: "start", joinAt: "", leaveAt: "", leaveEarly: false, note: "" });
+      if (isRuin()) { // 遺跡争奪は時間がイベントごとに違うので、同盟だけ引き継ぐ
+        $("prevBanner").textContent = "前回（" + eventLabel(pe) + "）の同盟を入れてあります。参加できる時間を選んで「登録する」を押してください。";
+        prev = { alliance: prev.alliance, entry: "start" };
+      }
     }
     fillForm(existing || prev || { alliance: user ? user.alliance : "", entry: "start", grade: "G7" });
     renderProxy();
@@ -773,6 +839,10 @@
 
   // 「一部参加」「集結の指示」を押したときだけ、時刻・集結の欄を出す
   function syncSubFields() {
+    var ruin = isRuin();
+    $("ruinField").style.display = ruin ? "block" : "none";
+    $("entryField").style.display = ruin ? "none" : "block";
+    if (ruin) { $("joinFields").style.display = "none"; return; }
     $("partField").style.display = radioValue("fEntry") === "part" ? "grid" : "none";
     $("rallyFields").style.display = $("fRallyOn").checked ? "block" : "none";
     $("joinFields").style.display = radioValue("fEntry") === "absent" ? "none" : "block";
@@ -825,6 +895,14 @@
     document.querySelectorAll(".fTroop:checked").forEach(function(cb) { troops += cb.value; });
     var choice = radioValue("fEntry") || "full";
     var alliance = str($("fAlliance").value).normalize("NFKC");
+    if (isRuin()) {
+      var slots = {};
+      RUIN_SLOTS.forEach(function(k) { slots[k] = radioValue("fSlot" + k) || ""; });
+      var going = RUIN_SLOTS.some(function(k) { return slots[k] === "yes" || slots[k] === "maybe"; });
+      return { alliance: alliance, entry: going ? "start" : "absent", grade: "その他", monthly: false, leaveEarly: false,
+        vc: false, vivian4: false, mayChange: false, troops: "", tier: null, joinAt: "", leaveAt: "", note: str($("fNote").value),
+        marchCount: null, marchPet: null, rallyCount: null, rallyPet: null, rallySpeedPet: null, slots: slots, proxyBy: proxyBy() };
+    }
     if (choice === "absent") {
       return { alliance: alliance, entry: "absent", grade: radioValue("fGrade") || "その他", monthly: false, leaveEarly: false,
         vc: false, vivian4: false, mayChange: $("fMayChange").checked, troops: "", tier: null, joinAt: "", leaveAt: "", note: str($("fNote").value),
@@ -886,6 +964,7 @@
     $("fJoinAt").value = toTimeInput(m.joinAt);
     $("fLeaveAt").value = toTimeInput(m.leaveAt);
     $("fNote").value = m.note || "";
+    RUIN_SLOTS.forEach(function(k) { setRadio("fSlot" + k, (m.slots || {})[k] || ""); });
     setNum("fMarchCount", m.marchCount);
     setNum("fMarchPet", m.marchPet);
     setNum("fRallyCount", m.rallyCount);
@@ -900,6 +979,10 @@
     function bad(v) { return v != null && !(v >= 0 && Math.floor(v) === v); }
     if (m.proxyBy && nameKey(m.proxyBy) === nameKey(me.name)) return "代理入力モードのまま、自分（入力者と同じ名前）を登録しようとしています。自分の分は、上の「代理入力モードをやめる」を押してから登録してください";
     if (!/^[A-Za-z]{3}$/.test(m.alliance)) return "同盟は英字3文字で入れてください（例: EGG）";
+    if (m.slots) {
+      var miss = RUIN_SLOTS.filter(function(k) { return !m.slots[k]; });
+      return miss.length ? miss.map(slotLabel).join("・") + "の参加を選んでください（全部の時間を選んでください）" : "";
+    }
     if (m.entry === "absent") return "";
     if (radioValue("fEntry") === "part" && !m.joinAt && !m.leaveAt) return "一部参加のときは「何時から」か「何時まで」を入れてください";
     if (m.marchPet == null) return "出征容量ペットを選んでください";
@@ -997,6 +1080,12 @@
       btn.textContent = open ? "閉じる" : "確認方法";
     });
   });
+
+  $("ruinSlots").innerHTML = RUIN_SLOTS.map(function(k) {
+    return '<div class="ruin-row"><span class="t">' + slotLabel(k) + '</span><div class="chips">' + SLOT_CHOICES.map(function(c) {
+      return '<label class="chip"><input type="radio" name="fSlot' + k + '" value="' + c[0] + '"><span>' + c[1] + "</span></label>";
+    }).join("") + "</div></div>";
+  }).join("");
 
   document.querySelectorAll("select[data-pet]").forEach(function(sel) {
     var pet = PETS[sel.dataset.pet], html = '<option value="">選んでください</option><option value="0">持っていない</option>';

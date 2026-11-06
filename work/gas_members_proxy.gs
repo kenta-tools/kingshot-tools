@@ -29,6 +29,8 @@ var MAX_BYTES = 5 * 1024 * 1024; // 保存データの上限（いたずら対�
 var DATA_FILE_NAME = "Kingshot メンバー管理データ（非公開）.json";
 var GRADES = ["G8", "G7", "G6", "G5", "その他"];
 var SELF_LIMIT_PER_MIN = 60; // 個人登録の受付上限（全体で1分あたり。いたずら連打対策）
+var RUIN_TYPE = "遺跡争奪";                       // 時間ごとに参加できるかを登録するイベント
+var RUIN_SLOTS = ["12", "18", "22", "23", "25"];  // 遺跡争奪の時間（25＝翌1時）。entry/index.html と同じ
 var SELF_SAME_IP_MIN = 30;   // 代理入力モードでないとき、同じIPから別の人の登録が続くのを断る時間（分）
 var SELF_UNDO_MAX = 400;     // 個人登録の「変更前の内容」を残す件数（いたずらを元に戻すため。d.selfUndo、非公開）
 
@@ -512,6 +514,13 @@ function selfSave_(token, p) {
 
       var ev = d.events.filter(function(e) { return e.id === p.eventId; })[0];
       if (!ev || !ev.open) return { ok: false, status: 403, error: "このイベントの受付は終了しました" };
+      if (row && ev.type === RUIN_TYPE) {
+        // 遺跡争奪は全部の時間を選んでもらう。どこかに参加（行けるかも含む）なら参加扱い
+        if (!row.slots || RUIN_SLOTS.some(function(k) { return !row.slots[k]; })) return { ok: false, status: 400, error: "参加できる時間を全部選んでください" };
+        row.entry = RUIN_SLOTS.some(function(k) { return row.slots[k] !== "no"; }) ? "start" : "absent";
+      } else if (row) {
+        delete row.slots;
+      }
 
       // ユーザーを決める: 候補から選んだ人 → 名前（旧名含む）が一致する人 → 新規
       var user = p.userId ? d.users.filter(function(u) { return u.id === p.userId; })[0] : null;
@@ -570,6 +579,7 @@ function selfSave_(token, p) {
           vc: row.vc, vivian4: row.vivian4, mayChange: row.mayChange, troops: row.troops, tier: row.tier, joinAt: row.joinAt, leaveAt: row.leaveAt,
           note: row.note, marchCount: row.marchCount, marchPet: row.marchPet, rallyCount: row.rallyCount,
           rallyPet: row.rallyPet, rallySpeedPet: row.rallySpeedPet, marchCap: row.marchCap, rallyCap: row.rallyCap,
+          slots: row.slots, // 遺跡争奪の時間ごとの参加（それ以外のイベントでは入らない）
           proxyBy: proxyBy, // 代理で入力した人の名前（本人の入力なら ""）
           updatedAt: new Date().toISOString(),
           id: existing ? existing.id : newId_("r"), eventId: ev.id, userId: user.id
@@ -686,6 +696,10 @@ function cleanEntry_(m) {
     rallySpeedPet: count_(m.rallySpeedPet, 8)
   };
   if (r.leaveAt) r.leaveEarly = true;
+  // 遺跡争奪の時間ごとの参加（yes＝参加、maybe＝行けるかも、no＝不参加）
+  var slotsIn = m.slots || {}, slots = {};
+  RUIN_SLOTS.forEach(function(k) { if (["yes", "maybe", "no"].indexOf(slotsIn[k]) >= 0) slots[k] = slotsIn[k]; });
+  if (Object.keys(slots).length) r.slots = slots;
   var c = calcCap_(r);
   r.marchCap = c.march;
   r.rallyCap = c.rally;
