@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KvK相手突合せ まとめ</title>
+<script>(function(){try{if(!sessionStorage.getItem('ksAdminPw')&&!localStorage.getItem('ksAdminPwSaved'))document.documentElement.style.visibility='hidden';}catch(e){document.documentElement.style.visibility='hidden';}})();</script>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+    background: #f4f5f7;
+    color: #222;
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 0 20px;
+  }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  .sub { color: #666; font-size: 13px; margin-bottom: 28px; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+  }
+  .tool-card {
+    position: relative;
+    display: block;
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    text-decoration: none;
+    color: inherit;
+    transition: box-shadow 0.15s, transform 0.15s;
+  }
+  .tool-card:hover {
+    box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+    transform: translateY(-2px);
+  }
+  .tool-card .icon { font-size: 26px; margin-bottom: 8px; }
+  .tool-card .title { font-size: 15px; font-weight: bold; margin-bottom: 6px; }
+  .tool-card .desc { font-size: 12px; color: #777; line-height: 1.5; }
+  .tool-card .date { font-size: 11px; color: #999; margin-top: 6px; }
+  .back-top { display: inline-block; font-size: 13px; color: #666; text-decoration: none; margin-bottom: 16px; }
+  .back-top:hover { text-decoration: underline; }
+  .empty { color: #999; font-size: 13px; }
+
+  .card {
+    background: #fff; border-radius: 12px; padding: 18px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 24px;
+  }
+  .card h2 { font-size: 15px; margin: 0 0 12px; }
+  .card .row { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; margin-bottom: 10px; }
+  .card .field { display: flex; flex-direction: column; gap: 4px; }
+  .card .field label { font-size: 12px; color: #666; }
+  .card input[type="text"] {
+    padding: 7px 9px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;
+  }
+  .card input#oppKidsInput { width: 200px; }
+  .card input#oppLabelInput { width: 160px; }
+  .card button {
+    background: #4a6cf7; color: #fff; border: none; border-radius: 8px;
+    padding: 8px 16px; font-size: 14px; cursor: pointer;
+  }
+  .card button:hover { opacity: 0.9; }
+  .card .copy-btn { background: #999; padding: 4px 10px; font-size: 12px; }
+  .prompt-out {
+    display: none; margin-top: 4px; background: #f8f9fb; border-radius: 8px;
+    padding: 10px 12px; font-family: "Consolas", "MS Gothic", monospace; font-size: 13px;
+    white-space: pre-wrap; word-break: break-all;
+  }
+  .card .note { font-size: 12px; color: #999; margin-top: 8px; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<h1>⚔️ KvK相手突合せ まとめ</h1>
+<div class="sub">KvKの相手鯖が決まるたびに作成した、うち（816鯖）と相手鯖の突合せ結果の一覧です。新しいものほど上に表示されます。</div>
+
+<div class="card">
+  <h2>新しい突合せを作るプロンプト</h2>
+  <div class="row">
+    <div class="field">
+      <label>相手鯖番号（カンマ区切り）</label>
+      <input type="text" id="oppKidsInput" placeholder="例: 123,456">
+    </div>
+    <div class="field">
+      <label>表示名（省略可）</label>
+      <input type="text" id="oppLabelInput" placeholder="例: 123鯖連合">
+    </div>
+    <div class="field">
+      <label>紐づけるKVKイベント</label>
+      <select id="eventSelect"><option value="">（読み込み中…）</option></select>
+    </div>
+    <div class="field">
+      <label>突合せ人数（省略時12人）</label>
+      <input type="number" id="maxRowsInput" placeholder="12" min="1">
+    </div>
+    <button type="button" id="makePromptBtn">プロンプトを作る</button>
+  </div>
+  <div class="prompt-out" id="promptOut"></div>
+  <div class="row" id="promptCopyRow" style="display:none; margin-top:0;">
+    <button type="button" class="copy-btn" id="copyPromptBtn">コピー</button>
+  </div>
+  <div class="note">ここで作ったプロンプトをClaudeに渡すと、相手鯖との突合せレポートを作成・公開します（このページ上では自動実行されません）。イベントを選ぶと、そのイベントが「完了」になるまで毎日9時に数値だけ自動更新されます。</div>
+</div>
+
+<div class="grid">
+  <a class="tool-card" href="KvK相手突合せ_1065鯖_20261103.html?v=20261107074433">
+    <div class="icon">⚔️</div>
+    <div class="title">1065鯖</div>
+    <div class="desc">12人 vs 12人の突合せ／7勝5敗</div>
+    <div class="date">2026-11-07</div>
+  </a>
+</div>
+
+<script>
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxu5HW9uLU9pCsUs1r_45xpuofWZmQAyZFDwSLK1C_7GvA7SDXZ4ayBEJTS0sR_8oToAw/exec";
+
+function loadEvents() {
+  const sel = document.getElementById("eventSelect");
+  fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "pubGet" }) })
+    .then(r => r.json())
+    .then(res => {
+      if (!res.ok) { sel.innerHTML = '<option value="">（読み込めませんでした）</option>'; return; }
+      const events = (res.history && res.history.events || []).filter(e => e.type === "KVK" && !e.done)
+        .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+      sel.innerHTML = '<option value="">（紐づけない）</option>' + events.map(e =>
+        `<option value="${e.id}" data-date="${e.date}">${e.date}</option>`
+      ).join("");
+    })
+    .catch(() => { sel.innerHTML = '<option value="">（読み込めませんでした）</option>'; });
+}
+loadEvents();
+
+document.getElementById("makePromptBtn").addEventListener("click", () => {
+  const kids = document.getElementById("oppKidsInput").value.trim();
+  const label = document.getElementById("oppLabelInput").value.trim();
+  const eventSel = document.getElementById("eventSelect");
+  const eventId = eventSel.value;
+  const eventDate = eventId ? eventSel.selectedOptions[0].dataset.date : "";
+  const maxRowsRaw = document.getElementById("maxRowsInput").value.trim();
+  const maxRows = maxRowsRaw ? parseInt(maxRowsRaw, 10) : 12;
+  const out = document.getElementById("promptOut");
+  if (!kids) {
+    out.style.display = "block";
+    out.textContent = "相手鯖番号を入力してください（例: 123,456）";
+    document.getElementById("promptCopyRow").style.display = "none";
+    return;
+  }
+  let prompt = `相手鯖 ${kids} とのKvK相手突合せを作って`;
+  if (label) prompt += `（表示名: ${label}）`;
+  if (eventId) prompt += `（紐づけるイベント: ${eventDate}開催分、イベントID ${eventId}）`;
+  prompt += `（人数: ${maxRows}人ずつ）`;
+  out.style.display = "block";
+  out.textContent = prompt;
+  document.getElementById("promptCopyRow").style.display = "flex";
+});
+
+document.getElementById("copyPromptBtn").addEventListener("click", () => {
+  const text = document.getElementById("promptOut").textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById("copyPromptBtn");
+    const orig = btn.textContent;
+    btn.textContent = "コピーしました";
+    setTimeout(() => { btn.textContent = orig; }, 1200);
+  });
+});
+</script>
+
+<script src="kvk-auth-gate.js?v=20261107074433"></script>
+</body>
+</html>

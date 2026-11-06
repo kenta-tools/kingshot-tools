@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>問い合わせ・質問</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+    background: #f4f5f7;
+    color: #222;
+    max-width: 700px;
+    margin: 40px auto;
+    padding: 0 20px;
+    line-height: 1.7;
+  }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .sub { color: #666; font-size: 13px; margin-bottom: 24px; }
+  .card { background: #fff; border-radius: 12px; padding: 20px 22px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 20px; }
+  .card h2 { font-size: 15px; margin: 0 0 14px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12.5px; color: #555; margin-bottom: 4px; font-weight: bold; }
+  .field input[type="text"], .field textarea {
+    width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-family: inherit;
+  }
+  .field textarea { min-height: 100px; resize: vertical; }
+  button {
+    font: inherit; font-size: 14px; font-weight: bold; padding: 9px 20px; border-radius: 8px;
+    border: none; background: #2d6cdf; color: #fff; cursor: pointer;
+  }
+  button:disabled { opacity: 0.5; cursor: default; }
+  .msg { font-size: 13px; margin-top: 10px; min-height: 1em; }
+  .msg.ok { color: #1a7f37; }
+  .msg.err { color: #c0392b; }
+  .top-link { color: #2d6cdf; text-decoration: none; font-size: 13px; }
+
+  .qa-item { padding: 14px 0; border-bottom: 1px solid #eee; }
+  .qa-item:last-child { border-bottom: none; }
+  .qa-item .q { font-weight: bold; font-size: 14px; }
+  .qa-item .q::before { content: "Q. "; color: #2d6cdf; }
+  .qa-item .a { margin-top: 6px; font-size: 13.5px; color: #333; white-space: pre-wrap; }
+  .qa-item .a::before { content: "A. "; color: #1a7f37; font-weight: bold; }
+  .empty { color: #999; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<div style="display:flex; justify-content:space-between; align-items:center;">
+  <h1>📮 問い合わせ・質問</h1>
+  <a href="../index.html?v=20261107074433" class="top-link">← TOP</a>
+</div>
+<div class="sub">サイトやゲームについて、気になったことを送ってください。回答は下に掲載されます（すぐには回答されません）。</div>
+
+<div class="card">
+  <h2>質問を送る</h2>
+  <div class="field">
+    <label>お名前（省略可）</label>
+    <input type="text" id="nameInput" placeholder="省略可">
+  </div>
+  <div class="field">
+    <label>質問・意見 ※必須</label>
+    <textarea id="textInput" placeholder="例：出征部隊数の確認方法がよくわかりません"></textarea>
+  </div>
+  <button type="button" id="submitBtn">送信する</button>
+  <div class="msg" id="submitMsg"></div>
+</div>
+
+<div class="card">
+  <h2>回答済みの質問</h2>
+  <div id="qaList" class="empty">読み込み中…</div>
+</div>
+
+<script>
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxu5HW9uLU9pCsUs1r_45xpuofWZmQAyZFDwSLK1C_7GvA7SDXZ4ayBEJTS0sR_8oToAw/exec";
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function loadAnswered() {
+  fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "pubGet" }) })
+    .then(r => r.json())
+    .then(res => {
+      const list = document.getElementById("qaList");
+      if (!res.ok) { list.textContent = "読み込めませんでした。"; return; }
+      const items = (res.inquiries || []).slice().reverse();
+      if (!items.length) { list.textContent = "まだありません。"; return; }
+      list.innerHTML = items.map(i =>
+        `<div class="qa-item"><div class="q">${escapeHtml(i.text)}</div><div class="a">${escapeHtml(i.answerText)}</div></div>`
+      ).join("");
+    })
+    .catch(() => { document.getElementById("qaList").textContent = "読み込めませんでした。"; });
+}
+loadAnswered();
+
+document.getElementById("submitBtn").addEventListener("click", () => {
+  const name = document.getElementById("nameInput").value.trim();
+  const text = document.getElementById("textInput").value.trim();
+  const msg = document.getElementById("submitMsg");
+  const btn = document.getElementById("submitBtn");
+  if (!text) {
+    msg.className = "msg err";
+    msg.textContent = "質問・意見を入力してください。";
+    return;
+  }
+  btn.disabled = true;
+  msg.className = "msg";
+  msg.textContent = "送信中…";
+  fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "askSave", name, text }) })
+    .then(r => r.json())
+    .then(res => {
+      if (!res.ok) throw new Error(res.error || "送信できませんでした");
+      msg.className = "msg ok";
+      msg.textContent = "送信しました。ありがとうございます。";
+      document.getElementById("textInput").value = "";
+    })
+    .catch(e => {
+      msg.className = "msg err";
+      msg.textContent = "送信できませんでした: " + e.message;
+    })
+    .then(() => { btn.disabled = false; });
+});
+</script>
+
+</body>
+</html>

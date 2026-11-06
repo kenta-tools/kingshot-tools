@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KvK占領戦 勝利判定ツール</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+    background: #f4f5f7;
+    color: #222;
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 0 20px;
+  }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .sub { color: #666; font-size: 13px; margin-bottom: 24px; }
+
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    margin-bottom: 20px;
+  }
+  .card h2 { font-size: 15px; margin: 0 0 14px; }
+
+  .settings-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  input[type="number"] {
+    padding: 7px 9px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    width: 70px;
+  }
+  input[type="text"] {
+    padding: 7px 9px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    width: 100%;
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: center; padding: 8px 6px; border-bottom: 1px solid #eee; }
+  th { color: #888; font-weight: normal; font-size: 12px; }
+  td.name-col { text-align: left; }
+  td input[type="number"] { width: 60px; }
+  tr.leader td { background: #fff4e5; }
+  td.decided { color: #2e8b57; font-weight: bold; }
+  tr.summary td { font-weight: bold; background: #f8f9fb; }
+  .note { font-size: 12px; color: #999; margin-top: 10px; }
+</style>
+</head>
+<body>
+<!-- ks-sidebar:start -->
+<style>
+  .ks-sidebar {
+    position: fixed; top: 0; left: 0; width: 220px; height: 100vh;
+    background: #1a2332; padding: 20px 14px; box-sizing: border-box;
+    overflow-y: auto; overflow-x: hidden;
+    font-family: 'Segoe UI','Hiragino Kaku Gothic ProN',Meiryo,sans-serif;
+    z-index: 99999;
+    transition: width 0.2s ease;
+  }
+  .ks-title-row { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+  .ks-sidebar .ks-title { color: #fff; font-weight: bold; font-size: 14px; white-space: nowrap; flex: 1; overflow: hidden; }
+  .ks-toggle-btn {
+    background: transparent; border: 1px solid #3a4a63; color: #c7d0dd; border-radius: 5px;
+    width: 24px; height: 24px; font-size: 13px; line-height: 1; cursor: pointer; flex: 0 0 auto;
+  }
+  .ks-toggle-btn:hover { background: #2a374d; }
+  .ks-sidebar nav { display: flex; flex-direction: column; }
+  .ks-sidebar .ks-link {
+    display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: 6px; margin-bottom: 2px;
+    text-decoration: none; font-size: 12px; line-height: 1.35; color: #c7d0dd;
+  }
+  .ks-sidebar .ks-link .ks-icon { flex: 0 0 auto; width: 18px; text-align: center; margin-top: 1px; }
+  .ks-sidebar .ks-link .ks-label { white-space: normal; overflow-wrap: break-word; }
+  .ks-sidebar .ks-link.ks-active { background: #3a4a63; color: #fff; font-weight: bold; }
+  .ks-sidebar .ks-group {
+    color: #6b7993; font-size: 10px; font-weight: bold; letter-spacing: 0.05em;
+    text-transform: uppercase; padding: 10px 10px 4px; white-space: nowrap;
+  }
+  .ks-sidebar .ks-group:first-of-type { padding-top: 0; }
+  body.ks-collapsed .ks-sidebar .ks-group { display: none; }
+
+  .ks-open-btn {
+    display: none; position: fixed; top: 14px; left: 14px; z-index: 100001;
+    width: 34px; height: 34px; border-radius: 8px; border: none;
+    background: #1a2332; color: #fff; font-size: 16px; cursor: pointer;
+    align-items: center; justify-content: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+  }
+
+  body { margin-left: 240px !important; transition: margin-left 0.2s ease; }
+
+  /* --- 折りたたみ：デスクトップではアイコンだけの細いレールにする --- */
+  body.ks-collapsed .ks-sidebar { width: 56px; padding-left: 8px; padding-right: 8px; }
+  body.ks-collapsed .ks-sidebar .ks-title { display: none; }
+  body.ks-collapsed .ks-title-row { justify-content: center; }
+  body.ks-collapsed .ks-sidebar .ks-label { display: none; }
+  body.ks-collapsed .ks-sidebar .ks-link { justify-content: center; padding: 8px 0; }
+  body.ks-collapsed { margin-left: 76px !important; }
+
+  /* --- モバイル対応：上部に固定バー（右上の☰で下にメニューを開く）。PCの折りたたみ状態は無視 --- */
+  .ks-menu-btn { display: none; }
+  @media (max-width: 760px) {
+    .ks-sidebar, body.ks-collapsed .ks-sidebar { width: 100% !important; height: 48px; padding: 0 12px !important; overflow: visible; }
+    .ks-title-row, body.ks-collapsed .ks-title-row { height: 48px; margin-bottom: 0; justify-content: flex-start; }
+    .ks-sidebar .ks-title, body.ks-collapsed .ks-sidebar .ks-title { display: block; font-size: 14px; }
+    .ks-toggle-btn, .ks-open-btn, body.ks-collapsed .ks-open-btn { display: none !important; }
+    .ks-menu-btn {
+      display: flex; margin-left: auto; flex: 0 0 auto; width: 40px; height: 34px; border-radius: 6px;
+      border: 1px solid #3a4a63; background: transparent; color: #fff; font-size: 18px; line-height: 1;
+      cursor: pointer; align-items: center; justify-content: center;
+    }
+    .ks-sidebar nav {
+      display: none; position: absolute; top: 48px; left: 0; right: 0; max-height: calc(100vh - 48px);
+      overflow-y: auto; background: #1a2332; padding: 6px 10px 12px; box-sizing: border-box;
+      box-shadow: 0 8px 18px rgba(0,0,0,0.35);
+    }
+    body.ks-menu-open .ks-sidebar nav { display: flex; }
+    .ks-sidebar .ks-link, body.ks-collapsed .ks-sidebar .ks-link { justify-content: flex-start; padding: 10px; font-size: 14px; }
+    .ks-sidebar .ks-label, body.ks-collapsed .ks-sidebar .ks-label { display: inline; }
+    .ks-sidebar .ks-group, body.ks-collapsed .ks-sidebar .ks-group { display: block; }
+    body, body.ks-collapsed { margin-left: 0 !important; padding-top: 56px !important; }
+  }
+
+  /* --- テーブル等の横はみ出し対策（モバイル幅のみ） --- */
+  @media (max-width: 760px) {
+    table { display: block; overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; }
+    .card, .panel, .result-wrap { overflow-x: auto; }
+    img, pre, textarea { max-width: 100%; }
+  }
+</style>
+<div class="ks-sidebar">
+  <div class="ks-title-row">
+    <span class="ks-title">⚔️ キングショット</span>
+    <button type="button" class="ks-toggle-btn" id="ksToggleBtn" onclick="ksToggleSidebar()" aria-label="メニュー開閉">←</button>
+    <button type="button" class="ks-menu-btn" aria-label="メニュー" aria-expanded="false">☰</button>
+  </div>
+  <nav>
+    <a href="../index.html?v=20261107074433" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261107074433" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261107074433" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261107074433" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261107074433" class="ks-link ks-active" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a>
+  </nav>
+</div>
+<button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
+<script>
+(function() {
+  var collapsed = false;
+  try { collapsed = localStorage.getItem("ksSidebarCollapsed") === "1"; } catch (e) {}
+  function applyBtn() {
+    var btn = document.getElementById("ksToggleBtn");
+    if (btn) btn.textContent = document.body.classList.contains("ks-collapsed") ? "→" : "←";
+  }
+  if (collapsed) document.body.classList.add("ks-collapsed");
+  document.addEventListener("DOMContentLoaded", applyBtn);
+  applyBtn();
+  window.ksToggleSidebar = function() {
+    var next = !document.body.classList.contains("ks-collapsed");
+    document.body.classList.toggle("ks-collapsed", next);
+    try { localStorage.setItem("ksSidebarCollapsed", next ? "1" : "0"); } catch (e) {}
+    applyBtn();
+  };
+  // スマホ幅のメニュー：☰で開閉。開いているときにメニューの外をタップしたら閉じ、そのタップは下の画面に通さない
+  function setMenuOpen(open) {
+    document.body.classList.toggle("ks-menu-open", open);
+    document.querySelectorAll(".ks-menu-btn").forEach(function(b) {
+      b.textContent = open ? "✕" : "☰";
+      b.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+  }
+  function outsideMenu(t) {
+    return document.body.classList.contains("ks-menu-open") && !(t.closest && (t.closest(".ks-sidebar nav") || t.closest(".ks-menu-btn")));
+  }
+  window.addEventListener("mousedown", function(e) { if (outsideMenu(e.target)) e.preventDefault(); }, true);
+  window.addEventListener("click", function(e) {
+    if (e.target.closest && e.target.closest(".ks-menu-btn")) { setMenuOpen(!document.body.classList.contains("ks-menu-open")); return; }
+    if (outsideMenu(e.target)) { e.preventDefault(); e.stopPropagation(); setMenuOpen(false); }
+  }, true);
+})();
+</script>
+<!-- ks-sidebar:end -->
+
+
+<h1>KvK占領戦 勝利判定ツール</h1>
+<div class="sub">各同盟の占領時間を入力すると、勝利確定までに必要な残り占領時間（分）を自動計算します。</div>
+
+<div class="card">
+  <div class="settings-row">
+    <label>試合時間：</label>
+    <input type="number" id="matchHours" value="5" min="0" step="0.5">
+    <span>時間（変更可）</span>
+    <button type="button" id="resetBtn" style="margin-left:auto; padding:7px 14px; border:1px solid #ddd; border-radius:6px; background:#fff; color:#c0392b; font-size:13px; cursor:pointer;">🔄 リセット</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>占領時間を入力してください</h2>
+  <table id="allianceTable">
+    <thead>
+      <tr>
+        <th style="text-align:left;">同盟</th>
+        <th>時(H)</th>
+        <th>分(M)</th>
+        <th>秒(S)</th>
+        <th>合計(秒)</th>
+        <th>占領時間</th>
+        <th>確定まで</th>
+      </tr>
+    </thead>
+    <tbody id="allianceBody"></tbody>
+    <tfoot>
+      <tr class="summary">
+        <td class="name-col">合計経過</td>
+        <td colspan="3"></td>
+        <td id="totalSec"></td>
+        <td id="totalTime"></td>
+        <td></td>
+      </tr>
+      <tr class="summary">
+        <td class="name-col">残り時間</td>
+        <td colspan="3"></td>
+        <td id="remainSec"></td>
+        <td id="remainTime"></td>
+        <td></td>
+      </tr>
+    </tfoot>
+  </table>
+  <datalist id="allianceNameList"></datalist>
+  <div class="note">※ 時・分・秒に入力 / 同盟名は直接編集可（ユーザー登録済みの同盟名が候補に出ます） / 「確定まで」は勝利確定までに必要な残り占領時間（分）</div>
+</div>
+
+<script>
+const DEFAULT_ALLIANCES = [
+  { name: "ひよこ", h: 2, m: 17, s: 12 },
+  { name: "相手メイン", h: 0, m: 37, s: 34 },
+  { name: "666", h: 0, m: 15, s: 3 },
+  { name: "相手ゴースト", h: 0, m: 10, s: 16 },
+  { name: "その他", h: 0, m: 0, s: 0 },
+];
+
+const allianceBody = document.getElementById("allianceBody");
+const matchHoursInput = document.getElementById("matchHours");
+
+// --- ユーザー登録データ（entry/index.htmlと同じGAS中継役）から同盟名の候補だけ取得 ---
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxu5HW9uLU9pCsUs1r_45xpuofWZmQAyZFDwSLK1C_7GvA7SDXZ4ayBEJTS0sR_8oToAw/exec";
+function fetchAllianceNames() {
+  fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "pubGet" }) })
+    .then(r => r.json())
+    .then(res => {
+      if (!res.ok) return;
+      const alliances = Array.from(new Set((res.users || []).map(u => u.alliance).filter(Boolean)));
+      document.getElementById("allianceNameList").innerHTML = alliances.map(a => `<option value="${a.replace(/"/g, "&quot;")}">`).join("");
+    })
+    .catch(() => {});
+}
+
+// --- 入力値の自動保存（このブラウザのみ） ---
+const STORAGE_KEY = "kvkOccupationState";
+
+function loadSavedState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function saveState() {
+  try {
+    const alliances = Array.from(allianceBody.querySelectorAll("tr")).map(tr => ({
+      name: tr.querySelector(".name-input").value,
+      h: tr.querySelector(".h-input").value,
+      m: tr.querySelector(".m-input").value,
+      s: tr.querySelector(".s-input").value,
+    }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ matchHours: matchHoursInput.value, alliances }));
+  } catch (e) {}
+}
+
+function formatHMS(totalSec) {
+  const sec = Math.max(0, Math.round(totalSec));
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+function renderRows(alliances) {
+  allianceBody.innerHTML = "";
+  alliances.forEach((a, i) => {
+    const tr = document.createElement("tr");
+    tr.dataset.index = i;
+    tr.innerHTML = `
+      <td class="name-col"><input type="text" class="name-input" list="allianceNameList" value="${a.name}"></td>
+      <td><input type="number" class="h-input" value="${a.h}" min="0"></td>
+      <td><input type="number" class="m-input" value="${a.m}" min="0" max="59"></td>
+      <td><input type="number" class="s-input" value="${a.s}" min="0" max="59"></td>
+      <td class="total-sec"></td>
+      <td class="occupy-time"></td>
+      <td class="until-decided"></td>
+    `;
+    allianceBody.appendChild(tr);
+  });
+  allianceBody.querySelectorAll("input").forEach(inp => {
+    inp.addEventListener("input", () => { recalc(); saveState(); });
+  });
+}
+
+function recalc() {
+  const rows = Array.from(allianceBody.querySelectorAll("tr"));
+  const totals = rows.map(tr => {
+    const h = parseFloat(tr.querySelector(".h-input").value) || 0;
+    const m = parseFloat(tr.querySelector(".m-input").value) || 0;
+    const s = parseFloat(tr.querySelector(".s-input").value) || 0;
+    return h * 3600 + m * 60 + s;
+  });
+
+  const matchHours = parseFloat(matchHoursInput.value) || 0;
+  const totalElapsed = totals.reduce((a, b) => a + b, 0);
+  const remain = matchHours * 3600 - totalElapsed;
+
+  const maxVal = Math.max(...totals);
+  const leaderCount = totals.filter(v => v === maxVal).length;
+
+  rows.forEach((tr, i) => {
+    const f = totals[i];
+    tr.querySelector(".total-sec").textContent = f;
+    tr.querySelector(".occupy-time").textContent = formatHMS(f);
+
+    // RANK(F,range,0)=1 かどうか（同率1位も1位扱い）＝ leaderCount>=1 かつ f===maxVal
+    const isLeader = f === maxVal;
+    // 2位以下ならLARGE(...,1)=最大値、1位ならLARGE(...,2)=2番目に大きい値
+    let rival;
+    if (isLeader) {
+      const sorted = [...totals].sort((a, b) => b - a);
+      rival = sorted[1] !== undefined ? sorted[1] : 0;
+    } else {
+      rival = maxVal;
+    }
+
+    const gap = rival + Math.max(0, remain) - f;
+    const needed = Math.max(0, Math.floor(gap / 2) + 1);
+
+    const cell = tr.querySelector(".until-decided");
+    tr.classList.toggle("leader", isLeader);
+    if (needed <= 0) {
+      cell.textContent = "確定！";
+      cell.classList.add("decided");
+    } else {
+      const minutes = Math.ceil(needed / 60);
+      cell.textContent = `${minutes}分`;
+      cell.classList.remove("decided");
+    }
+  });
+
+  document.getElementById("totalSec").textContent = totalElapsed;
+  document.getElementById("totalTime").textContent = formatHMS(totalElapsed);
+  document.getElementById("remainSec").textContent = Math.round(remain);
+  document.getElementById("remainTime").textContent = formatHMS(remain);
+}
+
+const savedState = loadSavedState();
+if (savedState && Array.isArray(savedState.alliances) && savedState.alliances.length === DEFAULT_ALLIANCES.length) {
+  matchHoursInput.value = savedState.matchHours;
+  renderRows(savedState.alliances);
+} else {
+  renderRows(DEFAULT_ALLIANCES);
+}
+matchHoursInput.addEventListener("input", () => { recalc(); saveState(); });
+
+document.getElementById("resetBtn").addEventListener("click", () => {
+  if (!confirm("占領時間（時・分・秒）をすべて0にリセットします。同盟名はそのままです。よろしいですか？")) return;
+  allianceBody.querySelectorAll("tr").forEach(tr => {
+    tr.querySelector(".h-input").value = 0;
+    tr.querySelector(".m-input").value = 0;
+    tr.querySelector(".s-input").value = 0;
+  });
+  recalc();
+  saveState();
+});
+
+recalc();
+fetchAllianceNames();
+</script>
+
+<script src="view-edit-gate.js?v=20261107074433"></script>
+</body>
+</html>
