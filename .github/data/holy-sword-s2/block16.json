@@ -1,0 +1,617 @@
+{
+  "frozenAt": "2026-11-06",
+  "roster": [
+    {
+      "gid": 133018682,
+      "name": "Niki",
+      "tag": "24K",
+      "kid": 900
+    },
+    {
+      "gid": 119852060,
+      "name": "白小白",
+      "tag": "aWp",
+      "kid": 761
+    },
+    {
+      "gid": 118475274,
+      "name": "Luka",
+      "tag": "24K",
+      "kid": 900
+    },
+    {
+      "gid": 132179211,
+      "name": "파괴!Alice~靜",
+      "tag": "24K",
+      "kid": 900
+    },
+    {
+      "gid": 109428466,
+      "name": "非洲小鸡@@@Goose",
+      "tag": "aWp",
+      "kid": 761
+    },
+    {
+      "gid": 125598459,
+      "name": "Minky",
+      "tag": "24K",
+      "kid": 900
+    },
+    {
+      "gid": 114868226,
+      "name": "761招募活躍華人",
+      "tag": "aWp",
+      "kid": 761
+    },
+    {
+      "gid": 117038275,
+      "name": "TheGoodGuy",
+      "tag": "ROK",
+      "kid": 773
+    },
+    {
+      "gid": 133785652,
+      "name": "파괴! Steve",
+      "tag": "24K",
+      "kid": 900
+    },
+    {
+      "gid": 115398000,
+      "name": "VampBarik",
+      "tag": "UNT",
+      "kid": 771
+    },
+    {
+      "gid": 101734728,
+      "name": "Valcons",
+      "tag": "826",
+      "kid": 826
+    },
+    {
+      "gid": 107547051,
+      "name": "～墨谦～",
+      "tag": "aWp",
+      "kid": 761
+    },
+    {
+      "gid": 114497031,
+      "name": "북천문",
+      "tag": "ROK",
+      "kid": 823
+    },
+    {
+      "gid": 119211126,
+      "name": "Flogrown",
+      "tag": "NwO",
+      "kid": 791
+    },
+    {
+      "gid": 119066779,
+      "name": "ThisNewGuy",
+      "tag": "ADK",
+      "kid": 805
+    },
+    {
+      "gid": 125225525,
+      "name": "Meshaal",
+      "tag": "826",
+      "kid": 826
+    },
+    {
+      "gid": 112934743,
+      "name": "761招募活躍玩家@Aimo",
+      "tag": "aWp",
+      "kid": 761
+    },
+    {
+      "gid": 132624364,
+      "name": "Skashᴮᵃᵃᴮᵒˢˢ",
+      "tag": "INV",
+      "kid": 875
+    },
+    {
+      "gid": 95561437,
+      "name": "MIYAKE YASMORI",
+      "tag": "007",
+      "kid": 848
+    },
+    {
+      "gid": 121719050,
+      "name": "༒ Beastmode ༒",
+      "tag": "RPX",
+      "kid": 826
+    },
+    {
+      "gid": 124614243,
+      "name": "༒진미채 Mr K༒",
+      "tag": "007",
+      "kid": 848
+    },
+    {
+      "gid": 105630046,
+      "name": "CARV 186",
+      "tag": "FIN",
+      "kid": 891
+    },
+    {
+      "gid": 125828148,
+      "name": "Zoey",
+      "tag": "TOP",
+      "kid": 850
+    },
+    {
+      "gid": 123336316,
+      "name": "●◇DD◇●",
+      "tag": "007",
+      "kid": 848
+    },
+    {
+      "gid": 99091771,
+      "name": "●◇Squid오징어◇●",
+      "tag": "007",
+      "kid": 848
+    },
+    {
+      "gid": 115485281,
+      "name": "Kelvin Wongᴴᴷ",
+      "tag": "aWp",
+      "kid": 761
+    },
+    {
+      "gid": 135239632,
+      "name": "Win",
+      "tag": "K0R",
+      "kid": 900
+    },
+    {
+      "gid": 130341086,
+      "name": "꒰ঌGemini TOP໒꒱",
+      "tag": "AMP",
+      "kid": 900
+    },
+    {
+      "gid": 113608278,
+      "name": "GENEᵀᴿᴵ⑨",
+      "tag": "999",
+      "kid": 763
+    },
+    {
+      "gid": 118207968,
+      "name": "Carl 卡尔",
+      "tag": "aWp",
+      "kid": 761
+    },
+    {
+      "gid": 123267073,
+      "name": "彡EUN彡",
+      "tag": "KOR",
+      "kid": 833
+    },
+    {
+      "gid": 132125564,
+      "name": "joshy!",
+      "tag": "SUN",
+      "kid": 813
+    },
+    {
+      "gid": 116917570,
+      "name": "Ice Queen",
+      "tag": "999",
+      "kid": 763
+    },
+    {
+      "gid": 118796952,
+      "name": "城焼担当",
+      "tag": "EGG",
+      "kid": 816
+    },
+    {
+      "gid": 214316325,
+      "name": "YellowPilot",
+      "tag": "24K",
+      "kid": 900
+    },
+    {
+      "gid": 114684668,
+      "name": "Saksonec",
+      "tag": "NwO",
+      "kid": 791
+    },
+    {
+      "gid": 117822332,
+      "name": "Bergy",
+      "tag": "SSS",
+      "kid": 763
+    },
+    {
+      "gid": 115837009,
+      "name": "Powerhill",
+      "tag": "TOP",
+      "kid": 850
+    },
+    {
+      "gid": 125042234,
+      "name": "Queen Erika",
+      "tag": "NwO",
+      "kid": 791
+    },
+    {
+      "gid": 115117762,
+      "name": "Potato",
+      "tag": "850",
+      "kid": 850
+    },
+    {
+      "gid": 117233099,
+      "name": "Shockula",
+      "tag": "PWR",
+      "kid": 771
+    },
+    {
+      "gid": 118856595,
+      "name": "橘色太陽",
+      "tag": "aWp",
+      "kid": 761
+    },
+    {
+      "gid": 125854917,
+      "name": "Orionᴹᵒᶠᵒ",
+      "tag": "TOP",
+      "kid": 850
+    },
+    {
+      "gid": 137646567,
+      "name": "M&M 朱古力",
+      "tag": "K0R",
+      "kid": 900
+    },
+    {
+      "gid": 100817042,
+      "name": "Jaguar",
+      "tag": "EGG",
+      "kid": 816
+    },
+    {
+      "gid": 117857486,
+      "name": "路易斯~Louis",
+      "tag": "YLY",
+      "kid": 790
+    },
+    {
+      "gid": 117720705,
+      "name": "was",
+      "tag": "NwO",
+      "kid": 791
+    },
+    {
+      "gid": 180293863,
+      "name": "Lord Belac",
+      "tag": "BLK",
+      "kid": 875
+    },
+    {
+      "gid": 121512268,
+      "name": "BC_2025",
+      "tag": "VKS",
+      "kid": 806
+    },
+    {
+      "gid": 127151948,
+      "name": "Jaffar",
+      "tag": "JMZ",
+      "kid": 893
+    },
+    {
+      "gid": 120799959,
+      "name": "Ratfink_WJ",
+      "tag": "KOR",
+      "kid": 790
+    },
+    {
+      "gid": 98157766,
+      "name": "Nancy Fraley",
+      "tag": "LGS",
+      "kid": 854
+    },
+    {
+      "gid": 126706960,
+      "name": "Ogmotol",
+      "tag": "TOP",
+      "kid": 850
+    },
+    {
+      "gid": 125520030,
+      "name": "Eggy ᴸᵐᴺ࿐ 給冷波比",
+      "tag": "YLY",
+      "kid": 790
+    },
+    {
+      "gid": 115470561,
+      "name": "かむ・x・かむ",
+      "tag": "VRC",
+      "kid": 816
+    },
+    {
+      "gid": 109608808,
+      "name": "猜火車_761招活躍華人",
+      "tag": "aWp",
+      "kid": 761
+    },
+    {
+      "gid": 116194472,
+      "name": "CrazyKenny 케니肯膩",
+      "tag": "LmN",
+      "kid": 790
+    },
+    {
+      "gid": 136644344,
+      "name": "Chee",
+      "tag": "HxH",
+      "kid": 894
+    },
+    {
+      "gid": 143668106,
+      "name": "Thumper Duck",
+      "tag": "VHQ",
+      "kid": 915
+    },
+    {
+      "gid": 102874559,
+      "name": "돼지핑",
+      "tag": "HOT",
+      "kid": 903
+    },
+    {
+      "gid": 135514153,
+      "name": "MooN",
+      "tag": "HxH",
+      "kid": 910
+    },
+    {
+      "gid": 132095924,
+      "name": "Dark_Energy_A",
+      "tag": "24K",
+      "kid": 900
+    },
+    {
+      "gid": 120851587,
+      "name": "GAIO华英雄",
+      "tag": "aWp",
+      "kid": 761
+    },
+    {
+      "gid": 135955844,
+      "name": "Emperor Gru",
+      "tag": "MMR",
+      "kid": 824
+    },
+    {
+      "gid": 114125592,
+      "name": "爪月丁尺モメ ᴷˢᴬ",
+      "tag": "826",
+      "kid": 826
+    },
+    {
+      "gid": 118936330,
+      "name": "Athene",
+      "tag": "SSS",
+      "kid": 763
+    },
+    {
+      "gid": 126495986,
+      "name": "Ċønštåntïnætøř",
+      "tag": "INV",
+      "kid": 875
+    },
+    {
+      "gid": 119099060,
+      "name": "亗 PhatBuddha ᵗʳˣ",
+      "tag": "TRX",
+      "kid": 833
+    },
+    {
+      "gid": 121781276,
+      "name": "Conqueror",
+      "tag": "GOD",
+      "kid": 850
+    },
+    {
+      "gid": 123791761,
+      "name": "＊엘리｡·͜·｡এ",
+      "tag": "KOR",
+      "kid": 841
+    },
+    {
+      "gid": 133717786,
+      "name": "King David דוד",
+      "tag": "24K",
+      "kid": 900
+    },
+    {
+      "gid": 126360939,
+      "name": "Kronosٰ",
+      "tag": "REV",
+      "kid": 847
+    },
+    {
+      "gid": 113473370,
+      "name": "オリーブハイブランチ",
+      "tag": "LOG",
+      "kid": 785
+    },
+    {
+      "gid": 124059935,
+      "name": "거 북ᵀᵘʳᵗˡᵉ",
+      "tag": "ROK",
+      "kid": 823
+    },
+    {
+      "gid": 121025401,
+      "name": "kenta",
+      "tag": "EGG",
+      "kid": 816
+    },
+    {
+      "gid": 125252922,
+      "name": "林北1155",
+      "tag": "REV",
+      "kid": 847
+    },
+    {
+      "gid": 114458195,
+      "name": "玩八蛋༒DE༊ᴸᵐᴺ࿐",
+      "tag": "LmN",
+      "kid": 790
+    },
+    {
+      "gid": 127542607,
+      "name": "TiTeaFshhhhhh",
+      "tag": "GOD",
+      "kid": 850
+    },
+    {
+      "gid": 119529198,
+      "name": "THORʀᴏʀ",
+      "tag": "SUN",
+      "kid": 817
+    },
+    {
+      "gid": 104149725,
+      "name": "༒Revenge༒",
+      "tag": "007",
+      "kid": 848
+    },
+    {
+      "gid": 132946119,
+      "name": "Gemini 开心卡叔Aker",
+      "tag": "24K",
+      "kid": 900
+    },
+    {
+      "gid": 113890562,
+      "name": "SpookySammy",
+      "tag": "PWR",
+      "kid": 771
+    },
+    {
+      "gid": 119242785,
+      "name": "Wildcard Charles",
+      "tag": "NwO",
+      "kid": 791
+    },
+    {
+      "gid": 133512708,
+      "name": "SPOokyFA",
+      "tag": "CNQ",
+      "kid": 912
+    },
+    {
+      "gid": 128767170,
+      "name": "Cøld",
+      "tag": "INV",
+      "kid": 875
+    },
+    {
+      "gid": 123308379,
+      "name": "༒ Cruvan ༒",
+      "tag": "RPX",
+      "kid": 826
+    },
+    {
+      "gid": 128022179,
+      "name": "SpArTaN_FeAr",
+      "tag": "DBD",
+      "kid": 879
+    },
+    {
+      "gid": 126394898,
+      "name": "Toxin",
+      "tag": "TOP",
+      "kid": 850
+    },
+    {
+      "gid": 41509558,
+      "name": "Fort",
+      "tag": "24K",
+      "kid": 900
+    },
+    {
+      "gid": 124177434,
+      "name": "demonc",
+      "tag": "826",
+      "kid": 826
+    },
+    {
+      "gid": 121817820,
+      "name": "つつつ",
+      "tag": "SPL",
+      "kid": 822
+    },
+    {
+      "gid": 122725373,
+      "name": "AiramUaimThu",
+      "tag": "BOR",
+      "kid": 833
+    },
+    {
+      "gid": 115213213,
+      "name": "Becool",
+      "tag": "999",
+      "kid": 763
+    },
+    {
+      "gid": 124435359,
+      "name": "Super DAB Bros",
+      "tag": "TOP",
+      "kid": 850
+    },
+    {
+      "gid": 119889456,
+      "name": "HizDark",
+      "tag": "LUX",
+      "kid": 805
+    },
+    {
+      "gid": 119509956,
+      "name": "Nightwatcher",
+      "tag": "SSS",
+      "kid": 763
+    },
+    {
+      "gid": 93884209,
+      "name": "Jezter",
+      "tag": "22K",
+      "kid": 900
+    },
+    {
+      "gid": 121915539,
+      "name": "Opa Joe",
+      "tag": "404",
+      "kid": 824
+    },
+    {
+      "gid": 116459049,
+      "name": "Loki ʷᵃʳ",
+      "tag": "WAR",
+      "kid": 763
+    },
+    {
+      "gid": 122385755,
+      "name": "Weeedly",
+      "tag": "BGO",
+      "kid": 847
+    },
+    {
+      "gid": 132299773,
+      "name": "Mcpo",
+      "tag": "TRX",
+      "kid": 833
+    },
+    {
+      "gid": 118096100,
+      "name": "# Godji #",
+      "tag": "NwO",
+      "kid": 791
+    }
+  ]
+}
