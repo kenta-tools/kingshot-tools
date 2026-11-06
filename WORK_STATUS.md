@@ -126,3 +126,9 @@ Kingshot関連の単体HTMLツールのうち、ゲームプレイの実務で�
 - ④スマホのメニューをハンバーガー式に統一：760px以下で上部固定バー（タイトル＋右上 .ks-menu-btn ☰/✕）、押すと nav が下にドロップダウン（body.ks-menu-open）。外タップで閉じ、そのタップは capture で止めて下に通さない（mousedownもpreventDefault）。PCの折りたたみ（ks-collapsed）はスマホでは無視。対象：work/inject_sidebar.py（テンプレート、tools/の生成5ページ）＋非表示2ページ（王城到着同期・ストップウォッチ、旧版サイドバーに同じ差し替え）・admin/admin-common.js・admin/inquiries.html・kvk-matchup/kvk-auth-gate.js。admin/teams.html はリーダー経由で同じ差分を依頼
 - タブの並べ替え（ユーザー依頼）：KvK同着スタート カウントダウン表・周期ウェーブタイマーの両方に `moveTab()`/`attachTabReorder()`。PCはタブをドラッグ＆ドロップ、スマホ（両方）は選択中タブの ◀ ▶。並びは各TABS_KEYの配列順で保存
 - 2026-11-03 追記：ユーザー指示「チーム分けは確定するまで工事中」。公開側だけ工事中（teams/index.html は `UNDER_CONSTRUCTION = true` で🚧表示、TOPカードに工事中バッジ、entry/index.html の #teamsBanner の script 先頭で `if (true) return;`）。管理画面 admin/teams.html は今まで通り使える。**確定したら3か所を戻す**（UNDER_CONSTRUCTION=false、entryの `if (true) return;` を削除、TOPのバッジと説明文）。spec.md の「工事中」の記述も消す
+
+## 2026-11-07（リーダー経由のバグ報告対応）
+- 聖剣リーグS2を手動で最新化（holy_sword_s2_refresh.py をローカル実行、PYTHONIOENCODING=utf-8 が必要）f7cf01b
+- admin/participants.html でイベント切替が効かない：eventSelect の change 処理が参加者一覧ページに無い #bulkMsg/#previewWrap に書いて例外→render されなかった。ある欄だけ消すよう修正
+- JSON等の取り込みで出征数などが消える：upsertEntry が参加情報を丸ごと置換していた。取り込み行に `_given`（元データで値が入っていた項目）を付け、`mergeImported()` で入っていない項目は既存値を残す（置き換えモードでも残る人の値を引継ぎ）。フォーム保存は従来通り全項目
+  - 実データ確認：11/7 KVKの34人は 11/03 12:55 の一括取り込みで全員 updatedAt が同一、部隊数・ペットは全イベントで0件。それ以前の個人登録の値が消えた可能性 → 復旧はドライブのデータファイルの版の履歴から（未実施、ユーザー判断待ち）

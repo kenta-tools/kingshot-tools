@@ -380,7 +380,33 @@
   }
 
   function normalize(list) {
-    return (list || []).map(normalizeRow).filter(function(m) { return m.name && m.alliance; });
+    return (list || []).map(function(m) {
+      var r = normalizeRow(m);
+      r._given = givenKeys(m);
+      return r;
+    }).filter(function(m) { return m.name && m.alliance; });
+  }
+
+  // 取り込み元（JSON・CSV・募集フォーマット）に値が入っていた項目。null・空欄・項目なしは「入っていない」扱い
+  function givenKeys(m) {
+    var given = {};
+    Object.keys(m || {}).forEach(function(k) {
+      if (m[k] != null && str(m[k]) !== "") given[k] = true;
+    });
+    return given;
+  }
+
+  // 取り込みで既にいる人を更新するとき、取り込み元に入っていなかった項目は今の値を残す
+  // （例：参加可否だけのJSONを取り込んでも、出征部隊数・ペットLvなどは消さない）
+  var KEEP_ALWAYS = ["id", "eventId", "userId", "updatedAt", "marchCap", "rallyCap"];
+  function mergeImported(row, prev) {
+    if (!prev || !row._given) return row;
+    var out = Object.assign({}, row);
+    Object.keys(prev).forEach(function(k) {
+      if (KEEP_ALWAYS.indexOf(k) >= 0) return;
+      if (!row._given[k]) out[k] = prev[k];
+    });
+    return fitPartial(out);
   }
 
   function normalizeState(data) {
@@ -832,6 +858,7 @@
     var e = withCap(Object.assign({}, row));
     delete e.name;
     delete e.sameAs;
+    delete e._given;
     e.id = id || newId("r");
     e.updatedAt = new Date().toISOString();
     e.eventId = currentEventId;
@@ -840,14 +867,16 @@
   }
 
   // 現在のイベントに参加情報を登録（同じ人がいれば上書き）。戻り値: { result: "added"|"updated", newUser }
-  function upsertEntry(row) {
+  // prevByUser: 「置き換え」で外す前の参加情報（userIdごと）。取り込みに入っていない項目はそこから残す
+  function upsertEntry(row, prevByUser) {
     var u = resolveUser(row);
     var existing = entryOf(currentEventId, u.user.id);
     if (existing) {
-      state.entries[state.entries.indexOf(existing)] = toEntry(row, u.user.id, existing.id);
+      state.entries[state.entries.indexOf(existing)] = toEntry(mergeImported(row, existing), u.user.id, existing.id);
       return { result: "updated", newUser: u.created };
     }
-    state.entries.push(toEntry(row, u.user.id));
+    var prev = prevByUser && prevByUser[u.user.id];
+    state.entries.push(toEntry(mergeImported(row, prev), u.user.id, prev && prev.id));
     return { result: "added", newUser: u.created };
   }
 
@@ -997,7 +1026,9 @@
         var m = parseEntry(part, ctx);
         if (!m.name) { errors.push(lineNo + "行目「" + part + "」: 名前が読めません"); return; }
         if (!m.alliance) { errors.push(lineNo + "行目「" + m.name + "」: 同盟名がありません（見出しがない場合は同盟名を入力してください）"); return; }
-        rows.push(fitPartial(m));
+        var r = fitPartial(m);
+        r._given = givenKeys(m);
+        rows.push(r);
       });
     }
 
@@ -1443,10 +1474,11 @@
   on("eventSelect", "change", function() {
     currentEventId = this.value;
     resetForm(false);
-    $("formMsg").textContent = "";
-    $("bulkMsg").textContent = "";
-    $("previewWrap").style.display = "none";
-    $("formatOut").value = "";
+    // ページによって無い欄があるので、ある欄だけ消す（無い欄で例外になると下の一覧が切り替わらない）
+    if ($("formMsg")) $("formMsg").textContent = "";
+    if ($("bulkMsg")) $("bulkMsg").textContent = "";
+    if ($("previewWrap")) $("previewWrap").style.display = "none";
+    if ($("formatOut")) $("formatOut").value = "";
     render();
   });
 
@@ -1873,15 +1905,17 @@
       setMsg($("bulkMsg"), "取り込めるデータがありません" + (parsed.errors.length ? "\n" + parsed.errors.join(" / ") : ""), false);
       return false;
     }
+    var prevByUser = {};
     if (mode === "replace") {
       var n = state.entries.filter(function(x) { return x.eventId === currentEventId; }).length;
-      if (!confirm("このイベントの参加者" + n + "人を外して、" + parsed.rows.length + "人で置き換えます。よろしいですか？（ユーザー一覧は残ります）")) return false;
+      if (!confirm("このイベントの参加者" + n + "人を外して、" + parsed.rows.length + "人で置き換えます。よろしいですか？（ユーザー一覧は残ります。取り込みに入っていない項目は、残る人の今の値を引き継ぎます）")) return false;
+      state.entries.forEach(function(x) { if (x.eventId === currentEventId) prevByUser[x.userId] = x; });
       state.entries = state.entries.filter(function(x) { return x.eventId !== currentEventId; });
       resetForm(false);
     }
     var added = 0, updated = 0, newUsers = 0;
     parsed.rows.forEach(function(r) {
-      var res = upsertEntry(r);
+      var res = upsertEntry(r, prevByUser);
       if (res.result === "added") added++; else updated++;
       if (res.newUser) newUsers++;
     });
