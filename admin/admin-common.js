@@ -24,6 +24,12 @@
     });
     return out;
   }
+  // 対象（要塞・遺跡）のある時間だけ（登録ページ entry/ の ruinTimes と同じ。対象が1つもなければ5つ全部）
+  function ruinTimes(id) {
+    var ev = eventById(id || currentEventId), t = (ev && ev.ruinTargets) || {};
+    var keys = RUIN_SLOTS.filter(function(k) { return (t[k] || []).length; });
+    return keys.length ? keys : RUIN_SLOTS;
+  }
   function isRuinEvent(id) { var ev = eventById(id); return !!ev && ev.type === RUIN_TYPE; }
   // 中継役の cleanEntry_ と同じ：決まった時間のキーで yes/maybe/no の値だけ残す。1つも無ければ undefined（保存しない）
   function normSlots(src) {
@@ -1384,10 +1390,11 @@
     if (normalHeadHtml === null) { normalHeadHtml = tr.innerHTML; normalLegend = legend ? legend.textContent : ""; }
     var want = ruin
       ? '<th data-key="alliance">同盟</th><th data-key="entry">参加</th><th data-key="name">名前</th>' +
-        RUIN_SLOTS.map(function(k) { return '<th class="nosort">' + slotLabel(k) + '</th>'; }).join("") +
+        ruinTimes().map(function(k) { return '<th class="nosort">' + slotLabel(k) + '</th>'; }).join("") +
         '<th class="nosort">備考</th><th class="nosort">更新日時</th><th class="nosort"></th>'
       : normalHeadHtml;
-    if (tr.dataset.mode !== (ruin ? "ruin" : "normal")) { tr.innerHTML = want; tr.dataset.mode = ruin ? "ruin" : "normal"; }
+    var mode = ruin ? "ruin:" + ruinTimes().join(",") : "normal"; // 時間の列はイベントの対象で変わる
+    if (tr.dataset.mode !== mode) { tr.innerHTML = want; tr.dataset.mode = mode; }
     if (legend) legend.textContent = ruin ? "◯:参加　△:行けるかも　×:不参加" : normalLegend;
     var box = $("ruinSumBox");
     if (!box && ruin) {
@@ -1409,17 +1416,18 @@
     if (box) box.style.display = ruin ? "block" : "none";
   }
 
-  // 登録ページ（entry/）の「登録状況を見る」と同じ形
+  // 登録ページ（entry/）の「登録状況を見る」と同じ形：「12時(2)・16人：もち、あっきぃ△」（(2)＝その時間の対象の数、人数＝参加＋行けるかも）
   function ruinSummary(rows) {
-    var lines = [eventLabel(eventById(currentEventId))];
-    RUIN_SLOTS.forEach(function(k) {
+    var ev = eventById(currentEventId), lines = [eventLabel(ev)];
+    ruinTimes().forEach(function(k) {
       var names = [];
       rows.forEach(function(m) {
         var v = (m.slots || {})[k];
         if (v === "yes") names.push(m.name);
         else if (v === "maybe") names.push(m.name + "△");
       });
-      lines.push(k + "時（" + names.length + "人）：" + names.join("、"));
+      var n = ((ev && ev.ruinTargets) || {})[k] ? ev.ruinTargets[k].length : 0;
+      lines.push(k + "時" + (n ? "(" + n + ")" : "") + "・" + names.length + "人：" + names.join("、"));
     });
     return lines.join("\n");
   }
@@ -1428,7 +1436,7 @@
     return '<td>' + escapeHtml(m.alliance) + '</td>' +
       '<td><span class="tag ' + m.entry + '">' + (m.entry === "absent" ? "不参加" : "参加") + '</span></td>' +
       '<td>' + escapeHtml(m.name) + (m.proxyBy ? ' <span class="hint">（代理: ' + escapeHtml(m.proxyBy) + '）</span>' : '') + '</td>' +
-      RUIN_SLOTS.map(function(k) { return '<td style="text-align: center;">' + (SLOT_MARK[(m.slots || {})[k]] || "") + '</td>'; }).join("") +
+      ruinTimes().map(function(k) { return '<td style="text-align: center;">' + (SLOT_MARK[(m.slots || {})[k]] || "") + '</td>'; }).join("") +
       '<td>' + escapeHtml(m.note) + '</td>' +
       '<td style="white-space: nowrap;">' + escapeHtml(m.updatedAt ? formatTime(m.updatedAt) : "") + '</td>' +
       '<td class="ops"><button class="small sub-btn" data-act="edit">変更</button> ' +
@@ -2246,10 +2254,11 @@
 
   // 遺跡争奪：時間ごとの参加（◯参加／△行けるかも／×不参加）だけを渡す（区分・部隊数・ペットは登録しないため）
   function buildRuinAiText(format, rows) {
-    var cols = ["同盟", "名前"].concat(RUIN_SLOTS.map(slotLabel), ["備考"]);
+    var times = ruinTimes();
+    var cols = ["同盟", "名前"].concat(times.map(slotLabel), ["備考"]);
     var recs = rows.map(function(m) {
       var r = { "同盟": m.alliance, "名前": m.name };
-      RUIN_SLOTS.forEach(function(k) { r[slotLabel(k)] = SLOT_MARK[(m.slots || {})[k]] || ""; });
+      times.forEach(function(k) { r[slotLabel(k)] = SLOT_MARK[(m.slots || {})[k]] || ""; });
       r["備考"] = m.note;
       return r;
     });
@@ -2258,7 +2267,7 @@
       "",
       "## 列の意味",
       "- 同盟・名前: プレイヤーの所属同盟と名前",
-      "- " + RUIN_SLOTS.map(slotLabel).join("・") + ": その時間の遺跡争奪に ◯＝参加／△＝行けるかも／×＝不参加（空欄は未回答）",
+      "- " + times.map(slotLabel).join("・") + ": その時間の遺跡争奪に ◯＝参加／△＝行けるかも／×＝不参加（空欄は未回答）",
       "- 全部の時間が×の人（不参加）は含めていません",
       "",
       "## データ（" + (format === "csv" ? "CSV" : "JSON") + "）"

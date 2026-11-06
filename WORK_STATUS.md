@@ -138,3 +138,6 @@ Kingshot関連の単体HTMLツールのうち、ゲームプレイの実務で�
 - GAS @27（addAlias 追加）デプロイ済み
 - 遺跡争奪の管理画面対応（ユーザ登録担当の d66b284 を受けて）：EVENT_TYPES に追加、normalizeRow で `slots` を保持（normSlots＝中継役 cleanEntry_ と同じく RUIN_SLOTS のキーで yes/maybe/no だけ残す）、フォーム変更・取り込み更新でも既存 slots を保持。参加者一覧は遺跡争奪のとき見出しを時間列に差し替え（setEntryHead、並べ替えクリックはイベント委譲に変更）、Discord用集計 #ruinSumBox（JSで差し込み）、AI用データは buildRuinAiText
 - 遺跡争奪の時間帯ごとの対象（チーム分け担当の依頼、リーダー経由）：events[].ruinTargets（RUIN_SLOTSの5キー→["要塞1"〜"要塞4","遺跡1"〜"遺跡12"]、要塞→遺跡の番号順）。normalizeState で normRuinTargets、mergeIntoRemote で自分が変えたときだけ上書き。イベントページに #ruinTargetsCard（JSで #eventView 先頭に差し込み、チェックで選ぶ）。GASのputは丸ごと保存なので変更なし
+- 遺跡争奪の続き（ユーザ登録担当 03b3976・GAS @28 に合わせて）：参加者一覧の時間列・AI用データ・Discord集計を ruinTimes()（対象のある時間だけ、未設定なら全部）に。集計は「12時(2)・16人：…」形式
+- 2026-11-07 方針変更（リーダー経由・ユーザー指示）：複数セッションにまたがる新機能はリーダーがまとめて実装。このセッションは担当範囲内の改修・バグ修正に専念
+- 共有インデックス注意：他セッションがステージしたファイルを巻き込んだ事故（71d5b80）あり。コミット前に必ず `git diff --cached --name-only` を単独で確認してから commit する
