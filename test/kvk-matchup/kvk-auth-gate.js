@@ -3,13 +3,13 @@
 // 同じタブでadmin側から遷移してきた場合は再ログイン不要（sessionStorageはタブ単位で同一オリジンなら引き継がれる）。
 // 使い方：対応ページの<head>先頭に
 //   <script>(function(){try{if(!sessionStorage.getItem('ksAdminPw')&&!localStorage.getItem('ksAdminPwSaved'))document.documentElement.style.visibility='hidden';}catch(e){document.documentElement.style.visibility='hidden';}})();</script>
-// を入れ、</body>の直前に <script src="kvk-auth-gate.js"></script> を入れる。
+// を入れ、<script src="../config.js"></script> を読み込んでから、</body>の直前に <script src="kvk-auth-gate.js"></script> を入れる。
 (function () {
   "use strict";
   var PW_KEY = "ksAdminPw";
   var PW_SAVED_KEY = "ksAdminPwSaved"; // 「パスワードを保存する」にチェックしてログインしたときだけ使う（タブを閉じても残る）
   try { if (!sessionStorage.getItem(PW_KEY) && localStorage.getItem(PW_SAVED_KEY)) sessionStorage.setItem(PW_KEY, localStorage.getItem(PW_SAVED_KEY)); } catch (e) {}
-  var GAS_URL = "https://script.google.com/macros/s/AKfycbxu5HW9uLU9pCsUs1r_45xpuofWZmQAyZFDwSLK1C_7GvA7SDXZ4ayBEJTS0sR_8oToAw/exec";
+  // GAS_URL は config.js（このファイルを読み込むページで、このファイルより先に読み込む）で定義
 
   function isAuthed() {
     try {

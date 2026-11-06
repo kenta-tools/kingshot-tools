@@ -13,13 +13,13 @@
 // 周期ウェーブタイマーのように毎フレームDOMを再構築するツールでも、セレクタで効くので
 // 要素ごとにdisabledを付け直す必要がない。
 //
-// 使い方：対応ページの</body>の直前に <script src="view-edit-gate.js"></script> を入れる。
+// 使い方：<script src="../config.js"></script> を読み込んでから、対応ページの</body>の直前に <script src="view-edit-gate.js"></script> を入れる。
 (function () {
   "use strict";
   var PW_KEY = "ksAdminPw";
   var PW_SAVED_KEY = "ksAdminPwSaved"; // 「パスワードを保存する」にチェックしてログインしたときだけ使う（タブを閉じても残る）
   try { if (!sessionStorage.getItem(PW_KEY) && localStorage.getItem(PW_SAVED_KEY)) sessionStorage.setItem(PW_KEY, localStorage.getItem(PW_SAVED_KEY)); } catch (e) {}
-  var GAS_URL = "https://script.google.com/macros/s/AKfycbxu5HW9uLU9pCsUs1r_45xpuofWZmQAyZFDwSLK1C_7GvA7SDXZ4ayBEJTS0sR_8oToAw/exec";
+  // GAS_URL は config.js（このファイルを読み込むページで、このファイルより先に読み込む）で定義
 
   var STYLE = [
     "body.ve-view-mode input, body.ve-view-mode select, body.ve-view-mode textarea, body.ve-view-mode button {",

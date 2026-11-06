@@ -483,7 +483,7 @@
   // ---------- 保存 ----------
   // データは中継役（Google Apps Script: work/gas_members_proxy.gs）が非公開の Google ドライブのファイルに保存する。
   // 読み書きはログインパスワード付きで中継役に頼む（公開サイトにはデータを置かない）。
-  var GAS_URL = "https://script.google.com/macros/s/AKfycbxu5HW9uLU9pCsUs1r_45xpuofWZmQAyZFDwSLK1C_7GvA7SDXZ4ayBEJTS0sR_8oToAw/exec"; // 中継役のウェブアプリURL
+  // GAS_URL は config.js（このファイルを読み込むページで、このファイルより先に読み込む）で定義
 
   function adminPassword() {
     try { return sessionStorage.getItem(PW_KEY) || ""; } catch (e) { return ""; }

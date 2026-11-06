@@ -65,7 +65,7 @@
 </head>
 <body>
 <div style="background:#fff3cd; border:1px solid #e2c56b; border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:13px; color:#6b5400; line-height:1.6;">
-  🧪 <b>これはテスト用のミラーです（test/配下）。</b>見た目・操作感の確認専用です。保存系の機能（登録・管理画面の保存・チーム分けの保存など）は本番と同じ中継役（GAS）を使っているため、<b>ここで保存するとと本番データが実際に変わります。</b>データが変わる操作は試さないでください。
+  🧪 <b>これはテスト用のミラーです（test/配下）。</b>見た目・操作感の確認専用です。テスト用の中継役（GAS）・データを使っているので、保存系の操作（登録・管理画面の保存・チーム分けの保存など）をしても<b>本番データには一切影響しません。</b>
 </div>
 <div class="top-row">
   <div>
@@ -90,17 +90,17 @@
 </div>
 
 <div class="grid">
-  <a class="tool-card" href="tools/tools-index.html?v=20261107074433">
+  <a class="tool-card" href="tools/tools-index.html?v=20261107084154">
     <div class="icon">🛠️</div>
     <div class="title">ツール一覧</div>
     <div class="desc">KvK同着スタート・占領判定・周期ウェーブタイマーなどの計算ツール</div>
   </a>
-  <a class="tool-card" href="flame-dragon/flame-dragon-index.html?v=20261107074433">
+  <a class="tool-card" href="flame-dragon/flame-dragon-index.html?v=20261107084154">
     <div class="icon">🐲</div>
     <div class="title">炎龍の覇者 ランキングまとめ</div>
     <div class="desc">炎龍の覇者イベントの総合ランキングHTML一覧</div>
   </a>
-  <a class="tool-card" href="holy-sword-league/holy-sword-league-index.html?v=20261107074433">
+  <a class="tool-card" href="holy-sword-league/holy-sword-league-index.html?v=20261107084154">
     <div class="icon">⚔️</div>
     <div class="title">聖剣リーグ ランキングまとめ</div>
     <div class="desc">聖剣リーグのシーズン・ブロックごとの総合ランキングHTML一覧</div>
@@ -121,7 +121,7 @@
     <div class="title">問い合わせ・質問</div>
     <div class="desc">サイトやゲームについての質問・意見を送る。回答済みの質問も見られます</div>
   </a>
-  <a class="tool-card" href="admin/events.html?v=20261107074433">
+  <a class="tool-card" href="admin/events.html?v=20261107084154">
     <div class="icon">🔐</div>
     <div class="title">メンバー管理（管理者）</div>
     <div class="desc">イベント参加メンバーの登録・編成管理（要パスワード）</div>
@@ -133,12 +133,13 @@
   </a>
 </div>
 
+<script src="config.js?v=20261107084154"></script>
 <script>
 (function() {
   var PW_KEY = "ksAdminPw";
   var PW_SAVED_KEY = "ksAdminPwSaved"; // 「パスワードを保存する」にチェックしてログインしたときだけ使う（タブを閉じても残る）
   try { if (!sessionStorage.getItem(PW_KEY) && localStorage.getItem(PW_SAVED_KEY)) sessionStorage.setItem(PW_KEY, localStorage.getItem(PW_SAVED_KEY)); } catch (e) {}
-  var GAS_URL = "https://script.google.com/macros/s/AKfycbxu5HW9uLU9pCsUs1r_45xpuofWZmQAyZFDwSLK1C_7GvA7SDXZ4ayBEJTS0sR_8oToAw/exec";
+  // GAS_URL は config.js（このファイルの直前に読み込み）で定義
 
   function isLoggedIn() {
     try { return !!sessionStorage.getItem(PW_KEY); } catch (e) { return false; }

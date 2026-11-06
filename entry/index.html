@@ -128,7 +128,7 @@
 
 <div class="row" style="justify-content: space-between;">
   <h1>📝 イベント参加登録</h1>
-  <a href="../index.html?v=20261107074433" class="top-link">← TOP</a>
+  <a href="../index.html?v=20261107084154" class="top-link">← TOP</a>
 </div>
 <div class="howto">
   ① 名前を入れて「次へ」<br>
@@ -389,11 +389,12 @@
   <button type="button" class="sub-btn" id="retryBtn" style="margin-top: 10px;">もう一度読み込む</button>
 </div>
 
+<script src="../config.js?v=20261107084154"></script>
 <script>
 (function() {
   // 保存は中継役（Google Apps Script: work/gas_members_proxy.gs）の pubGet / selfSave を使う（パスワード不要）。
   // 中継役は、管理画面で「受付中」にしたイベントの1人分の参加情報しか変更しない。
-  var GAS_URL = "https://script.google.com/macros/s/AKfycbxu5HW9uLU9pCsUs1r_45xpuofWZmQAyZFDwSLK1C_7GvA7SDXZ4ayBEJTS0sR_8oToAw/exec";
+  // GAS_URL は config.js（このファイルの直前に読み込み）で定義
   var NAME_KEY = "ksEntryName";
   var PROXY_KEY = "ksEntryProxyName"; // 代理入力モードの入力者の名前（あればモード中。やめるまで続く）
   var SELF_KEY = "ksEntrySelf";       // この端末で代理入力モードでなく登録した人（ユーザーID）。別の人を続けて登録しないため
@@ -1122,7 +1123,7 @@
 // チーム分けの公開分を出す（admin/teams.html で「公開する」を押したもの）。名前は入力欄か、この端末で前に登録した名前で探す
 (function() {
   "use strict";
-  var GAS_URL = "https://script.google.com/macros/s/AKfycbxu5HW9uLU9pCsUs1r_45xpuofWZmQAyZFDwSLK1C_7GvA7SDXZ4ayBEJTS0sR_8oToAw/exec";
+  // GAS_URL は config.js（ページ冒頭で読み込み済み）で定義
   var box = document.getElementById("teamsBanner");
   var input = document.getElementById("nameInput");
   var teams = [];
