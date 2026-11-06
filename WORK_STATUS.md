@@ -134,3 +134,5 @@ Kingshot関連の単体HTMLツールのうち、ゲームプレイの実務で�
   - 実データ確認：11/7 KVKの34人は 11/03 12:55 の一括取り込みで全員 updatedAt が同一、部隊数・ペットは全イベントで0件。それ以前の個人登録の値が消えた可能性 → 復旧はドライブのデータファイルの版の履歴から（未実施、ユーザー判断待ち）
 - KvK相手突合せを試練基準に：`sort_by_trial()`（kvk_matchup.py・refreshの両方。mystic_ranking.py の merge_and_rank は炎龍と共通なので触らない）。refresh は名簿固定のままその日の試練順に並べる。kvk_matchup.py に `--file-date YYYYMMDD`（既存レポートを同じURLで作り直す）を追加。1065鯖は試練上位12人で作り直し済み（--file-date 20261103）
 - 突合せの参加可否が出ない件：原因はJSON取り込みではなく名前の違い（城焼担当↔城焼、Jaguar↔ジャガー等）。looseKey（NFKC・小文字・カナ→ひら・記号除去）で完全一致→確定、イベント登録者で部分一致1人→「≈」推定。推定・未登録には登録者プルダウン＋「紐づけ」→ GAS 新アクション `addAlias`（パスワード必須、別ユーザーと衝突する名前は409）で旧名に追加
+- 検索エンジン対策（外部協力者の指摘→リーダー経由）：robots.txt はプロジェクトサイトでは効かないため、全HTMLに `<meta name="robots" content="noindex, nofollow">`。work/stamp_version.py が無いページに自動挿入（毎回のコミット前実行で新規ページもカバー）。Actionsで丸ごと再生成されるページ用に、mystic_ranking.py・kvk_matchup.py・kvk_matchup_refresh.py・holy_sword_s2_refresh.py のHEADテンプレートにも追加
+- GAS @27（addAlias 追加）デプロイ済み

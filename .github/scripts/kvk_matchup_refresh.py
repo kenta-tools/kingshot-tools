@@ -284,6 +284,7 @@ HEAD = """<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>KvK相手突合せ</title>
 <script>(function(){try{if(!sessionStorage.getItem('ksAdminPw')&&!localStorage.getItem('ksAdminPwSaved'))document.documentElement.style.visibility='hidden';}catch(e){document.documentElement.style.visibility='hidden';}})();</script>

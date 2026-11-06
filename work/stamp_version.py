@@ -26,6 +26,11 @@ VERSION = datetime.now().strftime("%Y%m%d%H%M%S")
 HREF_RE = re.compile(r'href="((?!https?:|mailto:|#)[^"]+?\.html)(\?v=\d+)?"')
 # src="xxx.js" / src="xxx.js?v=12345" のうち、外部URLを除いたものにマッチ（admin-common.js・kvk-auth-gate.jsなど）
 SRC_JS_RE = re.compile(r'src="((?!https?:)[^"]+?\.js)(\?v=\d+)?"')
+# 検索エンジンに載せない（2026-11-07、URLを直接共有して使う運用のため）。GitHub Pagesのプロジェクトサイトでは
+# robots.txt をドメイン直下に置けず効かないので、全HTMLの<head>に meta robots を入れる。既にあるページはそのまま
+ROBOTS_TAG = '<meta name="robots" content="noindex, nofollow">'
+ROBOTS_RE = re.compile(r"""<meta\s+name=["']robots["']""", re.I)
+HEAD_RE = re.compile(r"<head[^>]*>", re.I)
 
 
 def should_skip(path: Path) -> bool:
@@ -52,6 +57,11 @@ def stamp_file(path: Path) -> int:
 
     new_text = HREF_RE.sub(repl, text)
     new_text = SRC_JS_RE.sub(repl_js, new_text)
+    if not ROBOTS_RE.search(new_text):
+        m = HEAD_RE.search(new_text)
+        if m:
+            new_text = new_text[:m.end()] + "\n" + ROBOTS_TAG + new_text[m.end():]
+            count += 1
     if new_text != text:
         path.write_text(new_text, encoding="utf-8")
     return count
