@@ -23,6 +23,8 @@
   label.inline { font-size: 13px; display: inline-flex; align-items: center; gap: 4px; }
   select, input[type=number], input[type=text] { font: inherit; font-size: 13px; padding: 5px 7px; border: 1px solid #ccd2db; border-radius: 6px; background: #fff; }
   input[type=number] { width: 70px; }
+  select { max-width: 100%; }
+  label.inline { max-width: 100%; flex-wrap: wrap; }
   button {
     font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 6px;
     border: 1px solid #3a4a63; background: #1a2332; color: #fff; cursor: pointer;
@@ -46,7 +48,8 @@
   .tabs button.active { background: #1a2332; color: #fff; border-color: #1a2332; }
 
   /* ボード */
-  .board { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+  .board { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr)); gap: 12px; }
+  .board > .team { min-width: 0; }
   .team { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); border: 2px solid transparent; display: flex; flex-direction: column; }
   .team.drop-ok { border-color: #2c5cc5; }
   .team.can-drop { cursor: pointer; border-style: dashed; border-color: #8aa4d8; }
@@ -125,7 +128,7 @@
   <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#555;margin:0 0 10px;cursor:pointer;"><input type="checkbox" id="pwRemember" style="width:auto;margin:0;"> パスワードを保存する（次回から入力不要。共用の端末ではチェックしない）</label>
   <button type="button" id="loginBtn">ログイン</button>
   <div class="msg err" id="loginMsg"></div>
-  <a href="../index.html?v=20261107073433" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
+  <a href="../index.html?v=20261107074433" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
 </div>
 
 <div id="appView">
@@ -143,6 +146,7 @@
         <option value="kvk">KVK方式（集結リーダー＋乗り手）</option>
         <option value="seiken">聖剣方式（集結主＋乗り手チーム）</option>
         <option value="sanmei">三盟方式（上・中・下を手で決める）</option>
+        <option value="ruins">遺跡争奪方式（時間帯ごとに要塞・遺跡へ）</option>
       </select></label>
       <button type="button" class="sub" id="reloadBtn">🔄 最新を読み込む</button>
     </div>
@@ -205,8 +209,13 @@
   var PW_SAVED_KEY = "ksAdminPwSaved"; // 「パスワードを保存する」にチェックしてログインしたときだけ使う（タブを閉じても残る）
   try { if (!sessionStorage.getItem(PW_KEY) && localStorage.getItem(PW_SAVED_KEY)) sessionStorage.setItem(PW_KEY, localStorage.getItem(PW_SAVED_KEY)); } catch (e) {}
   var GAS_URL = "https://script.google.com/macros/s/AKfycbxu5HW9uLU9pCsUs1r_45xpuofWZmQAyZFDwSLK1C_7GvA7SDXZ4ayBEJTS0sR_8oToAw/exec";
-  var TEAM_TYPES = ["KVK", "聖剣", "聖剣リーグ", "三盟"]; // 炎龍はチーム分けの対象外
-  var MODE_BY_TYPE = { "KVK": "kvk", "聖剣": "seiken", "聖剣リーグ": "seiken", "三盟": "sanmei" };
+  var TEAM_TYPES = ["KVK", "聖剣", "聖剣リーグ", "三盟", "遺跡争奪"]; // 炎龍はチーム分けの対象外
+  var MODE_BY_TYPE = { "KVK": "kvk", "聖剣": "seiken", "聖剣リーグ": "seiken", "三盟": "sanmei", "遺跡争奪": "ruins" };
+  // 遺跡争奪：時間帯（entries[].slots のキー。admin-common.js の RUIN_SLOTS と同じ）と、要塞・遺跡（events[].ruinTargets の値）
+  var RUIN_SLOTS = ["12", "18", "22", "23", "25"];
+  var RUIN_TARGETS = ["要塞1", "要塞2", "要塞3", "要塞4"].concat([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(function(n) { return "遺跡" + n; }));
+  var RUIN_CAP = 15; // 1つの要塞・遺跡の最大人数（集結主を含む）
+  function slotLabel(k) { return k + "時" + (k === "25" ? "（翌1時）" : ""); }
   var GRADE_NUM = { "G8": 8, "G7": 7, "G6": 6, "G5": 5, "その他": 4 }; // その他はG4として計算する
   var DRAFT_KEY = "ksTeamsDraft_"; // + eventId。保存前の編集内容をこのブラウザに残す
   var LAST_EVENT_KEY = "ksTeamsLastEvent";
@@ -301,8 +310,8 @@
           '<button type="button" class="ks-menu-btn" aria-label="メニュー" aria-expanded="false">☰</button></div>' +
         "<nav>" + links +
           '<div class="ks-group"></div>' +
-          '<a href="../kvk-matchup/kvk-matchup-index.html?v=20261107073433" class="ks-link" title="KvK相手突合せ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ</span></a>' +
-          '<a href="../index.html?v=20261107073433" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a>' +
+          '<a href="../kvk-matchup/kvk-matchup-index.html?v=20261107074433" class="ks-link" title="KvK相手突合せ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ</span></a>' +
+          '<a href="../index.html?v=20261107074433" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a>' +
           '<button type="button" class="ks-link" id="logoutBtn" title="ログアウト"><span class="ks-icon">🚪</span><span class="ks-label">ログアウト</span></button>' +
         "</nav>" +
       "</div>" +
@@ -434,15 +443,36 @@
   function eventLabel(ev) { return ev ? ev.type + " " + ev.date : ""; }
 
   // 参加登録（entries）から、このイベントの参加者を作る。不参加は除く
+  // 同じ人の直近のKVKの登録（不参加を除く）。遺跡争奪の区分・容量・集結容量はここから引く
+  function latestKvkByUser() {
+    var dates = {}, out = {};
+    (data.events || []).forEach(function(e) { if (e.type === "KVK") dates[e.id] = String(e.date); });
+    (data.entries || []).forEach(function(x) {
+      if (!(x.eventId in dates) || x.entry === "absent") return;
+      var cur = out[x.userId];
+      if (!cur || dates[x.eventId] > dates[cur.eventId]) out[x.userId] = x;
+    });
+    return out;
+  }
+
   function buildPeople() {
     var users = {};
     (data.users || []).forEach(function(u) { users[u.id] = u; });
     people = [];
     byUid = {};
+    var ruinEvent = (eventById(eventId) || {}).type === "遺跡争奪";
+    var kvk = ruinEvent ? latestKvkByUser() : {};
     (data.entries || []).forEach(function(x, i) {
       if (x.eventId !== eventId || x.entry === "absent") return;
       var u = users[x.userId];
       if (!u) return;
+      var slots = x.slots || null;
+      if (ruinEvent) {
+        var k = kvk[x.userId];
+        x = Object.assign({}, k ? { grade: k.grade, marchCap: k.marchCap, rallyCap: k.rallyCap, rallyCount: k.rallyCount, vc: k.vc, vivian4: k.vivian4, monthly: k.monthly, troops: k.troops, tier: k.tier } : {},
+          { eventId: x.eventId, userId: x.userId, alliance: x.alliance, entry: x.entry, note: x.note });
+        x.fromKvk = !!k;
+      }
       var tier11 = Number(x.tier) === 11;
       var troops = String(x.troops || "");
       var p = {
@@ -458,6 +488,8 @@
       p.timeUnknown = (p.entry === "late" && !p.joinAt) || (p.leaveEarly && !p.joinAt && !p.leaveAt);
       p.fullTime = !p.timeUnknown && !p.joinAt && !p.leaveAt && !p.leaveEarly && p.entry === "start";
       p.isRallyer = p.rallyCount != null && p.rallyCount > 0;
+      p.slots = slots || {};
+      p.fromKvk = !!x.fromKvk;
       people.push(p);
       byUid[p.uid] = p;
     });
@@ -475,6 +507,10 @@
   }
   function newDraft(mode) {
     var d = { v: 1, mode: mode, settings: defaultSettings(), teams: [], assign: {}, pins: {} };
+    if (mode === "ruins") {
+      d.ruins = { seed: Math.random().toString(36).slice(2, 10), targets: null, slots: {}, cur: "" };
+      return d;
+    }
     if (mode === "kvk") {
       people.filter(function(p) { return p.isRallyer; }).sort(function(a, b) {
         return ((b.rallyCap || 0) - (a.rallyCap || 0)) || strongerFirst(a, b);
@@ -587,6 +623,7 @@
     draft.assign = draft.assign || {};
     draft.pins = draft.pins || {};
     draft.teams = draft.teams || [];
+    if (draft.mode === "ruins") draft.ruins = Object.assign({ seed: "s", targets: null, slots: {}, cur: "" }, draft.ruins || {});
     selectedUid = "";
     setMsg($("loadMsg"), info, true);
     renderAll();
@@ -744,6 +781,8 @@
   function renderAll() {
     if (!draft) return;
     $("modeSel").value = draft.mode;
+    $("tabs").style.display = draft.mode === "ruins" ? "none" : "";
+    if (draft.mode === "ruins") { renderStatus(); renderRuins(); return; }
     renderStatus();
     renderSettings();
     var stats = allStats();
@@ -1132,6 +1171,7 @@
   }
   // 公開用（閲覧ページ・参加登録ページ）。ユーザーIDではなく表示に使う値を埋め込む
   function buildView() {
+    if (draft.mode === "ruins") return buildRuinsView();
     function person(p, leader) {
       return { name: p.name, alliance: p.alliance, grade: p.grade, marks: marks(p), time: timeLabel(p), leader: !!leader };
     }
@@ -1154,6 +1194,7 @@
   }
 
   function buildText() {
+    if (draft.mode === "ruins") return buildRuinsText();
     var lines = [], blocks = [];
     var ev = eventById(eventId);
     function flush() { if (lines.length) { blocks.push("```\n" + lines.join("\n") + "\n```"); lines = []; } }
@@ -1175,6 +1216,304 @@
     if (pending.length) push(["時間未定（" + pending.length + "人）", pending.map(memberLabel).join("、")]);
     flush();
     return "■ " + eventLabel(ev) + " チーム分け\n" + blocks.join("\n") + "\n※括弧内は参加時間。記載なしは全時間。◇=VC参加OK ◆=ビビアン星4以上";
+  }
+
+  // ---------- 遺跡争奪 ----------
+  // 時間帯（12・18・22・23・25時）ごとに、その時間に参加する人（slots が yes／maybe）だけで要塞・遺跡に分ける。
+  // 対象の要塞・遺跡はイベントの ruinTargets（イベント作成画面で設定）。1か所 RUIN_CAP 人まで、集結主を含む。
+  // 下書きは draft.ruins.slots[時間] = { assign: {uid: "要塞1"|…|"standby"}, leaders: {"要塞1": uid}, pins: {uid: true} }
+  function curSlot() {
+    var withT = RUIN_SLOTS.filter(function(k) { return targetsFor(k).length; });
+    if (RUIN_SLOTS.indexOf(draft.ruins.cur) < 0) draft.ruins.cur = withT[0] || RUIN_SLOTS[0];
+    return draft.ruins.cur;
+  }
+  function ruinTargetsSource() {
+    var t = (eventById(eventId) || {}).ruinTargets;
+    if (t && RUIN_SLOTS.some(function(k) { return (t[k] || []).length; })) return { from: "event", map: t };
+    return { from: "draft", map: draft.ruins.targets || {} };
+  }
+  function targetsFor(k) {
+    var list = ruinTargetsSource().map[k] || [];
+    return RUIN_TARGETS.filter(function(x) { return list.indexOf(x) >= 0; });
+  }
+  function ruinState(k) {
+    var s = draft.ruins.slots[k] = draft.ruins.slots[k] || {};
+    s.assign = s.assign || {}; s.leaders = s.leaders || {}; s.pins = s.pins || {};
+    return s;
+  }
+  function slotStatus(p, k) { var v = p.slots[k]; return v === "yes" || v === "maybe" ? v : ""; }
+  function inSlot(k) { return people.filter(function(p) { return slotStatus(p, k); }); }
+  // 参加する時間帯の数（対象のある時間帯だけで数える）。少ない人ほど優先して入れる
+  function partCount(p) {
+    var keys = RUIN_SLOTS.filter(function(k) { return targetsFor(k).length; });
+    if (!keys.length) keys = RUIN_SLOTS;
+    return keys.filter(function(k) { return slotStatus(p, k); }).length;
+  }
+  // シャッフル用の決まった乱数（同じ seed なら毎回同じ並び。「🎲 シャッフルし直す」で seed を変える）
+  function rnd(key) {
+    var h = 2166136261, s = draft.ruins.seed + "|" + key;
+    for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return ((h >>> 0) % 1000003) / 1000003;
+  }
+  function ruinPlaceOf(k, uid) {
+    var a = ruinState(k).assign[uid];
+    return a === "standby" || targetsFor(k).indexOf(a) >= 0 ? a : "";
+  }
+  function ruinMembers(k, place) { return inSlot(k).filter(function(p) { return ruinPlaceOf(k, p.uid) === place; }); }
+  function ruinLeader(k, target) {
+    var uid = ruinState(k).leaders[target];
+    return uid && byUid[uid] && ruinPlaceOf(k, uid) === target ? byUid[uid] : null;
+  }
+  // 集結主の候補の並び：直近のKVKの集結容量の大きい順 → 区分 → 出征容量
+  function leaderOrder(a, b) {
+    return ((b.rallyCap == null ? -1 : b.rallyCap) - (a.rallyCap == null ? -1 : a.rallyCap)) || (b.g - a.g) ||
+      ((b.marchCap || 0) - (a.marchCap || 0)) || (a.order - b.order);
+  }
+  // 要塞に均等に入れてから、余りを遺跡に均等（1か所 RUIN_CAP 人まで）
+  function desiredCounts(T, n) {
+    var forts = T.filter(function(x) { return x.indexOf("要塞") === 0; }), ruins = T.filter(function(x) { return x.indexOf("遺跡") === 0; });
+    var out = {};
+    function spread(list, total) {
+      list.forEach(function(x, i) { out[x] = Math.floor(total / list.length) + (i < total % list.length ? 1 : 0); });
+    }
+    var toForts = Math.min(n, RUIN_CAP * forts.length);
+    if (forts.length) spread(forts, toForts);
+    if (ruins.length) spread(ruins, Math.min(n - toForts, RUIN_CAP * ruins.length));
+    return out;
+  }
+
+  function autoRuins(k) {
+    var T = targetsFor(k);
+    if (!T.length) return slotLabel(k) + "は対象の要塞・遺跡がありません";
+    var st = ruinState(k), P = inSlot(k);
+    // その時間に参加しなくなった人の分は消す
+    var inP = {};
+    P.forEach(function(p) { inP[p.uid] = true; });
+    Object.keys(st.assign).forEach(function(u) { if (!inP[u]) { delete st.assign[u]; delete st.pins[u]; } });
+    // 📌固定以外を外す（固定した人の場所と、固定した集結主は残す）
+    P.forEach(function(p) { if (!st.pins[p.uid]) delete st.assign[p.uid]; });
+    Object.keys(st.leaders).forEach(function(t) {
+      var uid = st.leaders[t];
+      if (T.indexOf(t) < 0 || !st.pins[uid] || ruinPlaceOf(k, uid) !== t) delete st.leaders[t];
+    });
+    var want = desiredCounts(T, Math.min(P.length, RUIN_CAP * T.length));
+    function count(t) { return P.filter(function(p) { return st.assign[p.uid] === t; }).length; }
+    // 1) 集結主を先に決める（人が入る場所だけ。「参加」の人から、集結容量の大きい順）
+    T.forEach(function(t) {
+      if (!want[t] || ruinLeader(k, t)) return;
+      var c = P.filter(function(p) { return slotStatus(p, k) === "yes" && !st.assign[p.uid]; }).sort(leaderOrder)[0];
+      if (!c) return;
+      st.leaders[t] = c.uid;
+      st.assign[c.uid] = t;
+    });
+    // 2) 残りの人を優先度順に並べる：参加 → 行けるかも、それぞれ参加する時間帯の少ない人から（同じならランダム）
+    var pool = P.filter(function(p) { return !st.assign[p.uid]; }).sort(function(a, b) {
+      return ((slotStatus(a, k) === "maybe") - (slotStatus(b, k) === "maybe")) || (partCount(a) - partCount(b)) || (rnd(k + a.uid) - rnd(k + b.uid));
+    });
+    // 3) 空いている席（場所ごとの目標人数 − 今いる人数）をランダムな順に並べ、優先度の高い人から座らせる。
+    //    固定した人が多い場所があって目標どおりに入りきらないときは、15人に空きがある場所で補う
+    var seats = [], spare = [];
+    T.forEach(function(t) {
+      var c = count(t);
+      for (var i = c; i < (want[t] || 0); i++) seats.push({ t: t, r: rnd(k + t + i) });
+      for (var j = Math.max(c, want[t] || 0); j < RUIN_CAP; j++) spare.push({ t: t, r: j + rnd(k + t + "x" + j) });
+    });
+    seats.sort(function(a, b) { return a.r - b.r; });
+    spare.sort(function(a, b) { return a.r - b.r; });
+    seats = seats.concat(spare);
+    var chosen = pool.slice(0, seats.length), extra = pool.slice(seats.length);
+    chosen.slice().sort(function(a, b) { return rnd(k + "deal" + a.uid) - rnd(k + "deal" + b.uid); }).forEach(function(p, i) { st.assign[p.uid] = seats[i].t; });
+    extra.forEach(function(p) { st.assign[p.uid] = "standby"; });
+    return slotLabel(k) + "を振り分けました（" + (P.length - extra.length) + "人" + (extra.length ? "、入りきらない " + extra.length + "人は待機" : "") + "）";
+  }
+
+  function ruinWarns(k, t) {
+    var ms = ruinMembers(k, t), l = ruinLeader(k, t), w = [];
+    if (ms.length > RUIN_CAP) w.push(RUIN_CAP + "人を超えています（" + ms.length + "人）");
+    if (ms.length && !l) w.push("集結主が決まっていません");
+    if (l && slotStatus(l, k) === "maybe") w.push("集結主が「行けるかも（△）」です");
+    if (l && l.rallyCap == null) w.push("集結主の集結容量が分かりません（直近のKVKで集結の登録なし）");
+    return w;
+  }
+
+  function ruinChip(p, k, isLeader) {
+    var st = ruinState(k), maybe = slotStatus(p, k) === "maybe";
+    var cls = "chip" + (isLeader ? " leader" : "") + (p.uid === selectedUid ? " sel" : "") + (maybe ? " unknown" : "");
+    var info = [escapeHtml(p.alliance)];
+    if (p.fromKvk) info.push(escapeHtml(p.grade));
+    if (isLeader || p.rallyCap != null) info.push(p.rallyCap != null ? "集結" + man(p.rallyCap) : "集結—");
+    info.push("参加" + partCount(p) + "回");
+    return '<div class="' + cls + '" draggable="true" data-uid="' + escapeHtml(p.uid) + '" title="' + escapeHtml(p.note) + '">' +
+      (isLeader ? "👑" : "") + (st.pins[p.uid] ? "📌" : "") + "<b>" + escapeHtml(p.name) + "</b>" + (maybe ? ' <span class="tm">△</span>' : "") + "<br>" +
+      '<span class="m">' + info.join("・") + "</span></div>";
+  }
+
+  function renderRuins() {
+    var k = curSlot(), T = targetsFor(k), st = ruinState(k), src = ruinTargetsSource();
+    // 設定欄：時間帯ごとの対象（イベント作成画面で設定。未設定ならここで仮に設定できる）
+    var html = "";
+    if (src.from === "event") {
+      html += '<div class="note">時間帯ごとの対象（イベント作成画面で設定したもの）：</div><div class="row" style="margin-top:2px;">' +
+        RUIN_SLOTS.map(function(s) { return "<span><b>" + slotLabel(s) + "</b>：" + (targetsFor(s).join("・") || "なし") + "</span>"; }).join("　") + "</div>";
+    } else {
+      html += '<div class="msg err">このイベントには、時間帯ごとの対象（要塞・遺跡）がまだ設定されていません。管理画面の「イベント」で設定してください。下で仮に選ぶこともできます（このチーム分けの下書きにだけ保存）。</div>' +
+        '<div class="tbl-wrap"><table><thead><tr><th>時間帯</th>' + RUIN_TARGETS.map(function(t) { return "<th>" + t.replace("要塞", "要").replace("遺跡", "遺") + "</th>"; }).join("") + "</tr></thead><tbody>" +
+        RUIN_SLOTS.map(function(s) {
+          return "<tr><td>" + slotLabel(s) + "</td>" + RUIN_TARGETS.map(function(t) {
+            return '<td><input type="checkbox" data-rt="' + s + "|" + t + '"' + (targetsFor(s).indexOf(t) >= 0 ? " checked" : "") + "></td>";
+          }).join("") + "</tr>";
+        }).join("") + "</tbody></table></div>";
+    }
+    html += '<div class="note" style="margin-top:6px;">自動振り分け：その時間に参加する人だけで分けます。1か所' + RUIN_CAP + '人まで（集結主を含む）。①集結主を先に決める（「参加」の人から、直近のKVKの集結容量の大きい順に、要塞1→…→遺跡の順）②残りの人を、要塞に均等に入れてから余りを遺跡に均等（どこに入るかはランダム）。入りきらないときは、参加する時間帯の数が少ない人を優先し、「行けるかも（△）」の人は「参加」の人のあと、余った人は待機です。</div>';
+    $("settingsBody").innerHTML = html;
+    Array.prototype.forEach.call($("settingsBody").querySelectorAll("[data-rt]"), function(cb) {
+      cb.addEventListener("change", function() {
+        var a = cb.dataset.rt.split("|"), m = draft.ruins.targets = draft.ruins.targets || {};
+        var list = (m[a[0]] || []).filter(function(x) { return x !== a[1]; });
+        if (cb.checked) list.push(a[1]);
+        m[a[0]] = RUIN_TARGETS.filter(function(x) { return list.indexOf(x) >= 0; });
+        changed();
+      });
+    });
+    $("autoRow").innerHTML =
+      '<button type="button" id="ruinAutoBtn">🤖 ' + slotLabel(k) + 'を自動で振り分ける</button>' +
+      '<button type="button" class="sub" id="ruinAutoAllBtn">🤖 全部の時間帯を自動で振り分ける</button>' +
+      '<button type="button" class="sub" id="ruinShuffleBtn">🎲 シャッフルし直す（' + slotLabel(k) + '）</button>' +
+      '<button type="button" class="sub" id="ruinClearBtn">↩ ' + slotLabel(k) + 'の割り当てを外す（📌以外）</button>';
+    on("ruinAutoBtn", "click", function() { setMsg($("autoMsg"), autoRuins(k), true); changed(); });
+    on("ruinAutoAllBtn", "click", function() {
+      var msgs = RUIN_SLOTS.filter(function(s) { return targetsFor(s).length; }).map(autoRuins);
+      setMsg($("autoMsg"), msgs.join("／") || "対象のある時間帯がありません", msgs.length > 0);
+      changed();
+    });
+    on("ruinShuffleBtn", "click", function() {
+      draft.ruins.seed = Math.random().toString(36).slice(2, 10);
+      setMsg($("autoMsg"), autoRuins(k), true);
+      changed();
+    });
+    on("ruinClearBtn", "click", function() {
+      if (!confirm(slotLabel(k) + "の、📌（固定）以外の割り当てと集結主を外します。よろしいですか？")) return;
+      inSlot(k).forEach(function(p) { if (!st.pins[p.uid]) delete st.assign[p.uid]; });
+      Object.keys(st.leaders).forEach(function(t) { if (!st.pins[st.leaders[t]]) delete st.leaders[t]; });
+      changed();
+    });
+
+    // 時間帯のタブ
+    var v = '<div class="tabs" style="margin-bottom:8px;">' + RUIN_SLOTS.map(function(s) {
+      var ps = inSlot(s), mb = ps.filter(function(p) { return slotStatus(p, s) === "maybe"; }).length;
+      return '<button type="button" data-slot="' + s + '"' + (s === k ? ' class="active"' : "") + ">" + slotLabel(s) + "（" + (ps.length - mb) + "人" + (mb ? "＋△" + mb : "") + "）" + (targetsFor(s).length ? "" : " 対象なし") + "</button>";
+    }).join("") + "</div>";
+    $("tabHint").textContent = "名前を押すと移動先を選べます（PCではドラッグ＆ドロップでも移せます）。📌は「固定」：自動振り分けで動かしません。△は「行けるかも」。区分・容量は直近のKVKの登録から出しています。";
+    if (!T.length) {
+      v += '<div class="card empty-hint">' + slotLabel(k) + "は対象の要塞・遺跡がありません。</div>";
+    } else {
+      v += '<div class="board">';
+      T.forEach(function(t) {
+        var ms = ruinMembers(k, t), l = ruinLeader(k, t), w = ruinWarns(k, t);
+        var cands = inSlot(k).slice().sort(function(a, b) { return ((slotStatus(a, k) === "maybe") - (slotStatus(b, k) === "maybe")) || leaderOrder(a, b); });
+        v += '<div class="team" data-drop="' + t + '"><div class="team-head"><div class="team-title"><b>' + t + '</b><span class="note">' + ms.length + "／" + RUIN_CAP + "人</span></div>" +
+          '<div class="leader-row">集結主 <select data-rleader="' + t + '"><option value="">（選ぶ）</option>' + cands.map(function(p) {
+            return '<option value="' + escapeHtml(p.uid) + '"' + (l === p ? " selected" : "") + ">" + escapeHtml(p.name) + (slotStatus(p, k) === "maybe" ? "△" : "") + (p.rallyCap != null ? "（集結" + man(p.rallyCap) + "）" : "") + "</option>";
+          }).join("") + "</select></div>" +
+          '<div class="cap-bar"><i class="' + (ms.length > RUIN_CAP ? "over" : "") + '" style="width:' + Math.min(100, ms.length / RUIN_CAP * 100).toFixed(1) + '%"></i></div>' +
+          (w.length ? '<div class="team-warn">' + w.map(function(x) { return "<div>" + escapeHtml(x) + "</div>"; }).join("") + "</div>" : "") +
+          '</div><div class="team-body">' + (ms.length ? ms.sort(function(a, b) { return ((b === l) - (a === l)) || leaderOrder(a, b); }).map(function(p) { return ruinChip(p, k, p === l); }).join("") : '<span class="empty-hint">ここに入れる</span>') + "</div></div>";
+      });
+      [["standby", "🪑 待機", "入りきらなかった人"], ["none", "📥 未割り当て", "まだどこにも入っていない人"]].forEach(function(b) {
+        var ms = inSlot(k).filter(function(p) { return (ruinPlaceOf(k, p.uid) || "none") === b[0]; });
+        v += '<div class="team special" data-drop="' + b[0] + '"><div class="team-head"><div class="team-title"><b>' + b[1] + '</b><span class="note">' + ms.length + '人</span></div><div class="team-stats">' + b[2] + "</div></div>" +
+          '<div class="team-body">' + (ms.length ? ms.map(function(p) { return ruinChip(p, k, false); }).join("") : '<span class="empty-hint">（なし）</span>') + "</div></div>";
+      });
+      v += "</div>";
+    }
+    $("viewArea").innerHTML = v;
+    Array.prototype.forEach.call($("viewArea").querySelectorAll("[data-slot]"), function(b) {
+      b.addEventListener("click", function() { draft.ruins.cur = b.dataset.slot; selectedUid = ""; saveLocal(); renderAll(); });
+    });
+    Array.prototype.forEach.call($("viewArea").querySelectorAll("[data-rleader]"), function(sel) {
+      sel.addEventListener("change", function() { setRuinLeader(k, sel.dataset.rleader, sel.value); changed(); });
+    });
+    Array.prototype.forEach.call($("viewArea").querySelectorAll(".chip"), function(c) {
+      c.addEventListener("click", function(e) { e.stopPropagation(); selectedUid = selectedUid === c.dataset.uid ? "" : c.dataset.uid; renderAll(); });
+      c.addEventListener("dragstart", function(e) { e.dataTransfer.setData("text/plain", c.dataset.uid); });
+    });
+    Array.prototype.forEach.call($("viewArea").querySelectorAll("[data-drop]"), function(box) {
+      box.addEventListener("dragover", function(e) { e.preventDefault(); box.classList.add("drop-ok"); });
+      box.addEventListener("dragleave", function() { box.classList.remove("drop-ok"); });
+      box.addEventListener("drop", function(e) {
+        e.preventDefault();
+        var uid = e.dataTransfer.getData("text/plain");
+        if (uid) { ruinMove(k, uid, box.dataset.drop); selectedUid = ""; changed(); }
+      });
+    });
+    $("outText").value = buildRuinsText();
+    // 名前を押したときの移動バー
+    var bar = $("moveBar"), p = byUid[selectedUid];
+    if (!p || !slotStatus(p, k)) { bar.style.display = "none"; return; }
+    bar.style.display = "block";
+    $("moveName").textContent = p.name + "（" + slotLabel(k) + "）";
+    $("pinBtn").textContent = st.pins[p.uid] ? "📌 固定を外す" : "📌 固定する";
+    var here = ruinPlaceOf(k, p.uid) || "none";
+    $("moveTargets").innerHTML = T.map(function(t) { return [t, t + "（" + ruinMembers(k, t).length + "人）"]; }).concat([["standby", "🪑 待機"], ["none", "📥 未割り当て"]]).map(function(x) {
+      return '<button type="button" data-to="' + x[0] + '"' + (x[0] === here ? ' class="here"' : "") + ">" + escapeHtml(x[1]) + (x[0] === here ? "（今ここ）" : "") + "</button>";
+    }).join("");
+    Array.prototype.forEach.call($("moveTargets").querySelectorAll("[data-to]"), function(b) {
+      b.addEventListener("click", function() { ruinMove(k, selectedUid, b.dataset.to); selectedUid = ""; changed(); });
+    });
+  }
+
+  function ruinMove(k, uid, place) {
+    var st = ruinState(k);
+    Object.keys(st.leaders).forEach(function(t) { if (st.leaders[t] === uid && t !== place) delete st.leaders[t]; });
+    if (place === "none" || !place) delete st.assign[uid];
+    else st.assign[uid] = place;
+  }
+  function setRuinLeader(k, t, uid) {
+    var st = ruinState(k);
+    if (!uid) { delete st.leaders[t]; return; }
+    Object.keys(st.leaders).forEach(function(x) { if (st.leaders[x] === uid) delete st.leaders[x]; });
+    st.leaders[t] = uid;
+    st.assign[uid] = t;
+    st.pins[uid] = true;
+  }
+
+  function buildRuinsText() {
+    var ev = eventById(eventId), blocks = [], lines = [];
+    function flush() { if (lines.length) { blocks.push("```\n" + lines.join("\n") + "\n```"); lines = []; } }
+    function push(group) { if (lines.length && lines.length + group.length > 10) flush(); lines = lines.concat(group); }
+    function label(p, k) { return p.name + (slotStatus(p, k) === "maybe" ? "△" : ""); }
+    RUIN_SLOTS.forEach(function(k) {
+      var T = targetsFor(k);
+      if (!T.length) return;
+      flush();
+      blocks.push("【" + slotLabel(k) + "】");
+      T.forEach(function(t) {
+        var l = ruinLeader(k, t), ms = ruinMembers(k, t).filter(function(p) { return p !== l; });
+        push([t + "（" + (ms.length + (l ? 1 : 0)) + "人）集結主:" + (l ? label(l, k) : "未定"), ms.length ? ms.map(function(p) { return label(p, k); }).join("、") : "（なし）"]);
+      });
+      var sb = ruinMembers(k, "standby");
+      if (sb.length) push(["待機（" + sb.length + "人）", sb.map(function(p) { return label(p, k); }).join("、")]);
+      flush();
+    });
+    if (!blocks.length) return "（対象のある時間帯がありません）";
+    return "■ " + eventLabel(ev) + " チーム分け\n" + blocks.join("\n") + "\n※△＝行けるかも";
+  }
+  function buildRuinsView() {
+    function person(p, k, leader) { return { name: p.name, alliance: p.alliance, maybe: slotStatus(p, k) === "maybe", leader: !!leader }; }
+    return {
+      mode: "ruins", title: eventLabel(eventById(eventId)),
+      slots: RUIN_SLOTS.filter(function(k) { return targetsFor(k).length; }).map(function(k) {
+        return {
+          slot: k, label: slotLabel(k),
+          targets: targetsFor(k).map(function(t) {
+            var l = ruinLeader(k, t);
+            return { name: t, leader: l ? l.name : "", members: ruinMembers(k, t).sort(function(a, b) { return (b === l) - (a === l); }).map(function(p) { return person(p, k, p === l); }) };
+          }),
+          standby: ruinMembers(k, "standby").map(function(p) { return person(p, k); })
+        };
+      }),
+      text: buildRuinsText()
+    };
   }
 
   // ---------- 保存 ----------
@@ -1224,8 +1563,9 @@
   });
   on("moveCancel", "click", function() { selectedUid = ""; renderAll(); });
   on("pinBtn", "click", function() {
-    if (isPinned(selectedUid)) delete draft.pins[selectedUid];
-    else draft.pins[selectedUid] = true;
+    var pins = draft.mode === "ruins" ? ruinState(curSlot()).pins : draft.pins;
+    if (pins[selectedUid]) delete pins[selectedUid];
+    else pins[selectedUid] = true;
     changed();
   });
   on("copyTextBtn", "click", function() {
