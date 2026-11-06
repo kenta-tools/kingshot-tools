@@ -150,9 +150,18 @@ def merge_and_rank(raw, threshold, threshold_board="mystic_trial"):
     return results
 
 
+def sort_by_trial(people):
+    """KvK突合せは秘境の試練のスコアが多い順に並べる（2026-11-07ユーザー指示。それまでは3ボードの総合順位）。
+    試練のスコアが無い人は最後、同点は総合順位の順。並べ直した順番を rank に入れ直す。"""
+    people.sort(key=lambda p: (-p["trial"]["score"] if p.get("trial") else float("inf"), p["total"], p["best"]))
+    for i, p in enumerate(people, start=1):
+        p["rank"] = i
+    return people
+
+
 def build_side(kid_list):
     raw = fetch_all(kid_list)
-    return merge_and_rank(raw, threshold=-1, threshold_board="mystic_trial")
+    return sort_by_trial(merge_and_rank(raw, threshold=-1, threshold_board="mystic_trial"))
 
 
 def esc(s):
@@ -251,7 +260,7 @@ def build_rows(our_people, their_people):
         rows.append(
             f'<tr>'
             f'<td class="num rankcell">{i + 1}</td>'
-            f'<td><span class="tag">{esc(o["tag"])}</span> {esc(o["name"])}<span class="entry-badge" id="entry-{i}"></span></td>'
+            f'<td><span class="tag">{esc(o["tag"])}</span> {esc(o["name"])}<span class="entry-badge" id="entry-{i}"></span><span class="entry-link" id="elink-{i}"></span></td>'
             f'{"".join(cells)}'
             f'{result_html}'
             f'<td>{opp_select}</td>'
@@ -344,6 +353,9 @@ HEAD = """<!DOCTYPE html>
   .entry-badge.entry-late{ background:color-mix(in srgb, var(--accent) 20%, var(--surface-2)); color:var(--accent); }
   .entry-badge.entry-absent{ background:color-mix(in srgb, var(--their) 18%, var(--surface-2)); color:var(--their); }
   .entry-badge.entry-none{ border:1px dashed var(--ink-faint); color:var(--ink-faint); }
+  .entry-badge.entry-guess{ outline:1px dashed currentColor; outline-offset:1px; }
+  .entry-link select{ margin-left:6px; font-size:0.72rem; max-width:9em; background:var(--surface-2); color:var(--ink); border:1px solid var(--border); border-radius:6px; padding:1px 4px; }
+  .entry-link button{ margin-left:4px; font-size:0.72rem; background:var(--surface-3); color:var(--ink); border:1px solid var(--border); border-radius:6px; padding:1px 8px; cursor:pointer; }
   .tag.their-tag{ background:color-mix(in srgb, var(--their) 18%, var(--surface-2)); color:var(--their); }
   td.cmp{ font-family:"JetBrains Mono", ui-monospace, monospace; font-size:0.78rem; }
   td.cmp .our-v{ color:var(--our); font-weight:700; }
@@ -380,7 +392,7 @@ BODY = """<body>
 
   <h1>KvK相手突合せ：うち鯖 vs {opponent_label}</h1>
   <p class="lede">
-    うち（鯖{our_kids}）と{opponent_label}（鯖{opponent_kids}）それぞれで、秘境の試練・マスター全体総力・ペットを合わせた<b>総合順位</b>を算出し、
+    うち（鯖{our_kids}）と{opponent_label}（鯖{opponent_kids}）それぞれで、<b>秘境の試練のスコアが多い順</b>に並べ、
     うちの上位{max_rows}人を、初期状態では同じ順位同士（うちの1位 vs 相手の1位、2位 vs 2位…）で並べて各ボードの実数値をそのまま比較しています。
     「相手」欄のプルダウンで、組み合わせを自由に変更できます（変更するとその場で勝敗を再計算します）。
     ※各鯖の人数はAPIが1ボードあたり最大100人までしか返さない仕様のため、上位100人（秘境の試練ランキング基準）までの集計です。実際の在籍者数とは異なります。
@@ -402,7 +414,7 @@ BODY = """<body>
 
   <div class="layout-flex">
     <div class="layout-main">
-      <p class="legend">各ボードのセルは「うちの実数値 vs 相手の実数値」。多く勝ったボード数（0〜3）で、その順位の勝敗を決めています。上の「イベント」を選ぶと、うちの名前の横にそのイベントの参加登録（最初から／途中参加／不参加／未登録）が出ます。</p>
+      <p class="legend">各ボードのセルは「うちの実数値 vs 相手の実数値」。多く勝ったボード数（0〜3）で、その順位の勝敗を決めています。上の「イベント」を選ぶと、うちの名前の横にそのイベントの参加登録（最初から／途中参加／不参加／未登録）が出ます。「≈」は名前が部分一致した推定です。推定・未登録の人は、右のプルダウンで登録者を選んで「紐づけ」を押すと、次回から自動で一致します。</p>
       <div class="table-wrap">
       <table>
       <thead>
@@ -532,32 +544,83 @@ function gasCall(payload) {
 }
 
 // --- 参加可否：選んだイベントのイベント参加登録（entries.entry）を、うちの名前で照合して表示 ---
-// 名前一致はKvK同着スタート カウントダウン表の nameKey()/findRegUser() と同じ（前後空白除去＋小文字化、旧名も見る）
+// 1) 名前か旧名（別表記）が一致（前後空白・大文字小文字・全角半角・カタカナひらがな・記号の違いは無視）→ そのまま表示
+// 2) 一致しなければ、選んだイベントの登録者から部分一致する人が1人だけいれば「≈登録名」として推定表示
+// 推定・未登録の人は右のプルダウンで登録者を選んで「紐づけ」→ ゲーム内の名前を旧名（別表記）として保存し、次回から自動で一致
 const ENTRY_SHORT = { start: "最初から", late: "途中参加", absent: "不参加" };
 let REG = { users: [], entries: [] };
 
-function nameKey(s) { return String(s).trim().toLowerCase(); }
+function looseKey(s) {
+  return String(s == null ? "" : s).normalize("NFKC").toLowerCase()
+    .replace(/[\\u30a1-\\u30f6]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60))
+    .replace(/[^\\p{L}\\p{N}]/gu, "");
+}
 
-function findRegUser(name) {
-  const k = nameKey(name);
+function userKeys(u) { return [u.name].concat(u.aliases || []).map(looseKey).filter(Boolean); }
+
+// { user, kind: "exact" | "guess" } か null
+function findRegMatch(name, eventId) {
+  const k = looseKey(name);
   if (!k) return null;
-  return REG.users.find(u => nameKey(u.name) === k)
-    || REG.users.find(u => (u.aliases || []).some(a => nameKey(a) === k))
-    || null;
+  const exact = REG.users.find(u => userKeys(u).includes(k));
+  if (exact) return { user: exact, kind: "exact" };
+  const ids = new Set(REG.entries.filter(x => x.eventId === eventId).map(x => x.userId));
+  const cands = REG.users.filter(u => ids.has(u.id) && userKeys(u).some(uk => {
+    const short = uk.length <= k.length ? uk : k, long = uk.length <= k.length ? k : uk;
+    return short.length >= 2 && long.includes(short);
+  }));
+  return cands.length === 1 ? { user: cands[0], kind: "guess" } : null;
+}
+
+function eventUsers(eventId) {
+  const ids = new Set(REG.entries.filter(x => x.eventId === eventId).map(x => x.userId));
+  return REG.users.filter(u => ids.has(u.id)).sort((a, b) => a.name.localeCompare(b.name, "ja"));
+}
+
+function escHtml(s) {
+  const d = document.createElement("div");
+  d.textContent = s == null ? "" : s;
+  return d.innerHTML.replace(/"/g, "&quot;");
 }
 
 function renderEntryBadges() {
   const eventId = document.getElementById("eventSelect").value;
+  const evUsers = eventId ? eventUsers(eventId) : [];
   OUR.forEach((o, i) => {
     const el = document.getElementById("entry-" + i);
+    const link = document.getElementById("elink-" + i);
     if (!el) return;
-    if (!eventId) { el.textContent = ""; el.className = "entry-badge"; return; }
-    const u = findRegUser(o.name);
-    const e = u && REG.entries.find(x => x.eventId === eventId && x.userId === u.id);
+    if (!eventId) { el.textContent = ""; el.className = "entry-badge"; if (link) link.innerHTML = ""; return; }
+    const m = findRegMatch(o.name, eventId);
+    const e = m && REG.entries.find(x => x.eventId === eventId && x.userId === m.user.id);
     const kind = e ? (ENTRY_SHORT[e.entry] ? e.entry : "start") : "none";
-    el.textContent = kind === "none" ? "未登録" : ENTRY_SHORT[kind];
-    el.className = "entry-badge entry-" + kind;
+    el.textContent = (kind === "none" ? "未登録" : ENTRY_SHORT[kind]) + (m && m.kind === "guess" ? " ≈" + m.user.name : "");
+    el.className = "entry-badge entry-" + kind + (m && m.kind === "guess" ? " entry-guess" : "");
+    if (!link) return;
+    if (m && m.kind === "exact") { link.innerHTML = ""; return; }
+    const guessId = m ? m.user.id : "";
+    link.innerHTML = '<select title="登録者を選んで紐づけると、この名前を旧名（別表記）として保存し、次回から自動で一致します">' +
+      '<option value="">（登録者を選ぶ）</option>' +
+      evUsers.map(u => `<option value="${u.id}"${u.id === guessId ? " selected" : ""}>${escHtml(u.name)}</option>`).join("") +
+      '</select><button type="button">紐づけ</button>';
+    link.querySelector("button").addEventListener("click", () => linkAlias(o.name, link.querySelector("select").value, link));
   });
+}
+
+function linkAlias(gameName, userId, link) {
+  const u = REG.users.find(x => x.id === userId);
+  if (!u) { alert("紐づける登録者を選んでください"); return; }
+  if (!confirm(`「${gameName}」を「${u.name}」の旧名（別表記）として登録します。よろしいですか？`)) return;
+  let password = "";
+  try { password = sessionStorage.getItem("ksAdminPw") || ""; } catch (e) {}
+  const btn = link.querySelector("button");
+  btn.disabled = true;
+  btn.textContent = "保存中…";
+  gasCall({ action: "addAlias", password, userId, alias: gameName }).then(res => {
+    if (!res.ok) { alert("保存できませんでした: " + (res.error || res.status)); btn.disabled = false; btn.textContent = "紐づけ"; return; }
+    u.aliases = res.user.aliases;
+    renderEntryBadges();
+  }).catch(() => { alert("通信エラーで保存できませんでした"); btn.disabled = false; btn.textContent = "紐づけ"; });
 }
 
 function loadEvents() {
@@ -629,16 +692,14 @@ def refresh_one(snapshot_path):
     max_rows = snapshot["maxRows"]
     our_gids = {p["gid"] for p in snapshot["ourRoster"]}
     their_gids = {p["gid"] for p in snapshot["theirRoster"]}
-    # 元の並び順（うち側は上位N人の順、相手側は突合せ時点の総合順位の順）を保つための順番マップ
-    our_order = {p["gid"]: i for i, p in enumerate(snapshot["ourRoster"])}
-    their_order = {p["gid"]: i for i, p in enumerate(snapshot["theirRoster"])}
 
     print(f"  📡 うち鯖{our_kids} / 相手鯖{opponent_kids} の現在のスコアを取得します...")
     our_all = build_side(our_kids)
     their_all = build_side(opponent_kids)
 
-    our_people = sorted((p for p in our_all if p["gid"] in our_gids), key=lambda p: our_order.get(p["gid"], 1 << 30))
-    their_people = sorted((p for p in their_all if p["gid"] in their_gids), key=lambda p: their_order.get(p["gid"], 1 << 30))
+    # 名簿（人）は固定のまま、並びはその日の秘境の試練の多い順（build_side が並べた順）
+    our_people = [p for p in our_all if p["gid"] in our_gids]
+    their_people = [p for p in their_all if p["gid"] in their_gids]
     missing_our = our_gids - {p["gid"] for p in our_people}
     missing_their = their_gids - {p["gid"] for p in their_people}
     if missing_our or missing_their:

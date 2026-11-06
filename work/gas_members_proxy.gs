@@ -86,6 +86,8 @@ function handle_(p) {
     if (p.action === "revertByIp") return json_(revertByIp_(token, p));
     // KvK相手突合せの「うちの誰が相手の誰と対戦するか」の保存（管理者のみ）。イベントID単位で1件、まるごと上書き
     if (p.action === "matchupSave") return json_(matchupSave_(token, p));
+    // KvK相手突合せで「ゲーム内の名前」を登録済みユーザーの旧名（別表記）に追加する（次回から名前が自動で一致する）
+    if (p.action === "addAlias") return json_(addAlias_(token, p));
     // 問い合わせ・質問の一覧（管理者のみ。未回答も含めて全部見られる）
     if (p.action === "getInquiries") return json_(getInquiries_(token));
     // 問い合わせへの回答を保存（管理者のみ）
@@ -314,6 +316,40 @@ function matchupSave_(token, p) {
       if (w.ok) return { ok: true };
       if (w.status !== 409 && w.status !== 422) return w;
       // 直前に他の人が保存した → 取り直してもう一度
+    }
+    return { ok: false, status: 409, error: "混み合っています。もう一度押してください" };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// KvK相手突合せ用：登録済みユーザー（p.userId）の aliases に p.alias（ゲーム内の名前など）を追加する。
+// 別のユーザーの名前・旧名と同じなら追加しない（同一人物の取り違え防止）。すでにあれば何もしない
+function addAlias_(token, p) {
+  var alias = clip_(p.alias, 30);
+  if (!p.userId || !alias) return { ok: false, status: 400, error: "ユーザーか名前が空です" };
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) return { ok: false, status: 503, error: "混み合っています。少し待ってからもう一度押してください" };
+  try {
+    for (var attempt = 0; attempt < 3; attempt++) {
+      var f = readFile_(token);
+      if (!f.ok) return f;
+      var d = f.data;
+      var users = d.users || [];
+      var u = users.filter(function(x) { return x.id === p.userId; })[0];
+      if (!u) return { ok: false, status: 404, error: "そのユーザーが見つかりません" };
+      var k = key_(alias);
+      var other = users.filter(function(x) {
+        return x.id !== u.id && (key_(x.name) === k || (x.aliases || []).some(function(a) { return key_(a) === k; }));
+      })[0];
+      if (other) return { ok: false, status: 409, error: "「" + alias + "」は別のユーザー（" + other.name + "）の名前として登録済みです" };
+      u.aliases = u.aliases || [];
+      if (key_(u.name) === k || u.aliases.some(function(a) { return key_(a) === k; })) return { ok: true, user: { id: u.id, name: u.name, aliases: u.aliases } };
+      u.aliases.push(alias);
+      d.updated = new Date().toISOString();
+      var w = writeFile_(token, d, f.sha, "alias added");
+      if (w.ok) return { ok: true, user: { id: u.id, name: u.name, aliases: u.aliases } };
+      if (w.status !== 409 && w.status !== 422) return w;
     }
     return { ok: false, status: 409, error: "混み合っています。もう一度押してください" };
   } finally {
