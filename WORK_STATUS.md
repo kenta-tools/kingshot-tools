@@ -136,3 +136,4 @@ Kingshot関連の単体HTMLツールのうち、ゲームプレイの実務で�
 - 突合せの参加可否が出ない件：原因はJSON取り込みではなく名前の違い（城焼担当↔城焼、Jaguar↔ジャガー等）。looseKey（NFKC・小文字・カナ→ひら・記号除去）で完全一致→確定、イベント登録者で部分一致1人→「≈」推定。推定・未登録には登録者プルダウン＋「紐づけ」→ GAS 新アクション `addAlias`（パスワード必須、別ユーザーと衝突する名前は409）で旧名に追加
 - 検索エンジン対策（外部協力者の指摘→リーダー経由）：robots.txt はプロジェクトサイトでは効かないため、全HTMLに `<meta name="robots" content="noindex, nofollow">`。work/stamp_version.py が無いページに自動挿入（毎回のコミット前実行で新規ページもカバー）。Actionsで丸ごと再生成されるページ用に、mystic_ranking.py・kvk_matchup.py・kvk_matchup_refresh.py・holy_sword_s2_refresh.py のHEADテンプレートにも追加
 - GAS @27（addAlias 追加）デプロイ済み
+- 遺跡争奪の管理画面対応（ユーザ登録担当の d66b284 を受けて）：EVENT_TYPES に追加、normalizeRow で `slots` を保持（normSlots＝中継役 cleanEntry_ と同じく RUIN_SLOTS のキーで yes/maybe/no だけ残す）、フォーム変更・取り込み更新でも既存 slots を保持。参加者一覧は遺跡争奪のとき見出しを時間列に差し替え（setEntryHead、並べ替えクリックはイベント委譲に変更）、Discord用集計 #ruinSumBox（JSで差し込み）、AI用データは buildRuinAiText

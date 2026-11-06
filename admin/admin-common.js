@@ -7,7 +7,20 @@
   var DRAFT_KEY = "ksMembersDraftV2";
   var EVENT_KEY = "ksAdminEvent";
 
-  var EVENT_TYPES = ["KVK", "聖剣", "聖剣リーグ", "三盟", "炎龍"];
+  var EVENT_TYPES = ["KVK", "聖剣", "聖剣リーグ", "三盟", "炎龍", "遺跡争奪"];
+  // 遺跡争奪：参加は「時間ごと」に yes＝参加／maybe＝行けるかも／no＝不参加（entries[].slots。中継役・entry/index.html の RUIN_SLOTS と同じ）
+  var RUIN_TYPE = "遺跡争奪";
+  var RUIN_SLOTS = ["12", "18", "22", "23", "25"];
+  var SLOT_MARK = { yes: "◯", maybe: "△", no: "×" };
+  function slotLabel(k) { return k + "時" + (k === "25" ? "（翌1時）" : ""); }
+  function isRuinEvent(id) { var ev = eventById(id); return !!ev && ev.type === RUIN_TYPE; }
+  // 中継役の cleanEntry_ と同じ：決まった時間のキーで yes/maybe/no の値だけ残す。1つも無ければ undefined（保存しない）
+  function normSlots(src) {
+    if (!src || typeof src !== "object") return undefined;
+    var out = {}, any = false;
+    RUIN_SLOTS.forEach(function(k) { if (["yes", "maybe", "no"].indexOf(src[k]) >= 0) { out[k] = src[k]; any = true; } });
+    return any ? out : undefined;
+  }
   var GRADES = ["G8", "G7", "G6", "G5", "その他"];
   var ENTRY_LABEL = { start: "最初から参加できる", late: "途中参加", absent: "不参加" };
   var ENTRY_SHORT = { start: "最初から", late: "途中参加", absent: "不参加" };
@@ -352,7 +365,8 @@
       rallySpeedPet: petLv(m.rallySpeedPet, "rallySpeedPet"),
       updatedAt: str(m.updatedAt), // 最後に登録・変更した日時（ISO）
       proxyBy: str(m.proxyBy), // 個人登録ページで代理入力した人の名前（本人の入力なら ""）
-      sameAs: str(m.sameAs) // AI変換で登録者が「同一人物」と確認した登録済みユーザー名（取り込み時のみ使う）
+      sameAs: str(m.sameAs), // AI変換で登録者が「同一人物」と確認した登録済みユーザー名（取り込み時のみ使う）
+      slots: normSlots(m.slots) // 遺跡争奪の時間ごとの参加（それ以外のイベントでは無し）
     }));
   }
 
@@ -872,7 +886,9 @@
     var u = resolveUser(row);
     var existing = entryOf(currentEventId, u.user.id);
     if (existing) {
-      state.entries[state.entries.indexOf(existing)] = toEntry(mergeImported(row, existing), u.user.id, existing.id);
+      var merged = mergeImported(row, existing);
+      if (!merged.slots && existing.slots) merged.slots = existing.slots; // フォームからの変更でも遺跡争奪の時間は消さない
+      state.entries[state.entries.indexOf(existing)] = toEntry(merged, u.user.id, existing.id);
       return { result: "updated", newUser: u.created };
     }
     var prev = prevByUser && prevByUser[u.user.id];
@@ -1307,9 +1323,71 @@
         : "");
   }
 
+  // ---------- 遺跡争奪の表示（時間ごとの ◯／△／×） ----------
+  var normalHeadHtml = null, normalLegend = null;
+  function setEntryHead(ruin) {
+    var table = $("memberBody").closest("table"), tr = table.querySelector("thead tr");
+    var legend = table.parentNode.querySelector(".legend");
+    if (normalHeadHtml === null) { normalHeadHtml = tr.innerHTML; normalLegend = legend ? legend.textContent : ""; }
+    var want = ruin
+      ? '<th data-key="alliance">同盟</th><th data-key="entry">参加</th><th data-key="name">名前</th>' +
+        RUIN_SLOTS.map(function(k) { return '<th class="nosort">' + slotLabel(k) + '</th>'; }).join("") +
+        '<th class="nosort">備考</th><th class="nosort">更新日時</th><th class="nosort"></th>'
+      : normalHeadHtml;
+    if (tr.dataset.mode !== (ruin ? "ruin" : "normal")) { tr.innerHTML = want; tr.dataset.mode = ruin ? "ruin" : "normal"; }
+    if (legend) legend.textContent = ruin ? "◯:参加　△:行けるかも　×:不参加" : normalLegend;
+    var box = $("ruinSumBox");
+    if (!box && ruin) {
+      box = document.createElement("div");
+      box.id = "ruinSumBox";
+      box.style.margin = "0 0 12px";
+      box.innerHTML = '<div class="hint">Discordに貼る用の集計（名前の横の△＝行けるかも。不参加・未回答の人は出ません）</div>' +
+        '<pre id="ruinSummary" style="white-space: pre-wrap; background: #f6f7f9; border: 1px solid #e3e6ea; border-radius: 6px; padding: 8px 10px; margin: 6px 0; font-size: 13px;"></pre>' +
+        '<button type="button" class="small sub-btn" id="ruinCopyBtn">コピー</button>';
+      table.parentNode.insertBefore(box, table);
+      $("ruinCopyBtn").addEventListener("click", function() {
+        var btn = this;
+        navigator.clipboard.writeText($("ruinSummary").textContent).then(function() {
+          btn.textContent = "コピーしました";
+          setTimeout(function() { btn.textContent = "コピー"; }, 1500);
+        });
+      });
+    }
+    if (box) box.style.display = ruin ? "block" : "none";
+  }
+
+  // 登録ページ（entry/）の「登録状況を見る」と同じ形
+  function ruinSummary(rows) {
+    var lines = [eventLabel(eventById(currentEventId))];
+    RUIN_SLOTS.forEach(function(k) {
+      var names = [];
+      rows.forEach(function(m) {
+        var v = (m.slots || {})[k];
+        if (v === "yes") names.push(m.name);
+        else if (v === "maybe") names.push(m.name + "△");
+      });
+      lines.push(k + "時（" + names.length + "人）：" + names.join("、"));
+    });
+    return lines.join("\n");
+  }
+
+  function ruinRowHtml(m) {
+    return '<td>' + escapeHtml(m.alliance) + '</td>' +
+      '<td><span class="tag ' + m.entry + '">' + (m.entry === "absent" ? "不参加" : "参加") + '</span></td>' +
+      '<td>' + escapeHtml(m.name) + (m.proxyBy ? ' <span class="hint">（代理: ' + escapeHtml(m.proxyBy) + '）</span>' : '') + '</td>' +
+      RUIN_SLOTS.map(function(k) { return '<td style="text-align: center;">' + (SLOT_MARK[(m.slots || {})[k]] || "") + '</td>'; }).join("") +
+      '<td>' + escapeHtml(m.note) + '</td>' +
+      '<td style="white-space: nowrap;">' + escapeHtml(m.updatedAt ? formatTime(m.updatedAt) : "") + '</td>' +
+      '<td class="ops"><button class="small sub-btn" data-act="edit">変更</button> ' +
+      '<button class="small danger" data-act="delete">削除</button></td>';
+  }
+
   function renderEntries() {
     if (!$("memberBody")) return;
     var rows = eventRows();
+    var ruin = isRuinEvent(currentEventId);
+    setEntryHead(ruin);
+    if (ruin) $("ruinSummary").textContent = ruinSummary(sortRows(rows));
 
     var alliances = [];
     rows.forEach(function(m) { if (alliances.indexOf(m.alliance) < 0) alliances.push(m.alliance); });
@@ -1325,7 +1403,7 @@
       if (fa && m.alliance !== fa) return;
       if (q && (m.name + " " + m.note).toLowerCase().indexOf(q) < 0) return;
       shown++;
-      html.push('<tr data-id="' + m.id + '"' + (m.id === editingId ? ' class="editing"' : "") + '>' + memberRowHtml(m, true) + '</tr>');
+      html.push('<tr data-id="' + m.id + '"' + (m.id === editingId ? ' class="editing"' : "") + '>' + (ruin ? ruinRowHtml(m) : memberRowHtml(m, true)) + '</tr>');
     });
     if (!rows.length) {
       html.push('<tr><td colspan="12" class="hint" style="text-align:center;">このイベントにはまだ参加者が登録されていません</td></tr>');
@@ -1439,13 +1517,14 @@
     renderUsers();
   }
 
-  document.querySelectorAll("th[data-key]").forEach(function(th) {
-    th.addEventListener("click", function() {
-      var key = th.dataset.key;
-      if (sortKey === key) sortDir = -sortDir;
-      else { sortKey = key; sortDir = 1; }
-      renderEntries();
-    });
+  // 見出しは遺跡争奪のとき差し替えるので、クリックはまとめて受ける
+  document.addEventListener("click", function(e) {
+    var th = e.target.closest && e.target.closest("th[data-key]");
+    if (!th) return;
+    var key = th.dataset.key;
+    if (sortKey === key) sortDir = -sortDir;
+    else { sortKey = key; sortDir = 1; }
+    renderEntries();
   });
   document.querySelectorAll("th[data-ukey]").forEach(function(th) {
     th.addEventListener("click", function() {
@@ -1679,6 +1758,7 @@
       var u = ensureUser(m.name, m.alliance);
       var idx = state.entries.findIndex(function(x) { return x.id === editingId; });
       m.proxyBy = state.entries[idx].proxyBy || ""; // 管理画面で直しても、代理入力した人の記録は残す
+      if (!m.slots && state.entries[idx].slots) m.slots = state.entries[idx].slots; // 遺跡争奪の時間も残す（フォームに欄が無いため）
       state.entries[idx] = toEntry(m, u.user.id, editingId);
       resetForm(false);
       commit();
@@ -2070,6 +2150,7 @@
   function buildAiText() {
     var format = document.querySelector("input[name=aiFormat]:checked").value;
     var rows = aiRows();
+    if (isRuinEvent(currentEventId)) return buildRuinAiText(format, rows);
     var head = [
       "# " + eventLabel(eventById(currentEventId)) + " 参加者一覧（" + rows.length + "人）",
       "",
@@ -2107,6 +2188,31 @@
     } else {
       body = JSON.stringify(rows.map(aiRecord), null, 1);
     }
+    return head.join("\n") + "\n" + FENCE + (format === "csv" ? "csv" : "json") + "\n" + body + "\n" + FENCE + "\n";
+  }
+
+  // 遺跡争奪：時間ごとの参加（◯参加／△行けるかも／×不参加）だけを渡す（区分・部隊数・ペットは登録しないため）
+  function buildRuinAiText(format, rows) {
+    var cols = ["同盟", "名前"].concat(RUIN_SLOTS.map(slotLabel), ["備考"]);
+    var recs = rows.map(function(m) {
+      var r = { "同盟": m.alliance, "名前": m.name };
+      RUIN_SLOTS.forEach(function(k) { r[slotLabel(k)] = SLOT_MARK[(m.slots || {})[k]] || ""; });
+      r["備考"] = m.note;
+      return r;
+    });
+    var head = [
+      "# " + eventLabel(eventById(currentEventId)) + " 参加者一覧（" + rows.length + "人）",
+      "",
+      "## 列の意味",
+      "- 同盟・名前: プレイヤーの所属同盟と名前",
+      "- " + RUIN_SLOTS.map(slotLabel).join("・") + ": その時間の遺跡争奪に ◯＝参加／△＝行けるかも／×＝不参加（空欄は未回答）",
+      "- 全部の時間が×の人（不参加）は含めていません",
+      "",
+      "## データ（" + (format === "csv" ? "CSV" : "JSON") + "）"
+    ];
+    var body = format === "csv"
+      ? [cols.join(",")].concat(recs.map(function(r) { return cols.map(function(c) { return csvCell(r[c] == null ? "" : r[c]); }).join(","); })).join("\n")
+      : JSON.stringify(recs, null, 1);
     return head.join("\n") + "\n" + FENCE + (format === "csv" ? "csv" : "json") + "\n" + body + "\n" + FENCE + "\n";
   }
 
