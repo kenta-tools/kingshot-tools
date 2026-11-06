@@ -13,6 +13,17 @@
   var RUIN_SLOTS = ["12", "18", "22", "23", "25"];
   var SLOT_MARK = { yes: "◯", maybe: "△", no: "×" };
   function slotLabel(k) { return k + "時" + (k === "25" ? "（翌1時）" : ""); }
+  // 時間帯ごとの対象（events[].ruinTargets。チーム分けで使う）。要塞→遺跡の番号順
+  var RUIN_TARGETS = ["要塞1", "要塞2", "要塞3", "要塞4"].concat([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(function(n) { return "遺跡" + n; }));
+  function normRuinTargets(src) {
+    if (!src || typeof src !== "object") return undefined;
+    var out = {};
+    RUIN_SLOTS.forEach(function(k) {
+      var list = Array.isArray(src[k]) ? src[k] : [];
+      out[k] = RUIN_TARGETS.filter(function(t) { return list.indexOf(t) >= 0; });
+    });
+    return out;
+  }
   function isRuinEvent(id) { var ev = eventById(id); return !!ev && ev.type === RUIN_TYPE; }
   // 中継役の cleanEntry_ と同じ：決まった時間のキーで yes/maybe/no の値だけ残す。1つも無ければ undefined（保存しない）
   function normSlots(src) {
@@ -435,7 +446,8 @@
     var events = (data.events || []).map(function(e) {
       return { id: e.id || newId("e"), type: EVENT_TYPES.indexOf(e.type) >= 0 ? e.type : EVENT_TYPES[0], date: str(e.date),
         open: e.open === true, // open: 個人登録ページ（entry/）で受付中
-        done: e.done === true }; // done: 完了したイベント（イベント一覧から外し「完了したイベント」に出す）
+        done: e.done === true, // done: 完了したイベント（イベント一覧から外し「完了したイベント」に出す）
+        ruinTargets: normRuinTargets(e.ruinTargets) }; // 遺跡争奪だけ：時間帯ごとの対象（要塞・遺跡）
     });
     var userIds = {}, eventIds = {};
     users.forEach(function(u) { userIds[u.id] = true; });
@@ -582,6 +594,7 @@
       if (o) {
         if (bV[v.id] && bV[v.id].open !== v.open) o.open = v.open; // 自分が受付中／締切を切り替えた
         if (bV[v.id] && bV[v.id].done !== v.done) o.done = v.done; // 自分が完了／進行中を切り替えた
+        if (bV[v.id] && JSON.stringify(bV[v.id].ruinTargets) !== JSON.stringify(v.ruinTargets)) o.ruinTargets = clone(v.ruinTargets || null) || undefined; // 自分が遺跡争奪の対象を変えた
         eventMap[v.id] = o.id;
         return;
       }
@@ -1280,10 +1293,50 @@
 
     var has = !!currentEventId;
     $("eventView").style.display = has ? "block" : "none";
+    renderRuinTargets();
     $("noEventView").style.display = has ? "none" : "block";
     document.querySelectorAll(".event-name").forEach(function(el) {
       el.textContent = eventLabel(eventById(currentEventId));
     });
+  }
+
+  // イベントページ：遺跡争奪のとき、時間帯ごとの対象（要塞・遺跡）をチェックで選ぶ欄（チーム分けで使う）
+  function renderRuinTargets() {
+    if (!$("newEventType") || !$("eventView")) return; // イベントページだけ
+    var ev = eventById(currentEventId), card = $("ruinTargetsCard");
+    if (!ev || ev.type !== RUIN_TYPE) { if (card) card.style.display = "none"; return; }
+    if (!card) {
+      card = document.createElement("div");
+      card.className = "card";
+      card.id = "ruinTargetsCard";
+      $("eventView").insertBefore(card, $("eventView").firstChild);
+      card.addEventListener("change", function(e) {
+        var cb = e.target, cur = eventById(currentEventId);
+        if (!cb.dataset || !cb.dataset.slot || !cur) return;
+        var t = normRuinTargets(cur.ruinTargets) || normRuinTargets({});
+        var list = t[cb.dataset.slot];
+        if (cb.checked && list.indexOf(cb.dataset.target) < 0) list.push(cb.dataset.target);
+        if (!cb.checked) list = list.filter(function(x) { return x !== cb.dataset.target; });
+        t[cb.dataset.slot] = list;
+        cur.ruinTargets = normRuinTargets(t); // 要塞→遺跡の番号順にそろえる
+        commit();
+      });
+    }
+    card.style.display = "block";
+    var t = ev.ruinTargets || {};
+    card.innerHTML = '<h2>🏯 時間帯ごとの対象（要塞・遺跡）</h2>' +
+      '<div class="hint">この遺跡争奪で、時間帯ごとにどの要塞・遺跡を狙うかをチェックします（チーム分けで使います）。変えたら「💾 保存する」を押してください。</div>' +
+      '<div style="overflow-x: auto;"><table style="margin-top: 8px;"><thead><tr><th>時間</th><th>要塞</th><th>遺跡</th></tr></thead><tbody>' +
+      RUIN_SLOTS.map(function(k) {
+        var sel = t[k] || [];
+        function box(name) {
+          return '<label style="white-space: nowrap; margin-right: 8px;"><input type="checkbox" data-slot="' + k + '" data-target="' + name + '"' +
+            (sel.indexOf(name) >= 0 ? " checked" : "") + '> ' + name.replace(/^(要塞|遺跡)/, "") + '</label>';
+        }
+        return '<tr><td style="white-space: nowrap;">' + slotLabel(k) + '</td>' +
+          '<td>' + RUIN_TARGETS.filter(function(x) { return x.indexOf("要塞") === 0; }).map(box).join("") + '</td>' +
+          '<td>' + RUIN_TARGETS.filter(function(x) { return x.indexOf("遺跡") === 0; }).map(box).join("") + '</td></tr>';
+      }).join("") + '</tbody></table></div>';
   }
 
   function defaultCompare(a, b) {

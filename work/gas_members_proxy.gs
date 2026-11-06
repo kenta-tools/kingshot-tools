@@ -551,9 +551,15 @@ function selfSave_(token, p) {
       var ev = d.events.filter(function(e) { return e.id === p.eventId; })[0];
       if (!ev || !ev.open) return { ok: false, status: 403, error: "このイベントの受付は終了しました" };
       if (row && ev.type === RUIN_TYPE) {
-        // 遺跡争奪は全部の時間を選んでもらう。どこかに参加（行けるかも含む）なら参加扱い
-        if (!row.slots || RUIN_SLOTS.some(function(k) { return !row.slots[k]; })) return { ok: false, status: 400, error: "参加できる時間を全部選んでください" };
-        row.entry = RUIN_SLOTS.some(function(k) { return row.slots[k] !== "no"; }) ? "start" : "absent";
+        // 遺跡争奪は、対象（要塞・遺跡）のある時間を全部選んでもらう（対象が未登録なら全部の時間）。
+        // 対象のない時間は保存しない。どこかに参加（行けるかも含む）なら参加扱い
+        var times = RUIN_SLOTS.filter(function(k) { return ev.ruinTargets && (ev.ruinTargets[k] || []).length; });
+        if (!times.length) times = RUIN_SLOTS;
+        if (!row.slots || times.some(function(k) { return !row.slots[k]; })) return { ok: false, status: 400, error: "参加できる時間を全部選んでください" };
+        var kept = {};
+        times.forEach(function(k) { kept[k] = row.slots[k]; });
+        row.slots = kept;
+        row.entry = times.some(function(k) { return row.slots[k] !== "no"; }) ? "start" : "absent";
       } else if (row) {
         delete row.slots;
       }

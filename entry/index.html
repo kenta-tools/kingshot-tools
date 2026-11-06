@@ -115,7 +115,7 @@
   tr.prev td { color: #8a94a3; background: #fafbfc; }
   /* 遺跡争奪: 時間ごとに 参加／行けるかも／不参加 */
   .ruin-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 0; border-bottom: 1px solid #eef0f3; }
-  .ruin-row .t { width: 92px; font-weight: bold; }
+  .ruin-row .t { min-width: 92px; font-weight: bold; }
   .ruin-sum { white-space: pre-wrap; background: #f6f8fb; border-radius: 8px; padding: 8px 10px; font-size: 13px; line-height: 1.7; margin: 6px 0 10px; }
   .list-filter { margin-top: 10px; max-width: 200px; }
   th { background: #f0f2f5; white-space: nowrap; }
@@ -239,7 +239,7 @@
 
     <!-- 遺跡争奪のときだけ: 時間ごとに参加できるか -->
     <div class="field" id="ruinField" style="display: none;">
-      <span class="cap">参加できる時間（全部の時間を選んでください）<span class="req">必須</span></span>
+      <span class="cap">参加できる時間（全部の時間を選んでください。かっこの中はその時間の対象）<span class="req">必須</span></span>
       <div id="ruinSlots"></div>
       <div style="font-size: 12px; color: #666; margin-top: 4px; line-height: 1.6;">まだわからない時間は「行けるかも」を選んでください（集計では名前の横に△が付きます）。</div>
     </div>
@@ -406,6 +406,27 @@
   var RUIN_SLOTS = ["12", "18", "22", "23", "25"];
   var SLOT_CHOICES = [["yes", "参加"], ["maybe", "行けるかも"], ["no", "不参加"]];
   function slotLabel(k) { return k + "時" + (k === "25" ? "（翌1時）" : ""); }
+  // このイベントで対象（要塞・遺跡）のある時間だけ聞く。対象は管理画面でイベントに登録する（events[].ruinTargets）。
+  // 対象がまだ1つも登録されていないイベントは、全部の時間を聞く
+  function ruinTargets(k) {
+    var ev = eventById(currentEventId);
+    return (ev && ev.ruinTargets && ev.ruinTargets[k]) || [];
+  }
+  function ruinTimes() {
+    var keys = RUIN_SLOTS.filter(function(k) { return ruinTargets(k).length; });
+    return keys.length ? keys : RUIN_SLOTS;
+  }
+  function slotTitle(k) {
+    var t = ruinTargets(k);
+    return slotLabel(k) + (t.length ? "（" + t.join("・") + "）" : "");
+  }
+  function renderRuinSlots() {
+    $("ruinSlots").innerHTML = ruinTimes().map(function(k) {
+      return '<div class="ruin-row"><span class="t">' + escapeHtml(slotTitle(k)) + '</span><div class="chips">' + SLOT_CHOICES.map(function(c) {
+        return '<label class="chip"><input type="radio" name="fSlot' + k + '" value="' + c[0] + '"><span>' + c[1] + "</span></label>";
+      }).join("") + "</div></div>";
+    }).join("");
+  }
   function isRuin(eventId) {
     var ev = eventById(eventId || currentEventId);
     return !!ev && ev.type === RUIN_TYPE;
@@ -635,7 +656,8 @@
 
     function v(x) { return x == null || x === "" ? "" : escapeHtml(x); }
     function pet(lv) { return lv == null ? "" : lv === 0 ? "なし" : "Lv" + lv; }
-    var head = ruin ? ["", "同盟", "名前"].concat(RUIN_SLOTS.map(slotLabel), ["ひとこと", "更新日時"]) : LIST_HEAD;
+    var times = ruin ? ruinTimes() : [];
+    var head = ruin ? ["", "同盟", "名前"].concat(times.map(slotLabel), ["ひとこと", "更新日時"]) : LIST_HEAD;
     $("listHead").innerHTML = "<tr>" + head.map(function(h) { return "<th>" + escapeHtml(h) + "</th>"; }).join("") + "</tr>";
     $("ruinSumBox").style.display = ruin ? "block" : "none";
     if (ruin) $("ruinSummary").textContent = ruinSummary(rows);
@@ -645,7 +667,7 @@
         return '<tr class="' + (me && me.userId === m.userId ? "me" : "") + (m.entry === "absent" ? " absent" : "") + (m.prev ? " prev" : "") + '">' +
           '<td><button type="button" class="sub-btn edit" data-user="' + escapeHtml(m.userId) + '">' + (m.prev ? "登録する" : "直す") + '</button></td>' +
           "<td>" + v(m.alliance) + "</td><td>" + v(m.name) + (m.proxyBy && !m.prev ? '<br><span class="proxy-tag">（代理: ' + v(m.proxyBy) + "）</span>" : "") + "</td>" +
-          RUIN_SLOTS.map(function(k) { return '<td style="text-align: center;">' + (m.prev ? "" : mark[(m.slots || {})[k]] || "") + "</td>"; }).join("") +
+          times.map(function(k) { return '<td style="text-align: center;">' + (m.prev ? "" : mark[(m.slots || {})[k]] || "") + "</td>"; }).join("") +
           '<td class="note">' + v(m.note) + "</td><td>" + (m.updatedAt ? formatTime(m.updatedAt) : "") + "</td></tr>";
       }
       var mine = me && me.userId === m.userId, abs = m.entry === "absent";
@@ -667,17 +689,18 @@
     });
   }
 
-  // 遺跡争奪の集計（Discordに貼る形）。参加＝名前、行けるかも＝名前△
+  // 遺跡争奪の集計（Discordに貼る形）。「12時(2)・16人：もち、あっきぃ△、…」(2)＝その時間の対象の数、△＝行けるかも
   function ruinSummary(rows) {
     var ev = eventById(currentEventId), lines = [eventLabel(ev)];
-    RUIN_SLOTS.forEach(function(k) {
+    ruinTimes().forEach(function(k) {
       var names = [];
       rows.forEach(function(m) {
         var s = !m.prev && (m.slots || {})[k];
         if (s === "yes") names.push(m.name);
         else if (s === "maybe") names.push(m.name + "△");
       });
-      lines.push(k + "時（" + names.length + "人）：" + names.join("、"));
+      var n = ruinTargets(k).length;
+      lines.push(k + "時" + (n ? "(" + n + ")" : "") + "・" + names.length + "人：" + names.join("、"));
     });
     return lines.join("\n");
   }
@@ -896,9 +919,9 @@
     var choice = radioValue("fEntry") || "full";
     var alliance = str($("fAlliance").value).normalize("NFKC");
     if (isRuin()) {
-      var slots = {};
-      RUIN_SLOTS.forEach(function(k) { slots[k] = radioValue("fSlot" + k) || ""; });
-      var going = RUIN_SLOTS.some(function(k) { return slots[k] === "yes" || slots[k] === "maybe"; });
+      var slots = {}, times = ruinTimes();
+      times.forEach(function(k) { slots[k] = radioValue("fSlot" + k) || ""; });
+      var going = times.some(function(k) { return slots[k] === "yes" || slots[k] === "maybe"; });
       return { alliance: alliance, entry: going ? "start" : "absent", grade: "その他", monthly: false, leaveEarly: false,
         vc: false, vivian4: false, mayChange: false, troops: "", tier: null, joinAt: "", leaveAt: "", note: str($("fNote").value),
         marchCount: null, marchPet: null, rallyCount: null, rallyPet: null, rallySpeedPet: null, slots: slots, proxyBy: proxyBy() };
@@ -964,7 +987,10 @@
     $("fJoinAt").value = toTimeInput(m.joinAt);
     $("fLeaveAt").value = toTimeInput(m.leaveAt);
     $("fNote").value = m.note || "";
-    RUIN_SLOTS.forEach(function(k) { setRadio("fSlot" + k, (m.slots || {})[k] || ""); });
+    if (isRuin()) {
+      renderRuinSlots(); // イベントごとに聞く時間が違う
+      ruinTimes().forEach(function(k) { setRadio("fSlot" + k, (m.slots || {})[k] || ""); });
+    }
     setNum("fMarchCount", m.marchCount);
     setNum("fMarchPet", m.marchPet);
     setNum("fRallyCount", m.rallyCount);
@@ -980,7 +1006,7 @@
     if (m.proxyBy && nameKey(m.proxyBy) === nameKey(me.name)) return "代理入力モードのまま、自分（入力者と同じ名前）を登録しようとしています。自分の分は、上の「代理入力モードをやめる」を押してから登録してください";
     if (!/^[A-Za-z]{3}$/.test(m.alliance)) return "同盟は英字3文字で入れてください（例: EGG）";
     if (m.slots) {
-      var miss = RUIN_SLOTS.filter(function(k) { return !m.slots[k]; });
+      var miss = ruinTimes().filter(function(k) { return !m.slots[k]; });
       return miss.length ? miss.map(slotLabel).join("・") + "の参加を選んでください（全部の時間を選んでください）" : "";
     }
     if (m.entry === "absent") return "";
@@ -1080,12 +1106,6 @@
       btn.textContent = open ? "閉じる" : "確認方法";
     });
   });
-
-  $("ruinSlots").innerHTML = RUIN_SLOTS.map(function(k) {
-    return '<div class="ruin-row"><span class="t">' + slotLabel(k) + '</span><div class="chips">' + SLOT_CHOICES.map(function(c) {
-      return '<label class="chip"><input type="radio" name="fSlot' + k + '" value="' + c[0] + '"><span>' + c[1] + "</span></label>";
-    }).join("") + "</div></div>";
-  }).join("");
 
   document.querySelectorAll("select[data-pet]").forEach(function(sel) {
     var pet = PETS[sel.dataset.pet], html = '<option value="">選んでください</option><option value="0">持っていない</option>';
