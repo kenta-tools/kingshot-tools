@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta name="robots" content="noindex, nofollow">
 <meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>KvK相手突合せ</title>
 <script>(function(){try{if(!sessionStorage.getItem('ksAdminPw')&&!localStorage.getItem('ksAdminPwSaved'))document.documentElement.style.visibility='hidden';}catch(e){document.documentElement.style.visibility='hidden';}})();</script>
-<script src="../config.js?v=20261107084154"></script>
+<script src="../config.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -289,7 +289,7 @@
   </details>
 
   <footer>
-    出典：MightPulse API（<a href="https://api.mightpulse.com/">api.mightpulse.com</a>）/v1/kingdoms/{kid}/ranks エンドポイント（board=mystic_trial, master_power, pet_power）をうち鯖・相手鯖それぞれで取得・集計。データ更新日時: 2026-11-07 07:28。このページは1065鯖との突合せ記録として残しています。
+    出典：MightPulse API（<a href="https://api.mightpulse.com/">api.mightpulse.com</a>）/v1/kingdoms/{kid}/ranks エンドポイント（board=mystic_trial, master_power, pet_power）をうち鯖・相手鯖それぞれで取得・集計。データ更新日時: 2026-11-07 00:26。このページは1065鯖との突合せ記録として残しています。
   </footer>
 
 </div>
@@ -357,7 +357,7 @@ document.querySelectorAll(".opp-select").forEach(sel => {
 });
 
 const OPPONENT_LABEL = "1065鯖";
-// GAS_URL は config.js で定義
+// GAS_URL は config.js（HEADで読み込み済み）で定義
 const EVENT_ID_KEY = "ksMatchupEventId";
 
 function gasCall(payload) {
@@ -496,6 +496,6 @@ document.getElementById("savePairsBtn").addEventListener("click", function() {
 loadEvents();
 </script>
 
-<script src="kvk-auth-gate.js?v=20261107084154"></script>
+<script src="kvk-auth-gate.js"></script>
 </body>
 </html>
