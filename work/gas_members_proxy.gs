@@ -84,8 +84,13 @@ function handle_(p) {
     if (p.action === "setDiscordInvite") return json_(setDiscordInvite_(p.invite));
     // いたずらの取り消し: 指定IP（末尾 * で前方一致）からの個人登録を、新しい順に元へ戻す（dryRun なら一覧だけ）
     if (p.action === "revertByIp") return json_(revertByIp_(token, p));
-    // KvK相手突合せの「うちの誰が相手の誰と対戦するか」の保存（管理者のみ）。イベントID単位で1件、まるごと上書き
+    // KvK相手突合せの「うちの誰が相手の誰と対戦するか」の保存（管理者のみ）。組み合わせ（パターン）を複数持てる。matchupId なしは「標準」を上書き
     if (p.action === "matchupSave") return json_(matchupSave_(token, p));
+    // 組み合わせの名前変更・削除（管理者のみ）
+    if (p.action === "matchupRename") return json_(matchupRename_(token, p));
+    if (p.action === "matchupDelete") return json_(matchupDelete_(token, p));
+    // KvK同着カウントダウン表の共有タブの追加・名前変更・並べ替え・削除・突合せの選択（管理者のみ）
+    if (p.action === "kvkTabs") return json_(kvkTabs_(token, p));
     // KvK相手突合せで「ゲーム内の名前」を登録済みユーザーの旧名（別表記）に追加する（次回から名前が自動で一致する）
     if (p.action === "addAlias") return json_(addAlias_(token, p));
     // 問い合わせ・質問の一覧（管理者のみ。未回答も含めて全部見られる）
@@ -142,10 +147,10 @@ function pubGet_(token) {
     entries: (d.entries || []).filter(function(x) { return ids[x.eventId]; }),
     // kvkRosters/flameRostersは終了したイベント分も含めて全部返す（終了後も閲覧はできるようにするため。
     // 更新を締め切るかどうかはクライアント側で「そのイベントがopenか」を見て判断する）
-    kvkRosters: d.kvkRosters || [],
+    kvkRosters: (d.kvkRosters || []).map(kvkRosterNorm_), // 各イベントの共有名簿。tabs（名前付きタブ）を補って返す（昔の1つの名簿は「標準」タブ）
     flameRosters: d.flameRosters || [],
     // KvK相手突合せで保存した「うちの誰が相手の誰と対戦するか」（名前のペアのみ。管理者のみ保存可、閲覧はパスワード不要）
-    matchupPairs: d.matchupPairs || [],
+    matchupPairs: matchupList_(d), // 組み合わせ（パターン）の一覧。昔の1件は id=eventId・name「標準」で返す
     // 問い合わせ・質問のうち回答済みのものだけ（質問者の名前は含めない。未回答はgetInquiries＝管理者のみ）
     inquiries: (d.inquiries || []).filter(function(i) { return i.answered; }).map(function(i) {
       return { id: i.id, text: i.text, answerText: i.answerText, answeredAt: i.answeredAt };
@@ -160,17 +165,13 @@ function pubGet_(token) {
   };
 }
 
-// KvK同着カウントダウン表「共有用」画面の名簿保存。イベントID単位で1件、名簿まるごと上書き。
-// p: { eventId, rows: [{name, march, petLevel, usePet, group, opponentName, opponentSec}, ...] }
-function kvkSave_(token, p) {
-  var cache = CacheService.getScriptCache();
-  var minuteKey = "kvk_" + Math.floor(Date.now() / 60000);
-  var count = Number(cache.get(minuteKey) || 0);
-  if (count >= SELF_LIMIT_PER_MIN) return { ok: false, status: 429, error: "混み合っています。1分ほど待ってからもう一度押してください" };
-  cache.put(minuteKey, String(count + 1), 120);
+// KvK同着カウントダウン表「共有用」画面の名簿。イベントID単位で1件、その中に名前付きの「タブ」を複数持てる（1イベント10タブまで）。
+// 1件: { eventId, rows（＝最初のタブの名簿。古い画面との互換用）, updatedAt, tabs: [{id, title, matchupId, rows, updatedAt}, ...] }
+// 昔の形（tabsなし）は、tabs=[{id:"main", title:"標準", rows}] として扱う（保存し直さなくてよい）。
+var KVK_MAX_TABS = 10;
 
-  if (!p.eventId) return { ok: false, status: 400, error: "イベントが選ばれていません" };
-  var rows = (Array.isArray(p.rows) ? p.rows : []).slice(0, 500).map(function(r) {
+function kvkRows_(rows) {
+  return (Array.isArray(rows) ? rows : []).slice(0, 500).map(function(r) {
     return {
       name: clip_(r.name, 30),
       march: numOrNull_(r.march),
@@ -181,6 +182,51 @@ function kvkSave_(token, p) {
       opponentSec: numOrNull_(r.opponentSec)
     };
   }).filter(function(r) { return r.name; });
+}
+
+// 保存データの1件から、タブの一覧を取り出す（tabsなしの昔の形は「標準」1つにする）。1件も無ければ []
+function kvkTabsOf_(rec) {
+  if (!rec) return [];
+  if (Array.isArray(rec.tabs) && rec.tabs.length) {
+    return rec.tabs.map(function(t) {
+      return { id: t.id, title: t.title || "標準", matchupId: t.matchupId || "", rows: t.rows || [], updatedAt: t.updatedAt || "" };
+    });
+  }
+  return [{ id: "main", title: "標準", matchupId: "", rows: rec.rows || [], updatedAt: rec.updatedAt || "" }];
+}
+
+// pubGet で返す形：tabs を補う（rows は最初のタブの名簿のまま）
+function kvkRosterNorm_(rec) {
+  var o = {};
+  Object.keys(rec).forEach(function(k) { o[k] = rec[k]; });
+  o.tabs = kvkTabsOf_(rec);
+  return o;
+}
+
+function kvkRecordOf_(d, eventId) {
+  d.kvkRosters = d.kvkRosters || [];
+  return d.kvkRosters.filter(function(x) { return x.eventId === eventId; })[0];
+}
+
+// 保存データに書き戻す。rows（最初のタブの名簿）は古い画面との互換用に同期する
+function kvkPutTabs_(d, eventId, tabs) {
+  var rec = kvkRecordOf_(d, eventId);
+  var now = new Date().toISOString();
+  var record = { eventId: eventId, rows: (tabs[0] && tabs[0].rows) || [], updatedAt: now, tabs: tabs };
+  if (rec) d.kvkRosters[d.kvkRosters.indexOf(rec)] = record; else d.kvkRosters.push(record);
+}
+
+// p: { eventId, rows: [...], tabId?, baseUpdatedAt?, force? }
+//   tabId なし（古い画面）：最初のタブの名簿を上書き。tabId あり：そのタブだけ上書き（baseUpdatedAt が今と違えば、他の人が先に更新したので止める。force なら上書き）
+function kvkSave_(token, p) {
+  var cache = CacheService.getScriptCache();
+  var minuteKey = "kvk_" + Math.floor(Date.now() / 60000);
+  var count = Number(cache.get(minuteKey) || 0);
+  if (count >= SELF_LIMIT_PER_MIN) return { ok: false, status: 429, error: "混み合っています。1分ほど待ってからもう一度押してください" };
+  cache.put(minuteKey, String(count + 1), 120);
+
+  if (!p.eventId) return { ok: false, status: 400, error: "イベントが選ばれていません" };
+  var rows = kvkRows_(p.rows);
 
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(30000)) return { ok: false, status: 503, error: "混み合っています。少し待ってからもう一度押してください" };
@@ -189,18 +235,85 @@ function kvkSave_(token, p) {
       var f = readFile_(token);
       if (!f.ok) return f;
       var d = f.data;
-      if (!isEventOpen_(d, p.eventId)) return { ok: false, status: 403, error: "このイベントは終了しているため更新できません" };
-      d.kvkRosters = d.kvkRosters || [];
-      var existing = d.kvkRosters.filter(function(x) { return x.eventId === p.eventId; })[0];
-      var record = { eventId: p.eventId, rows: rows, updatedAt: new Date().toISOString() };
-      if (existing) d.kvkRosters[d.kvkRosters.indexOf(existing)] = record;
-      else d.kvkRosters.push(record);
+      if (!isEventEditable_(d, p.eventId)) return { ok: false, status: 403, error: "このイベントは終了（完了）しているため更新できません" };
+      var tabs = kvkTabsOf_(kvkRecordOf_(d, p.eventId));
+      if (!tabs.length) tabs = [{ id: "main", title: "標準", matchupId: "", rows: [], updatedAt: "" }];
+      var tab = p.tabId ? tabs.filter(function(t) { return t.id === p.tabId; })[0] : tabs[0];
+      if (!tab) return { ok: false, status: 404, error: "そのタブが見つかりません（削除された可能性があります）" };
+      if (p.tabId && p.baseUpdatedAt != null && !p.force && String(tab.updatedAt || "") !== String(p.baseUpdatedAt)) {
+        return { ok: false, status: 409, conflict: true, error: "他の人が先にこのタブを更新しました", updatedAt: tab.updatedAt };
+      }
+      tab.rows = rows;
+      tab.updatedAt = new Date().toISOString();
+      kvkPutTabs_(d, p.eventId, tabs);
 
       d.updated = new Date().toISOString();
       var w = writeFile_(token, d, f.sha, "KvK shared roster saved");
-      if (w.ok) return { ok: true };
+      if (w.ok) return { ok: true, tabId: tab.id, updatedAt: tab.updatedAt };
       if (w.status !== 409 && w.status !== 422) return w;
       // 直前に他の人が保存した → 取り直してもう一度
+    }
+    return { ok: false, status: 409, error: "混み合っています。もう一度押してください" };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// 共有タブの追加・名前変更・並べ替え・削除・突合せの選択（管理者のみ）。受付中のイベントだけ。
+// p: { eventId, op: "add"|"rename"|"move"|"delete"|"setMatchup", tabId?, title?, rows?, matchupId?, order? }
+// 返す tabs は全タブ（id・title・matchupId・rows・updatedAt）。画面はこれで置き換える
+function kvkTabs_(token, p) {
+  if (!p.eventId) return { ok: false, status: 400, error: "イベントが選ばれていません" };
+  var op = p.op;
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) return { ok: false, status: 503, error: "混み合っています。少し待ってからもう一度押してください" };
+  try {
+    for (var attempt = 0; attempt < 3; attempt++) {
+      var f = readFile_(token);
+      if (!f.ok) return f;
+      var d = f.data;
+      if (!isEventEditable_(d, p.eventId)) return { ok: false, status: 403, error: "このイベントは終了（完了）しているため更新できません" };
+      var tabs = kvkTabsOf_(kvkRecordOf_(d, p.eventId));
+      if (!tabs.length) tabs = [{ id: "main", title: "標準", matchupId: "", rows: [], updatedAt: "" }];
+      var tab = p.tabId ? tabs.filter(function(t) { return t.id === p.tabId; })[0] : null;
+      var result = {};
+
+      if (op === "add") {
+        if (tabs.length >= KVK_MAX_TABS) return { ok: false, status: 400, error: "タブは1イベントに" + KVK_MAX_TABS + "個までです" };
+        var title = clip_(p.title, 20) || "名簿" + (tabs.length + 1);
+        var nt = { id: "t" + Utilities.getUuid().replace(/-/g, "").slice(0, 8), title: title, matchupId: clip_(p.matchupId, 40),
+          rows: kvkRows_(p.rows), updatedAt: new Date().toISOString() };
+        tabs.push(nt);
+        result.tabId = nt.id;
+      } else if (op === "rename") {
+        if (!tab) return { ok: false, status: 404, error: "そのタブが見つかりません" };
+        var name = clip_(p.title, 20);
+        if (!name) return { ok: false, status: 400, error: "タブの名前を入れてください" };
+        tab.title = name;
+      } else if (op === "setMatchup") {
+        if (!tab) return { ok: false, status: 404, error: "そのタブが見つかりません" };
+        tab.matchupId = clip_(p.matchupId, 40);
+      } else if (op === "move") {
+        var order = Array.isArray(p.order) ? p.order : [];
+        var byId = {};
+        tabs.forEach(function(t) { byId[t.id] = t; });
+        var next = [];
+        order.forEach(function(id) { if (byId[id]) { next.push(byId[id]); delete byId[id]; } });
+        tabs.forEach(function(t) { if (byId[t.id]) next.push(t); }); // 指定に無かったタブは末尾へ（他の人が追加したタブを消さない）
+        tabs = next;
+      } else if (op === "delete") {
+        if (!tab) return { ok: false, status: 404, error: "そのタブが見つかりません（すでに削除された可能性があります）" };
+        if (tabs.length <= 1) return { ok: false, status: 400, error: "最後の1つのタブは削除できません" };
+        tabs.splice(tabs.indexOf(tab), 1);
+      } else {
+        return { ok: false, status: 400, error: "不明な操作です" };
+      }
+
+      kvkPutTabs_(d, p.eventId, tabs);
+      d.updated = new Date().toISOString();
+      var w = writeFile_(token, d, f.sha, "KvK shared tabs: " + op);
+      if (w.ok) { result.ok = true; result.tabs = tabs; return result; }
+      if (w.status !== 409 && w.status !== 422) return w;
     }
     return { ok: false, status: 409, error: "混み合っています。もう一度押してください" };
   } finally {
@@ -211,6 +324,12 @@ function kvkSave_(token, p) {
 function numOrNull_(v) {
   var n = Number(v);
   return v !== "" && v != null && isFinite(n) ? n : null;
+}
+
+// 共有名簿・共有タブ（kvkSave・kvkTabs）を編集できるイベントか：存在し、完了していない（受付中・進行中のどちらでも可。完了済みは閲覧のみ）
+function isEventEditable_(d, eventId) {
+  var ev = (d.events || []).filter(function(e) { return e.id === eventId; })[0];
+  return !!(ev && ev.done !== true);
 }
 
 // eventIdが「受付中（open:true）」のイベントかどうか（終了済みイベントへの共有保存を止めるため）
@@ -282,8 +401,21 @@ function flameSave_(token, p) {
 }
 
 // KvK相手突合せ（管理者のみ・パスワード必須）の「うちの誰が相手の誰と対戦するか」の保存。
-// イベントID単位で1件、名前のペアまるごと上書き（kvkSave_と同じ形）。
-// p: { eventId, opponentLabel, pairs: [{ourName, ourTag, theirName, theirTag}, ...] }
+// KvK相手突合せの「うちの誰が相手の誰と対戦するか」。イベントごとに、名前を付けた「組み合わせ（パターン）」を複数持てる（1イベント10件まで、名前20文字）。
+// 1件: { id, eventId, name, opponentLabel, pairs:[{ourName,ourTag,theirName,theirTag}], updatedAt }
+// 昔の形（id・nameなし、イベントIDごとに1件）は id=eventId・name「標準」として扱う（保存し直さなくてよい）。
+var MATCHUP_MAX_PER_EVENT = 10;
+function matchupNorm_(r) {
+  var o = {};
+  Object.keys(r).forEach(function(k) { o[k] = r[k]; });
+  o.id = r.id || r.eventId;
+  o.name = r.name || "標準";
+  return o;
+}
+function matchupList_(d) { return (d.matchupPairs || []).map(matchupNorm_); }
+
+// p: { eventId, matchupId?, name?, opponentLabel, pairs }
+//   matchupId なし（昔のページ）：「標準」（id=eventId）を上書き。matchupId="new"：新しい組み合わせを作る。それ以外：その組み合わせを上書き
 function matchupSave_(token, p) {
   if (!p.eventId) return { ok: false, status: 400, error: "イベントが選ばれていません" };
   var pairs = (Array.isArray(p.pairs) ? p.pairs : []).slice(0, 200).map(function(x) {
@@ -295,25 +427,65 @@ function matchupSave_(token, p) {
     };
   }).filter(function(x) { return x.ourName && x.theirName; });
 
+  return matchupEdit_(token, function(d, list) {
+    if (!(d.events || []).some(function(e) { return e.id === p.eventId; })) return { error: "そのイベントが見つかりません", status: 400 };
+    var mid = p.matchupId || p.eventId, isNew = mid === "new";
+    var name = clip_(p.name, 20);
+    var sameEvent = list.filter(function(x) { return x.eventId === p.eventId; });
+    var existing = isNew ? null : sameEvent.filter(function(x) { return x.id === mid; })[0];
+    if (!isNew && !existing && p.matchupId) return { error: "その組み合わせが見つかりません（削除された可能性があります）", status: 404 };
+    if (isNew && sameEvent.length >= MATCHUP_MAX_PER_EVENT) return { error: "組み合わせは1イベントに" + MATCHUP_MAX_PER_EVENT + "件までです", status: 400 };
+    if (!name) name = existing ? existing.name : isNew ? "パターン" + (sameEvent.length + 1) : "標準";
+    var dup = sameEvent.filter(function(x) { return x.name === name && (!existing || x.id !== existing.id); })[0];
+    if (dup) return { error: "同じ名前の組み合わせがあります（「" + name + "」）", status: 400 };
+    var record = { id: isNew ? "m" + Utilities.getUuid().replace(/-/g, "").slice(0, 8) : (existing ? existing.id : p.eventId), eventId: p.eventId,
+      name: name, opponentLabel: clip_(p.opponentLabel, 40), pairs: pairs, updatedAt: new Date().toISOString() };
+    if (existing) list[list.indexOf(existing)] = record; else list.push(record);
+    return { id: record.id, name: record.name };
+  });
+}
+
+// 組み合わせの名前だけ変える（管理者のみ）。p: { eventId, matchupId, name }
+function matchupRename_(token, p) {
+  var name = clip_(p.name, 20);
+  if (!p.eventId || !p.matchupId) return { ok: false, status: 400, error: "組み合わせが選ばれていません" };
+  if (!name) return { ok: false, status: 400, error: "名前を入れてください" };
+  return matchupEdit_(token, function(d, list) {
+    var sameEvent = list.filter(function(x) { return x.eventId === p.eventId; });
+    var rec = sameEvent.filter(function(x) { return x.id === p.matchupId; })[0];
+    if (!rec) return { error: "その組み合わせが見つかりません", status: 404 };
+    if (sameEvent.some(function(x) { return x.name === name && x.id !== rec.id; })) return { error: "同じ名前の組み合わせがあります（「" + name + "」）", status: 400 };
+    rec.name = name; rec.updatedAt = new Date().toISOString();
+    return { id: rec.id, name: name };
+  });
+}
+
+// 組み合わせを削除（管理者のみ）。p: { eventId, matchupId }
+function matchupDelete_(token, p) {
+  if (!p.eventId || !p.matchupId) return { ok: false, status: 400, error: "組み合わせが選ばれていません" };
+  return matchupEdit_(token, function(d, list) {
+    var rec = list.filter(function(x) { return x.eventId === p.eventId && x.id === p.matchupId; })[0];
+    if (!rec) return { error: "その組み合わせが見つかりません", status: 404 };
+    list.splice(list.indexOf(rec), 1);
+    return { id: rec.id };
+  });
+}
+
+// 突合せの 読む→変える→書く。fn(d, list) は list（id・name を補った写し）を直接書き換え、{error,status} か結果のオブジェクトを返す
+function matchupEdit_(token, fn) {
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(30000)) return { ok: false, status: 503, error: "混み合っています。少し待ってからもう一度押してください" };
   try {
     for (var attempt = 0; attempt < 3; attempt++) {
       var f = readFile_(token);
       if (!f.ok) return f;
-      var d = f.data;
-      if (!(d.events || []).some(function(e) { return e.id === p.eventId; })) {
-        return { ok: false, status: 400, error: "そのイベントが見つかりません" };
-      }
-      d.matchupPairs = d.matchupPairs || [];
-      var existing = d.matchupPairs.filter(function(x) { return x.eventId === p.eventId; })[0];
-      var record = { eventId: p.eventId, opponentLabel: clip_(p.opponentLabel, 40), pairs: pairs, updatedAt: new Date().toISOString() };
-      if (existing) d.matchupPairs[d.matchupPairs.indexOf(existing)] = record;
-      else d.matchupPairs.push(record);
-
+      var d = f.data, list = matchupList_(d);
+      var r = fn(d, list) || {};
+      if (r.error) return { ok: false, status: r.status || 400, error: r.error };
+      d.matchupPairs = list;
       d.updated = new Date().toISOString();
       var w = writeFile_(token, d, f.sha, "KvK matchup pairs saved");
-      if (w.ok) return { ok: true };
+      if (w.ok) { r.ok = true; return r; }
       if (w.status !== 409 && w.status !== 422) return w;
       // 直前に他の人が保存した → 取り直してもう一度
     }

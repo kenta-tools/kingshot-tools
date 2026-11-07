@@ -51,6 +51,8 @@
   .tab-bar{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:10px; }
   .tab-item{ display:flex; align-items:center; gap:6px; background:#fff; border:1px solid #ddd; border-radius:999px 999px 0 0; padding:7px 10px 7px 14px; font-size:13px; cursor:pointer; border-bottom:3px solid transparent; }
   .tab-item.active{ border-bottom-color:var(--accent); font-weight:bold; }
+  .tab-item.tab-draft .tab-title-input{ font-style: italic; }
+  .tab-item.tab-draft::after{ content: "●"; color: #d9435e; font-size: 9px; margin-left: 2px; }
   .tab-item .tab-title-input{ border:none; background:transparent; font-size:13px; font-weight:inherit; padding:0; width:auto; min-width:2em; max-width:160px; }
   .tab-item .tab-title-input:focus{ outline:1px solid var(--accent); border-radius:4px; }
   .tab-item .tab-close{ color:#999; font-size:14px; line-height:1; padding:0 2px; }
@@ -152,7 +154,11 @@
     <button type="button" class="ks-menu-btn" aria-label="メニュー" aria-expanded="false">☰</button>
   </div>
   <nav>
+<<<<<<< Updated upstream
     <a href="../index.html?v=20261107204656" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261107204656" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261107204656" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261107204656" class="ks-link ks-active" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261107204656" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="KvKストップウォッチ.html?v=20261107204656" class="ks-link" title="ストップウォッチ（メモ付き）"><span class="ks-icon">⏱️</span><span class="ks-label">ストップウォッチ（メモ付き）</span></a>
+=======
+    <a href="../index.html?v=20261107185518" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261107185518" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261107185518" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261107185518" class="ks-link ks-active" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261107185518" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a>
+>>>>>>> Stashed changes
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -217,7 +223,11 @@
   </div>
   <div class="cfg-row">
     <button type="button" class="btn secondary small" id="fillOpponentBtn">相手の名前を自動入力（突合せから）</button>
-    <span class="save-note">名簿はそのままに、空欄の「相手の名前」だけをKvK相手突合せで保存済みの組み合わせから埋めます</span>
+    <span class="save-note">名簿はそのままに、空欄の「相手の名前」だけを、下で選んだ組み合わせから埋めます</span>
+  </div>
+  <div class="cfg-row" id="matchupRow">
+    <label>突合せの組み合わせ（このタブ）: <select id="matchupSelect" class="ve-exempt"><option value="">（なし）</option></select></label>
+    <span class="save-note" id="matchupNote">組み合わせの名前を付けて複数保存するのはKvK相手突合せ（管理者）です。タブごとに別の組み合わせを選べます（共有用では管理者が選ぶと全員に共有されます）。選び直しただけでは名簿は変わらず、「取り込む」「自動入力」を押したときに使われます</span>
   </div>
 </div>
 
@@ -259,8 +269,13 @@
   <div class="result-wrap"><table id="result-table"></table></div>
 </div>
 
+<<<<<<< Updated upstream
 <script src="../config.js?v=20261107204656"></script>
 <script src="pet-bonus.js?v=20261107204656"></script>
+=======
+<script src="../config.js?v=20261107185518"></script>
+<script src="pet-bonus.js?v=20261107185518"></script>
+>>>>>>> Stashed changes
 <script>
 const SAMPLE = [
   { name: "じろ", march: 36, adj: 0, group: "じろ" },
@@ -303,6 +318,7 @@ function escapeAttr(str){
 // --- ユーザー登録データ（entry/index.htmlと同じGAS中継役を読み取り専用で利用） ---
 // GAS_URL は config.js で定義
 let regData = { events: [], users: [], entries: [], kvkRosters: [], history: { events: [], entries: [] } };
+let regLoaded = false; // ユーザー登録データ（イベント・共有名簿）を読み込み終えたか。読み込み前に「共有用」を押しても壊れないようにする
 
 function gasCall(payload){
   return fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) })
@@ -338,7 +354,26 @@ const EVENT_TYPE = "KVK";
 
 function isEventOpen(id){ return regData.events.some(ev => ev.id === id); }
 
-function eventLabel(ev){ return ev ? ev.type + " " + ev.date + (isEventOpen(ev.id) ? "" : "（終了）") : ""; }
+// イベントの状態：open＝受付中、running＝受付が終わって進行中、done＝完了、missing＝一覧に無い
+function eventState(id){
+  if(!id) return "missing";
+  if(isEventOpen(id)) return "open";
+  const h = ((regData.history && regData.history.events) || []).find(e => e.id === id);
+  return !h ? "missing" : h.done ? "done" : "running";
+}
+// 共有の名簿・タブを編集できるか：受付中・進行中ならOK、完了済み・見つからないときは閲覧のみ
+function isEventEditable(id){ const st = eventState(id); return st === "open" || st === "running"; }
+// 共有の名簿・タブを変えられない理由（状態ごとに言い分ける。「終了」と「受付が終わっただけ」を混同しない）
+function closedReason(id){
+  const st = eventState(id);
+  return st === "done" ? "このイベントは終了（完了）しているため" : "イベントが見つからないため";
+}
+
+function eventLabel(ev){
+  if(!ev) return "";
+  const st = eventState(ev.id);
+  return ev.type + " " + ev.date + (st === "done" ? "（終了）" : st === "running" ? "（進行中）" : "");
+}
 
 function formatTime(iso){
   const d = new Date(iso);
@@ -358,7 +393,9 @@ function refreshEventSelect(){
     ? events.map(ev => `<option value="${escapeAttr(ev.id)}">${escapeAttr(eventLabel(ev))}</option>`).join("")
     : `<option value="">（${EVENT_TYPE}のイベントがありません）</option>`;
   if (events.some(ev => ev.id === keep)) sel.value = keep;
+  else { const live = events.find(ev => eventState(ev.id) !== "done"); if (live) sel.value = live.id; } // 選んでいたイベントが無いときは、先頭の終了していないイベントにする
   currentEventId = sel.value;
+  renderMatchupSelect();
 }
 
 function refreshNameList(){
@@ -373,8 +410,10 @@ function fetchRegData(){
       matchupPairs: res.matchupPairs || [],
       history: res.history || { events: [], entries: [] },
     };
+    regLoaded = true;
     refreshEventSelect();
     refreshNameList();
+    if(mode === "shared") loadSharedIntoState(); // 読み込み前に「共有用」を押していたときは、読み込めた時点で共有の名簿・タブを出し直す
   }).catch(e => {
     document.getElementById("sharedNote").textContent = "ユーザー登録データを読み込めませんでした: " + e.message;
   });
@@ -571,6 +610,95 @@ const DEFAULT_TAB_ID = "default";
 let tabs = [{ id: DEFAULT_TAB_ID, title: "名簿1" }];
 let currentTabId = DEFAULT_TAB_ID;
 
+// ---- 共有用のタブ（イベントごとに名前付きで複数、最大10）。追加・名前変更・並べ替え・削除・突合せの選択は管理者ログイン中だけ ----
+// 共有タブは regData.kvkRosters の中身そのもの。{id, title, matchupId, rows, updatedAt, draft?}（draft＝保存していない編集の退避）
+let sharedTabs = [];
+let sharedCurrentTabId = "";
+function isAdminLoggedIn(){ try { return !!sessionStorage.getItem("ksAdminPw"); } catch(e){ return false; } }
+function adminPw(){ try { return sessionStorage.getItem("ksAdminPw") || ""; } catch(e){ return ""; } }
+function canEditTabs(){ return mode === "personal" || (isAdminLoggedIn() && isEventEditable(currentEventId)); }
+function curTabs(){ return mode === "personal" ? tabs : sharedTabs; }
+function curTabId(){ return mode === "personal" ? currentTabId : sharedCurrentTabId; }
+function sharedTab(id){ return sharedTabs.find(t => t.id === id); }
+function sharedRec(create){
+  let rec = regData.kvkRosters.find(r => r.eventId === currentEventId);
+  if(!rec && create){ rec = { eventId: currentEventId, rows: [], updatedAt: "", tabs: [] }; regData.kvkRosters.push(rec); }
+  return rec;
+}
+// 今のイベントの共有タブを用意する（tabs が無い昔の形は「標準」1つに）
+function ensureSharedTabs(){
+  const rec = sharedRec(true);
+  if(!Array.isArray(rec.tabs) || !rec.tabs.length) rec.tabs = [{ id: "main", title: "標準", matchupId: "", rows: rec.rows || [], updatedAt: rec.updatedAt || "" }];
+  sharedTabs = rec.tabs;
+  if(!sharedTabs.some(t => t.id === sharedCurrentTabId)) sharedCurrentTabId = sharedTabs[0].id;
+}
+function rowsSig(rows){ return JSON.stringify(rows.map(r => { const c = Object.assign({}, r); delete c.id; return c; })); }
+// 画面の名簿に保存していない変更があれば、そのタブの下書きとして退避する（タブを行き来しても失わないため）
+function stashSharedDraft(){
+  const t = sharedTab(sharedCurrentTabId);
+  if(!t) return;
+  if(rowsSig(rosterRows) !== sharedSnapshot) t.draft = rosterRows.map(r => Object.assign({}, r)); else delete t.draft;
+}
+function sharedNoteSet(text){ document.getElementById("sharedNote").textContent = text; }
+// サーバーが返した全タブで置き換える（保存していない下書きは残す）
+function applyServerTabs(serverTabs){
+  const rec = sharedRec(true);
+  const old = {};
+  (rec.tabs || []).forEach(t => { old[t.id] = t; });
+  rec.tabs = serverTabs.map(t => { const o = old[t.id]; return Object.assign({}, t, o && o.draft ? { draft: o.draft } : {}); });
+  sharedTabs = rec.tabs;
+  if(!sharedTabs.some(t => t.id === sharedCurrentTabId)) sharedCurrentTabId = sharedTabs[0].id;
+}
+// 共有タブの操作（管理者のみ。サーバー側でもパスワードを確認する）
+function sharedOp(payload){
+  if(!canEditTabs()){ sharedNoteSet(isAdminLoggedIn() ? closedReason(currentEventId) + "タブを変更できません" : "タブの変更は管理者ログイン中だけできます"); return Promise.resolve(null); }
+  stashSharedDraft();
+  sharedNoteSet("処理中…");
+  return gasCall(Object.assign({ action: "kvkTabs", password: adminPw(), eventId: currentEventId }, payload)).then(res => {
+    if(!res.ok) throw new Error(res.error || "できませんでした");
+    applyServerTabs(res.tabs);
+    return res;
+  }).catch(e => {
+    sharedNoteSet("できませんでした: " + e.message);
+    renderTabBar();
+    return null;
+  });
+}
+function sharedAddTab(copy){
+  const cur = sharedTab(sharedCurrentTabId);
+  const title = copy && cur ? cur.title + "のコピー" : "名簿" + (sharedTabs.length + 1);
+  sharedOp({ op: "add", title: title, rows: copy ? rosterRows : rowsForNewTab(), matchupId: copy && cur ? cur.matchupId : "" }).then(res => {
+    if(!res) return;
+    sharedCurrentTabId = res.tabId;
+    loadSharedIntoState();
+    sharedNoteSet("タブ「" + title + "」を追加しました（共有されます）");
+  });
+}
+function sharedDeleteTab(id){
+  const t = sharedTab(id);
+  if(!t || sharedTabs.length <= 1) return;
+  if(!confirm("共有のタブ「" + t.title + "」を削除します。名簿も全員から消えます（元に戻せません）。よろしいですか？")) return;
+  sharedOp({ op: "delete", tabId: id }).then(res => {
+    if(!res) return;
+    loadSharedIntoState();
+    sharedNoteSet("タブ「" + t.title + "」を削除しました");
+  });
+}
+function sharedRenameTab(tab, title){
+  title = title.trim();
+  if(!title || title === tab.title){ renderTabBar(); return; }
+  sharedOp({ op: "rename", tabId: tab.id, title: title }).then(res => {
+    renderTabBar();
+    if(res) sharedNoteSet("タブの名前を「" + title + "」にしました");
+  });
+}
+function sharedSetMatchup(tabId, matchupId){
+  sharedOp({ op: "setMatchup", tabId: tabId, matchupId: matchupId }).then(res => {
+    renderMatchupSelect();
+    if(res) sharedNoteSet("このタブの突合せの組み合わせを変えました（全員に共有されます）");
+  });
+}
+
 function rosterKeyFor(id){ return id === DEFAULT_TAB_ID ? ROSTER_STORAGE_KEY : ROSTER_STORAGE_KEY + "_" + id; }
 
 function loadTabs(){
@@ -595,10 +723,17 @@ function saveTabs(){
 let dragTabId = null;
 
 function moveTab(id, toIndex) {
-  const from = tabs.findIndex(t => t.id === id);
-  if (from < 0 || toIndex < 0 || toIndex >= tabs.length || from === toIndex) return;
-  const [tab] = tabs.splice(from, 1);
-  tabs.splice(toIndex, 0, tab);
+  const list = curTabs();
+  const from = list.findIndex(t => t.id === id);
+  if (from < 0 || toIndex < 0 || toIndex >= list.length || from === toIndex) return;
+  if (mode === "shared" && !canEditTabs()) return;
+  const [tab] = list.splice(from, 1);
+  list.splice(toIndex, 0, tab);
+  if (mode === "shared") { // 先に画面を並べ替え、サーバーにも順番を送る
+    renderTabBar();
+    sharedOp({ op: "move", order: list.map(t => t.id) }).then(res => { renderTabBar(); if(res) sharedNoteSet("タブの並び順を変えました（共有されます）"); });
+    return;
+  }
   saveTabs();
   renderTabBar();
 }
@@ -621,9 +756,9 @@ function attachTabReorder(el, tab, idx) {
     dragTabId = null;
   });
   el.addEventListener("dragend", () => { dragTabId = null; });
-  if (tab.id !== currentTabId || tabs.length < 2) return;
+  if (tab.id !== curTabId() || curTabs().length < 2) return;
   [["◀", -1, "左へ移動"], ["▶", 1, "右へ移動"]].forEach(([label, d, title]) => {
-    if (idx + d < 0 || idx + d >= tabs.length) return;
+    if (idx + d < 0 || idx + d >= curTabs().length) return;
     const b = document.createElement("span");
     b.className = "tab-move";
     b.textContent = label;
@@ -636,56 +771,87 @@ function attachTabReorder(el, tab, idx) {
 
 function renderTabBar(){
   const bar = document.getElementById("tabBar");
-  bar.style.display = mode === "personal" ? "flex" : "none";
+  const list = curTabs(), cur = curTabId(), edit = canEditTabs();
+  bar.style.display = "flex";
   bar.innerHTML = "";
-  tabs.forEach((tab, idx) => {
+  list.forEach((tab, idx) => {
     const el = document.createElement("div");
-    el.className = "tab-item" + (tab.id === currentTabId ? " active" : "");
+    el.className = "tab-item" + (tab.id === cur ? " active" : "") + (tab.draft ? " tab-draft" : "");
     el.innerHTML = `
-      <input type="text" class="tab-title-input" value="${escapeAttr(tab.title)}" size="${Math.max(2, tab.title.length)}">
-      ${tabs.length > 1 ? `<span class="tab-close" title="このタブを削除">×</span>` : ""}
+      <input type="text" class="tab-title-input" value="${escapeAttr(tab.title)}" size="${Math.max(2, tab.title.length)}" maxlength="20"${edit ? "" : " readonly"}>
+      ${list.length > 1 && edit ? `<span class="tab-close" title="このタブを削除">×</span>` : ""}
     `;
-    el.addEventListener("click", () => { if(tab.id !== currentTabId) switchToTab(tab.id); });
-    el.querySelector(".tab-title-input").addEventListener("input", e => {
-      tab.title = e.target.value;
-      e.target.size = Math.max(2, e.target.value.length);
-      saveTabs();
-    });
+    el.title = mode === "shared" && tab.draft ? "保存していない変更があります" : "";
+    el.addEventListener("click", () => { if(tab.id !== cur) switchToTab(tab.id); });
+    const titleInput = el.querySelector(".tab-title-input");
+    if(mode === "shared"){
+      // 共有タブは、入力が終わったとき（Enter・フォーカスが外れたとき）に名前を送る
+      titleInput.addEventListener("change", e => sharedRenameTab(tab, e.target.value));
+    } else {
+      titleInput.addEventListener("input", e => {
+        tab.title = e.target.value;
+        e.target.size = Math.max(2, e.target.value.length);
+        saveTabs();
+      });
+    }
     const closeEl = el.querySelector(".tab-close");
     if(closeEl){
       closeEl.addEventListener("click", e => { e.stopPropagation(); deleteTab(tab.id); });
     }
-    attachTabReorder(el, tab, idx);
+    if(edit) attachTabReorder(el, tab, idx);
     bar.appendChild(el);
   });
-  const addBtn = document.createElement("button");
-  addBtn.type = "button";
-  addBtn.className = "tab-add";
-  addBtn.textContent = "+";
-  addBtn.title = "空の名簿のタブを追加";
-  addBtn.addEventListener("click", () => addTab(false));
-  bar.appendChild(addBtn);
-  const dupBtn = document.createElement("button");
-  dupBtn.type = "button";
-  dupBtn.className = "tab-dup";
-  dupBtn.textContent = "このタブを複製";
-  dupBtn.addEventListener("click", () => addTab(true));
-  bar.appendChild(dupBtn);
+  if(edit && !(mode === "shared" && list.length >= 10)){
+    const addBtn = document.createElement("button");
+    addBtn.type = "button";
+    addBtn.className = "tab-add";
+    addBtn.textContent = "+";
+    addBtn.title = "今のタブと同じ人の名簿で、新しいタブを追加（相手の名前・秒数は空）";
+    addBtn.addEventListener("click", () => addTab(false));
+    bar.appendChild(addBtn);
+    const dupBtn = document.createElement("button");
+    dupBtn.type = "button";
+    dupBtn.className = "tab-dup";
+    dupBtn.textContent = "このタブを複製";
+    dupBtn.addEventListener("click", () => addTab(true));
+    bar.appendChild(dupBtn);
+  }
+  if(mode === "shared" && !edit && !regLoaded){
+    const hint = document.createElement("span");
+    hint.className = "save-note";
+    hint.style.marginLeft = "8px";
+    hint.textContent = "（読み込み中…）";
+    bar.appendChild(hint);
+  } else if(mode === "shared" && !edit){
+    const hint = document.createElement("span");
+    hint.className = "save-note";
+    hint.style.marginLeft = "8px";
+    hint.textContent = isEventEditable(currentEventId) ? "（タブの追加・名前変更・並べ替え・削除は管理者ログイン中だけできます）" : "（" + closedReason(currentEventId) + "タブは閲覧のみです）";
+    bar.appendChild(hint);
+  }
 }
 
-// copy=true なら今の名簿をそのまま、false なら空の1行だけで新しいタブを作る
+// 「＋」で新しいタブを作るときの名簿：今開いているタブと同じ人の一覧（相手の名前・相手の秒数は空に戻す。相手は、そのタブで選ぶ突合せの組み合わせから「自動入力」で埋める）。今の名簿が空なら空のまま
+function rowsForNewTab(){
+  return rosterRows.map(r => Object.assign({}, r, { opponentName: "", opponentSec: "" }));
+}
+
+// copy=true なら今の名簿をそのまま（「このタブを複製」）、false なら今と同じ人の一覧（相手の名前・秒数は空）で新しいタブを作る
 function addTab(copy){
+  if(mode === "shared") return sharedAddTab(copy);
   const id = "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const cur = tabs.find(t => t.id === currentTabId);
   const title = copy && cur ? cur.title + "のコピー" : "名簿" + (tabs.length + 1);
-  const rows = copy ? rosterRows : [newRow({})];
+  const base = copy ? rosterRows : rowsForNewTab();
+  const rows = base.length ? base : [newRow({})];
   try { localStorage.setItem(rosterKeyFor(id), JSON.stringify({ rows, rowSeq })); } catch(e){}
-  tabs.push({ id, title });
+  tabs.push({ id, title, matchupId: copy && cur ? cur.matchupId : undefined }); // コピーしたタブは突合せの選択も引き継ぐ
   saveTabs();
   switchToTab(id);
 }
 
 function deleteTab(id){
+  if(mode === "shared") return sharedDeleteTab(id);
   if(tabs.length <= 1) return;
   if(!confirm("このタブを削除します。保存されている名簿も消えます。よろしいですか？")) return;
   tabs = tabs.filter(t => t.id !== id);
@@ -702,7 +868,14 @@ function deleteTab(id){
 }
 
 function switchToTab(id){
-  if(id === currentTabId || mode !== "personal") return;
+  if(mode === "shared"){
+    if(id === sharedCurrentTabId) return;
+    stashSharedDraft();
+    sharedCurrentTabId = id;
+    loadSharedIntoState();
+    return;
+  }
+  if(id === currentTabId) return;
   currentTabId = id;
   saveTabs();
   renderTabBar();
@@ -733,25 +906,43 @@ function loadPersonalIntoState(){
   }
   document.getElementById("sharedSaveBtn").disabled = false;
   document.getElementById("importBtn").disabled = false;
+  renderMatchupSelect();
   renderRoster();
   compute();
 }
 
 // --- 共有用（みんなで見る）の読込・保存 ---
 function loadSharedIntoState(){
-  const rec = regData.kvkRosters.find(r => r.eventId === currentEventId);
-  rosterRows = (rec && Array.isArray(rec.rows) ? rec.rows : []).map(r => newRow(r));
-  sharedDirty = false;
-  sharedSnapshot = JSON.stringify(rosterRows);
+  if(!regLoaded || !currentEventId){ // まだ読み込み中、またはイベントが無い：共有タブは作らず、待つ・選ぶよう案内する
+    sharedTabs = [];
+    rosterRows = [];
+    sharedDirty = false;
+    sharedSnapshot = null;
+    renderTabBar();
+    renderMatchupSelect();
+    renderRoster();
+    compute();
+    document.getElementById("sharedSaveBtn").disabled = true;
+    document.getElementById("importBtn").disabled = true;
+    sharedNoteSet(!regLoaded ? "読み込み中…（読み込みが終わると共有の名簿・タブが出ます）" : "イベントを選んでください");
+    return;
+  }
+  ensureSharedTabs();
+  const t = sharedTab(sharedCurrentTabId);
+  rosterRows = (t.draft || t.rows || []).map(r => newRow(r));
+  sharedDirty = !!t.draft;
+  sharedSnapshot = rowsSig((t.rows || []).map(r => newRow(r)));
+  renderTabBar();
+  renderMatchupSelect();
   renderRoster();
   compute();
-  const editable = isEventOpen(currentEventId);
+  const editable = isEventEditable(currentEventId);
   document.getElementById("sharedSaveBtn").disabled = !editable;
   document.getElementById("importBtn").disabled = !editable;
   const note = document.getElementById("sharedNote");
-  note.textContent = rec
-    ? `最終更新: ${formatTime(rec.updatedAt)}${editable ? "" : "（このイベントは終了したため閲覧のみです）"}`
-    : (editable ? "（まだ共有データがありません。入力して「共有に保存」を押してください）" : "（このイベントは終了しており、共有データもありません）");
+  note.textContent = t.updatedAt
+    ? `「${t.title}」最終更新: ${formatTime(t.updatedAt)}${editable ? "" : "（" + closedReason(currentEventId) + "閲覧のみです）"}${t.draft ? "　※保存していない変更があります" : ""}`
+    : (editable ? "（このタブにはまだ共有データがありません。入力して「共有に保存」を押してください）" : "（" + closedReason(currentEventId) + "共有データもありません）");
 }
 
 function setMode(newMode){
@@ -759,7 +950,7 @@ function setMode(newMode){
   // sharedDirtyだけでなく、実際に名簿が変わったか（JSON比較）も確認する。
   // input/changeイベントが何らかの理由で発火してsharedDirtyだけ立っても、
   // 内容が変わっていなければ確認ダイアログを出さない。
-  const reallyChanged = mode === "shared" && sharedSnapshot !== null && JSON.stringify(rosterRows) !== sharedSnapshot;
+  const reallyChanged = mode === "shared" && sharedSnapshot !== null && rowsSig(rosterRows) !== sharedSnapshot;
   if(mode === "shared" && sharedDirty && reallyChanged){
     if(!confirm("共有用の保存していない変更があります。保存せずに切り替えますか？")) return;
   }
@@ -779,6 +970,7 @@ document.getElementById("modeSharedBtn").addEventListener("click", () => setMode
 
 document.getElementById("eventSelect").addEventListener("change", function(){
   currentEventId = this.value;
+  renderMatchupSelect();
   if(mode === "shared") loadSharedIntoState();
 });
 
@@ -787,27 +979,76 @@ document.getElementById("sharedReloadBtn").addEventListener("click", () => {
   fetchRegData().then(() => loadSharedIntoState());
 });
 
+function sharedSaveRequest(tab, force){
+  return gasCall({ action: "kvkSave", eventId: currentEventId, tabId: tab.id, baseUpdatedAt: tab.updatedAt || "", force: !!force, rows: rosterRows });
+}
 document.getElementById("sharedSaveBtn").addEventListener("click", () => {
-  if(!currentEventId){ document.getElementById("sharedNote").textContent = "イベントを選んでください"; return; }
-  if(!isEventOpen(currentEventId)){ document.getElementById("sharedNote").textContent = "このイベントは終了しているため更新できません"; return; }
-  document.getElementById("sharedNote").textContent = "保存中…";
-  gasCall({ action: "kvkSave", eventId: currentEventId, rows: rosterRows }).then(res => {
+  if(!currentEventId){ sharedNoteSet("イベントを選んでください"); return; }
+  if(!isEventEditable(currentEventId)){ sharedNoteSet(closedReason(currentEventId) + "更新できません"); return; }
+  const tab = sharedTab(sharedCurrentTabId);
+  if(!tab) return;
+  sharedNoteSet("保存中…");
+  sharedSaveRequest(tab, false).then(res => {
+    if(res.ok || !res.conflict) return res;
+    // 他の人が先にこのタブを保存していた：確認して、よければ自分の内容で上書きする
+    const ok = confirm(`他の人が先にこのタブ「${tab.title}」を更新しました（${formatTime(res.updatedAt)}）。\n\nOK：あなたの内容で上書き保存する\nキャンセル：保存しない（「最新を取得」で他の人の内容を読み込めます。あなたの編集は画面に残ります）`);
+    if(!ok) return { cancelled: true };
+    return sharedSaveRequest(tab, true);
+  }).then(res => {
+    if(res.cancelled){ sharedNoteSet("保存しませんでした（他の人の更新があります。「最新を取得」で読み込めます）"); return; }
     if(!res.ok) throw new Error(res.error || "保存できませんでした");
     sharedDirty = false;
-    sharedSnapshot = JSON.stringify(rosterRows);
-    const updatedAt = new Date().toISOString();
-    const idx = regData.kvkRosters.findIndex(r => r.eventId === currentEventId);
-    const rec = { eventId: currentEventId, rows: rosterRows, updatedAt };
-    if(idx >= 0) regData.kvkRosters[idx] = rec; else regData.kvkRosters.push(rec);
-    document.getElementById("sharedNote").textContent = "保存しました（最終更新: " + formatTime(updatedAt) + "）";
+    tab.rows = rosterRows.map(r => Object.assign({}, r));
+    tab.updatedAt = res.updatedAt || new Date().toISOString();
+    delete tab.draft;
+    const rec = sharedRec(true);
+    rec.updatedAt = tab.updatedAt;
+    if(sharedTabs[0] === tab) rec.rows = tab.rows; // 古い画面との互換（最初のタブの名簿）
+    sharedSnapshot = rowsSig(rosterRows);
+    renderTabBar();
+    sharedNoteSet("「" + tab.title + "」を保存しました（最終更新: " + formatTime(tab.updatedAt) + "）");
   }).catch(e => {
-    document.getElementById("sharedNote").textContent = "保存できませんでした: " + e.message;
+    sharedNoteSet("保存できませんでした: " + e.message);
   });
 });
 
-// KvK相手突合せで保存済みの組み合わせから、この名前の「相手」を探す（このイベント分のみ）
+// KvK相手突合せで保存済みの組み合わせ（名前付きで1イベントに複数）。昔の形（id・nameなし）は「標準」として扱う
+function eventMatchups(){
+  return (regData.matchupPairs || [])
+    .filter(r => r.eventId === currentEventId)
+    .map(r => Object.assign({}, r, { id: r.id || r.eventId, name: r.name || "標準", pairs: r.pairs || [] }));
+}
+// 使う組み合わせ：自分用はタブで選んだもの（無ければ標準→先頭）。共有用はタブが無いので標準（無ければ先頭）
+function activeMatchup(){
+  const list = eventMatchups();
+  if(!list.length) return null;
+  const dflt = list.find(m => m.id === currentEventId) || list.find(m => m.name === "標準") || list[0];
+  const tab = mode === "personal" ? tabs.find(t => t.id === currentTabId) : sharedTab(sharedCurrentTabId);
+  return (tab && list.find(m => m.id === tab.matchupId)) || dflt;
+}
+function renderMatchupSelect(){
+  const sel = document.getElementById("matchupSelect");
+  if(!sel) return;
+  const list = eventMatchups();
+  document.getElementById("matchupRow").style.display = "flex";
+  sel.innerHTML = list.length
+    ? list.map(m => `<option value="${escapeAttr(m.id)}">${escapeAttr(m.name)}（${m.pairs.length}人${m.opponentLabel ? "・" + escapeAttr(m.opponentLabel) : ""}）</option>`).join("")
+    : '<option value="">（保存された組み合わせがありません）</option>';
+  const act = activeMatchup();
+  sel.value = act ? act.id : "";
+  sel.disabled = !list.length || !canEditTabs(); // 共有タブの選択は管理者ログイン中だけ（全員に共有される）
+}
+document.getElementById("matchupSelect").addEventListener("change", function(){
+  if(mode === "shared"){ sharedSetMatchup(sharedCurrentTabId, this.value); return; }
+  const tab = tabs.find(t => t.id === currentTabId);
+  if(!tab) return;
+  tab.matchupId = this.value; // タブごとに保持（タブの名前・順番と一緒に保存）
+  saveTabs();
+});
+
+// KvK相手突合せで保存済みの組み合わせから、この名前の「相手」を探す（このイベント分・選んでいる組み合わせのみ）
 function opponentFromMatchup(name){
-  const rec = (regData.matchupPairs || []).find(r => r.eventId === currentEventId);
+  const rec = activeMatchup();
   if(!rec) return "";
   const pair = (rec.pairs || []).find(p => p.ourName === name);
   return pair ? pair.theirName : "";
@@ -815,7 +1056,7 @@ function opponentFromMatchup(name){
 
 document.getElementById("importBtn").addEventListener("click", () => {
   if(!currentEventId){ alert("イベントを選んでください"); return; }
-  if(mode === "shared" && !isEventOpen(currentEventId)){ alert("このイベントは終了しているため更新できません"); return; }
+  if(mode === "shared" && !isEventEditable(currentEventId)){ alert(closedReason(currentEventId) + "更新できません"); return; }
   const targets = regData.entries.filter(e => e.eventId === currentEventId && e.entry !== "absent" && e.rallyCount != null);
   if(!targets.length){ alert("このイベントで「集結の指示があった」人がユーザー登録に見つかりません"); return; }
   if(!confirm(`名簿を一旦クリアして、${targets.length}人を取り込みます。よろしいですか？`)) return;
@@ -837,7 +1078,7 @@ document.getElementById("fillOpponentBtn").addEventListener("click", () => {
     const opp = opponentFromMatchup(row.name.trim());
     if(opp){ row.opponentName = opp; filled++; }
   });
-  if(!filled){ alert("突合せの保存済みデータに、該当する名前が見つかりませんでした"); return; }
+  if(!filled){ const m = activeMatchup(); alert(m ? `組み合わせ「${m.name}」に、該当する名前が見つかりませんでした` : "突合せの保存済みデータがありません"); return; }
   renderRoster();
   persistState();
   compute();
@@ -851,7 +1092,7 @@ function getRoster(){
     return {
       name,
       // ペットで速度を補正すると行軍秒数が小数になるため、表示・突合せ判定のため整数秒に丸める
-      actual: Math.round(march + (row.adj || 0)),
+      actual: Math.max(0, Math.round(march - (row.adj || 0))),
       group: row.group || "",
       opponentName: row.opponentName || "",
       opponentSec: row.opponentSec,
@@ -1018,6 +1259,10 @@ fetchRegData();
 fetchOpponentNames();
 </script>
 
+<<<<<<< Updated upstream
 <script src="view-edit-gate.js?v=20261107204656"></script>
+=======
+<script src="view-edit-gate.js?v=20261107185518"></script>
+>>>>>>> Stashed changes
 </body>
 </html>

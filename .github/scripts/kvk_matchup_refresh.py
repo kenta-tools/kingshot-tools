@@ -32,6 +32,36 @@ API_KEY = os.getenv("MIGHTPULSE_API_KEY")
 BASE_URL = "https://api.mightpulse.com/v1"
 BOARD_KEYS = {"mystic_trial": "trial", "master_power": "master", "pet_power": "pet"}
 BOARD_LABELS = [("trial", "秘境の試練"), ("master", "マスター全体総力"), ("pet", "ペット")]
+
+# ペット列は「ペット用の試練のステージ」を主に、ペット総力を括弧書きで出す（2026-11-07ユーザー指示）。
+# ペット用の試練は MightPulse API の forest_of_life（Forest of Life）。score の先頭の桁（2）を除いた残りがステージ（例 20373 → Stage 373）。
+# 勝ち負けはステージで判定（score＝ステージ側のスコア、power＝ペット総力）。取れない人は「—（総力）」、総力も無ければ「—」
+PET_STAGE_BOARD = "forest_of_life"
+
+
+def stage_of(score):
+    """forest_of_life の score（例 20373）から先頭の桁（2）を除いた数（373）の、下1桁を枝番にした表記（37-3）。ペット試練だけの読み方"""
+    t = str(int(score))
+    n = int(t[1:]) if len(t) > 1 else int(t)
+    return f"{n // 10}-{n % 10}"
+
+
+def pet_entry(power_entry, stage_score):
+    if stage_score is None and not power_entry:
+        return None
+    return {"score": stage_score, "power": power_entry["score"] if power_entry else None}
+
+
+def fmt_entry(entry, board=None):
+    if not entry:
+        return "—"
+    if board == "pet":
+        st = stage_of(entry["score"]) if entry.get("score") is not None else "—"
+        if entry.get("power") is None:
+            return st
+        return f"{st}（{abbreviate(entry['power'])}）"
+    return abbreviate(entry["score"], board)
+
 GAS_URL = "https://script.google.com/macros/s/AKfycbxu5HW9uLU9pCsUs1r_45xpuofWZmQAyZFDwSLK1C_7GvA7SDXZ4ayBEJTS0sR_8oToAw/exec"
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -101,7 +131,11 @@ def fetch_all(kid_list):
             rows = data.get("board", {}).get("rows", []) if data and data.get("ok") else []
             raw[kid][board] = rows
             time.sleep(0.3)
-        print(f"  kid={kid} done: " + ", ".join(f"{b}={len(raw[kid][b])}" for b in BOARD_KEYS))
+        # ペット用の試練（ステージ）。ランキングの集計（BOARD_KEYS）には入れず、別に取る
+        data = get(f"/kingdoms/{kid}/ranks", {"board": PET_STAGE_BOARD, "limit": 100})
+        raw[kid][PET_STAGE_BOARD] = data.get("board", {}).get("rows", []) if data and data.get("ok") else []
+        time.sleep(0.3)
+        print(f"  kid={kid} done: " + ", ".join(f"{b}={len(raw[kid][b])}" for b in list(BOARD_KEYS) + [PET_STAGE_BOARD]))
     return raw
 
 
@@ -114,6 +148,11 @@ def merge_and_rank(raw, threshold, threshold_board="mystic_trial"):
                 if gid not in people:
                     people[gid] = {"name": row["nick_name"], "tag": row.get("alliance_abbr") or "なし", "kid": row["kid"]}
                 people[gid][short] = {"score": row["score"]}
+
+    stage_scores = {}
+    for kid, boards in raw.items():
+        for row in boards.get(PET_STAGE_BOARD, []):
+            stage_scores[row["governor_id"]] = row["score"]
 
     threshold_key = BOARD_KEYS[threshold_board]
     qualifying = {gid: p for gid, p in people.items() if threshold < 0 or (threshold_key in p and p[threshold_key]["score"] > threshold)}
@@ -140,6 +179,7 @@ def merge_and_rank(raw, threshold, threshold_board="mystic_trial"):
             total += rank
             if gid in ranks[short]:
                 best = rank if best is None else min(best, rank)
+        r["pet"] = pet_entry(r.get("pet"), stage_scores.get(gid))  # ペット列：ステージ（判定）＋総力（括弧書き）。順位の集計には元のペット総力を使った
         r["total"] = total
         r["best"] = best if best is not None else total
         results.append(r)
@@ -197,8 +237,8 @@ def compare_board(a_entry, b_entry):
 
 def board_cell(our_entry, their_entry, cell_id, board=None):
     winner = compare_board(our_entry, their_entry)
-    our_txt = abbreviate(our_entry["score"], board) if our_entry else "—"
-    their_txt = abbreviate(their_entry["score"], board) if their_entry else "—"
+    our_txt = fmt_entry(our_entry, board)
+    their_txt = fmt_entry(their_entry, board)
     cls = {"a": "win-our", "b": "win-their", "tie": "win-tie", None: "win-na"}[winner]
     return f'<td class="cmp {cls}" id="{cell_id}"><span class="our-v">{our_txt}</span><span class="vs">vs</span><span class="their-v">{their_txt}</span></td>', winner
 
@@ -206,7 +246,7 @@ def board_cell(our_entry, their_entry, cell_id, board=None):
 def person_json(p):
     data = {"name": p["name"], "tag": p["tag"]}
     for short, _label in BOARD_LABELS:
-        data[short] = {"score": p[short]["score"]} if p.get(short) else None
+        data[short] = dict(p[short]) if p.get(short) else None
     return data
 
 
@@ -224,7 +264,7 @@ def build_their_ranking_rows(their_people):
         cells = []
         for short, _label in BOARD_LABELS:
             v = t.get(short)
-            cells.append(f'<td class="cmp">{abbreviate(v["score"], short) if v else "—"}</td>')
+            cells.append(f'<td class="cmp">{fmt_entry(v, short)}</td>')
         rows.append(
             f'<tr>'
             f'<td class="num rankcell">{t["rank"]}</td>'
@@ -376,6 +416,8 @@ HEAD = """<!DOCTYPE html>
   .event-box select{ font:inherit; font-size:0.84rem; padding:5px 8px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--ink); }
   .event-box button{ font:inherit; font-size:0.82rem; padding:7px 14px; border-radius:8px; border:none; background:var(--accent); color:#fff; cursor:pointer; }
   .event-box button:disabled{ opacity:0.45; cursor:default; }
+  .event-box button.sub{ background:var(--surface-2); color:var(--ink); border:1px solid var(--border); }
+  .event-box input[type=text]{ font:inherit; font-size:0.84rem; padding:5px 8px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--ink); width:160px; }
   .event-box .event-msg{ font-size:0.76rem; color:var(--ink-faint); }
   .legend{ font-family:"Rajdhani","Yu Gothic UI",sans-serif; font-size:0.76rem; color:var(--ink-faint); margin:0 0 14px; line-height:1.6; }
   details.prompt-box{ margin-top:28px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:4px 16px; box-shadow:var(--shadow); }
@@ -404,7 +446,13 @@ BODY = """<body>
   <div class="event-box">
     <label for="eventSelect">イベント:</label>
     <select id="eventSelect"><option value="">（読み込み中…）</option></select>
-    <button type="button" id="savePairsBtn" disabled>💾 この組み合わせを保存</button>
+    <label for="patternSelect">組み合わせ:</label>
+    <select id="patternSelect" disabled><option value="">＋新しい組み合わせ</option></select>
+    <input type="text" id="patternName" maxlength="20" placeholder="名前（例：本隊用）">
+    <button type="button" id="savePairsBtn" disabled>💾 新しく保存</button>
+    <button type="button" class="sub" id="saveAsNewBtn" disabled>📄 複製して新規保存</button>
+    <button type="button" class="sub" id="renamePatternBtn" disabled>✏️ 名前を変える</button>
+    <button type="button" class="sub" id="deletePatternBtn" disabled>🗑 削除</button>
     <span class="event-msg" id="eventMsg"></span>
   </div>
 
@@ -425,7 +473,7 @@ BODY = """<body>
         <th>うち</th>
         <th>秘境の試練</th>
         <th>マスター全体総力</th>
-        <th>ペット</th>
+        <th>ペット試練<br>（総力）</th>
         <th>勝敗</th>
         <th>相手</th>
       </tr>
@@ -446,7 +494,7 @@ BODY = """<body>
         <th>{opponent_label}</th>
         <th>試練</th>
         <th>総力</th>
-        <th>ペット</th>
+        <th>ペット試練<br>（総力）</th>
       </tr>
       </thead>
       <tbody>
@@ -485,6 +533,19 @@ function abbreviate(n, board) {
   return n.toLocaleString();
 }
 
+function stageOf(score) { // forest_of_life の score（例 20373）の先頭の桁を除いた数（373）を、下1桁を枝番にして 37-3 と表す
+  const t = String(score), n = t.length > 1 ? parseInt(t.slice(1), 10) : parseInt(t, 10);
+  return Math.floor(n / 10) + "-" + (n % 10);
+}
+function fmtEntry(e, board) {
+  if (!e) return "—";
+  if (board === "pet") { // ペット用の試練のステージを主に、ペット総力は括弧書き
+    const st = e.score != null ? stageOf(e.score) : "—";
+    return e.power != null ? st + "（" + abbreviate(e.power, board) + "）" : st;
+  }
+  return abbreviate(e.score, board);
+}
+
 function compareBoard(a, b) {
   const as = a ? a.score : null, bs = b ? b.score : null;
   if (as == null && bs == null) return null;
@@ -505,8 +566,8 @@ function recalcRow(i) {
     const winner = compareBoard(o[short], them ? them[short] : null);
     if (winner === "a") aWins++; else if (winner === "b") bWins++;
     const cell = document.getElementById("cmp-" + i + "-" + short);
-    const ov = o[short] ? abbreviate(o[short].score, short) : "—";
-    const tv = them && them[short] ? abbreviate(them[short].score, short) : "—";
+    const ov = fmtEntry(o[short], short);
+    const tv = fmtEntry(them ? them[short] : null, short);
     const cls = winner === "a" ? "win-our" : winner === "b" ? "win-their" : winner === "tie" ? "win-tie" : "win-na";
     cell.className = "cmp " + cls;
     cell.innerHTML = `<span class="our-v">${ov}</span><span class="vs">vs</span><span class="their-v">${tv}</span>`;
@@ -625,36 +686,59 @@ function linkAlias(gameName, userId, link) {
   }).catch(() => { alert("通信エラーで保存できませんでした"); btn.disabled = false; btn.textContent = "紐づけ"; });
 }
 
-function loadEvents() {
-  const sel = document.getElementById("eventSelect");
-  gasCall({ action: "pubGet" }).then(res => {
-    if (!res.ok) { sel.innerHTML = '<option value="">（読み込めませんでした）</option>'; return; }
-    REG = { users: res.users || [], entries: (res.history && res.history.entries) || [] };
-    const events = (res.history && res.history.events || []).filter(e => e.type === "KVK").sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-    if (!events.length) { sel.innerHTML = '<option value="">（KVKイベントがありません）</option>'; return; }
-    let saved = "";
-    try { saved = localStorage.getItem(EVENT_ID_KEY) || ""; } catch (e) {}
-    sel.innerHTML = '<option value="">（未選択）</option>' + events.map(e =>
-      `<option value="${e.id}"${e.id === saved ? " selected" : ""}>${e.date}</option>`
-    ).join("");
-    document.getElementById("savePairsBtn").disabled = !sel.value;
-    renderEntryBadges();
-  });
+// ---- 組み合わせ（パターン）：イベントごとに名前を付けて複数保存できる（管理者のみ保存・名前変更・削除。閲覧はパスワード不要） ----
+let PATTERNS = [];
+function normPattern(r) { return Object.assign({}, r, { id: r.id || r.eventId, name: r.name || "標準", pairs: r.pairs || [] }); } // 昔の形（id・nameなし）は「標準」
+const MAX_PATTERNS = 10;
+const elEvent = document.getElementById("eventSelect");
+const elPattern = document.getElementById("patternSelect");
+const elName = document.getElementById("patternName");
+const elMsg = document.getElementById("eventMsg");
+const elSave = document.getElementById("savePairsBtn");
+const elSaveNew = document.getElementById("saveAsNewBtn");
+const elRename = document.getElementById("renamePatternBtn");
+const elDelete = document.getElementById("deletePatternBtn");
+
+function eventPatterns() { return PATTERNS.filter(p => p.eventId === elEvent.value); }
+
+function renderPatterns(selectId) {
+  const list = eventPatterns();
+  elPattern.innerHTML = '<option value="">＋新しい組み合わせ</option>' + list.map(p =>
+    `<option value="${escHtml(p.id)}">${escHtml(p.name)}（${p.pairs.length}人${p.opponentLabel && p.opponentLabel !== OPPONENT_LABEL ? "・相手: " + escHtml(p.opponentLabel) : ""}）</option>`
+  ).join("");
+  elPattern.value = list.some(p => p.id === selectId) ? selectId : "";
+  updatePatternButtons();
 }
 
-document.getElementById("eventSelect").addEventListener("change", function() {
-  try { localStorage.setItem(EVENT_ID_KEY, this.value); } catch (e) {}
-  document.getElementById("savePairsBtn").disabled = !this.value;
-  document.getElementById("eventMsg").textContent = "";
-  renderEntryBadges();
-});
+function updatePatternButtons() {
+  const hasEvent = !!elEvent.value, hasPattern = !!elPattern.value;
+  elPattern.disabled = !hasEvent;
+  elSave.disabled = !hasEvent;
+  elSave.textContent = hasPattern ? "💾 上書き保存" : "💾 新しく保存";
+  elSaveNew.disabled = !hasEvent || !hasPattern || eventPatterns().length >= MAX_PATTERNS;
+  elRename.disabled = !hasPattern;
+  elDelete.disabled = !hasPattern;
+}
 
-document.getElementById("savePairsBtn").addEventListener("click", function() {
-  const eventId = document.getElementById("eventSelect").value;
-  const msg = document.getElementById("eventMsg");
-  if (!eventId) { msg.textContent = "イベントを選んでください"; return; }
-  let password = "";
-  try { password = sessionStorage.getItem("ksAdminPw") || ""; } catch (e) {}
+// 保存してある組み合わせを、画面の「相手」欄に読み込む（このページの相手鯖に居ない人は「未設定」になる）
+function loadPattern(p) {
+  const theirIdx = {};
+  THEIR.forEach((t, j) => { theirIdx[t.name + "\t" + t.tag] = j; });
+  const mine = {};
+  p.pairs.forEach(x => { mine[x.ourName + "\t" + x.ourTag] = x; });
+  let missed = 0;
+  OUR.forEach((o, i) => {
+    const sel = document.getElementById("opp-" + i);
+    const x = mine[o.name + "\t" + o.tag];
+    let v = "";
+    if (x) { const j = theirIdx[x.theirName + "\t" + x.theirTag]; if (j != null) v = String(j); else missed++; }
+    sel.value = v;
+    recalcRow(i);
+  });
+  return missed;
+}
+
+function currentPairs() {
   const pairs = [];
   document.querySelectorAll(".opp-select").forEach(sel => {
     const idx = sel.value === "" ? null : parseInt(sel.value, 10);
@@ -663,14 +747,97 @@ document.getElementById("savePairsBtn").addEventListener("click", function() {
     const t = THEIR[idx];
     pairs.push({ ourName: o.name, ourTag: o.tag, theirName: t.name, theirTag: t.tag });
   });
-  this.disabled = true;
-  msg.textContent = "保存中…";
-  gasCall({ action: "matchupSave", password, eventId, opponentLabel: OPPONENT_LABEL, pairs }).then(res => {
-    if (!res.ok) { msg.textContent = "保存できませんでした: " + (res.error || res.status); return; }
-    msg.textContent = `保存しました（${pairs.length}人分）。カウントダウン表に反映されます`;
-  }).catch(() => {
-    msg.textContent = "通信エラーで保存できませんでした";
-  }).then(() => { this.disabled = false; });
+  return pairs;
+}
+
+function adminPw() {
+  try { return sessionStorage.getItem("ksAdminPw") || ""; } catch (e) { return ""; }
+}
+
+function refreshPatterns(selectId) {
+  return gasCall({ action: "pubGet" }).then(res => {
+    if (res.ok) PATTERNS = (res.matchupPairs || []).map(normPattern);
+    renderPatterns(selectId);
+  });
+}
+
+function loadEvents() {
+  gasCall({ action: "pubGet" }).then(res => {
+    if (!res.ok) { elEvent.innerHTML = '<option value="">（読み込めませんでした）</option>'; return; }
+    REG = { users: res.users || [], entries: (res.history && res.history.entries) || [] };
+    PATTERNS = (res.matchupPairs || []).map(normPattern);
+    const events = (res.history && res.history.events || []).filter(e => e.type === "KVK").sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+    if (!events.length) { elEvent.innerHTML = '<option value="">（KVKイベントがありません）</option>'; return; }
+    let saved = "";
+    try { saved = localStorage.getItem(EVENT_ID_KEY) || ""; } catch (e) {}
+    elEvent.innerHTML = '<option value="">（未選択）</option>' + events.map(e =>
+      `<option value="${e.id}"${e.id === saved ? " selected" : ""}>${e.date}</option>`
+    ).join("");
+    renderPatterns("");
+    renderEntryBadges();
+  });
+}
+
+elEvent.addEventListener("change", function() {
+  try { localStorage.setItem(EVENT_ID_KEY, this.value); } catch (e) {}
+  elMsg.textContent = "";
+  elName.value = "";
+  renderPatterns("");
+  renderEntryBadges();
+});
+
+elPattern.addEventListener("change", function() {
+  const p = eventPatterns().find(x => x.id === this.value);
+  updatePatternButtons();
+  if (!p) { elName.value = ""; elMsg.textContent = ""; return; }
+  elName.value = p.name;
+  const missed = loadPattern(p);
+  elMsg.textContent = `「${p.name}」を読み込みました（${p.pairs.length}人分）` + (missed ? `。この相手鯖に居ない${missed}人分は「未設定」になっています` : "");
+});
+
+// 保存・複製・名前変更・削除の共通処理（押している間はボタンを止める）
+function patternOp(label, payload, afterId) {
+  if (!elEvent.value) { elMsg.textContent = "イベントを選んでください"; return Promise.resolve(null); }
+  [elSave, elSaveNew, elRename, elDelete].forEach(b => { b.disabled = true; });
+  elMsg.textContent = label + "中…";
+  return gasCall(Object.assign({ password: adminPw(), eventId: elEvent.value }, payload)).then(res => {
+    if (!res.ok) { elMsg.textContent = label + "できませんでした: " + (res.error || res.status); return null; }
+    return res;
+  }).catch(() => { elMsg.textContent = "通信エラーで" + label + "できませんでした"; return null; }).then(res => {
+    if (!res) { updatePatternButtons(); return null; }
+    return refreshPatterns(afterId ? afterId(res) : elPattern.value).then(() => res);
+  });
+}
+
+function savePattern(asNew) {
+  const pairs = currentPairs();
+  const id = asNew ? "" : elPattern.value;
+  patternOp("保存", { action: "matchupSave", matchupId: id || "new", name: elName.value.trim(), opponentLabel: OPPONENT_LABEL, pairs },
+    res => res.id).then(res => {
+    if (!res) return;
+    const p = eventPatterns().find(x => x.id === res.id);
+    elName.value = p ? p.name : elName.value;
+    elMsg.textContent = `「${res.name}」を保存しました（${pairs.length}人分）。カウントダウン表で選べます`;
+  });
+}
+elSave.addEventListener("click", () => savePattern(false));
+elSaveNew.addEventListener("click", () => savePattern(true));
+
+elRename.addEventListener("click", function() {
+  const name = elName.value.trim();
+  if (!name) { elMsg.textContent = "新しい名前を入れてください"; return; }
+  patternOp("名前変更", { action: "matchupRename", matchupId: elPattern.value, name }).then(res => {
+    if (res) elMsg.textContent = `名前を「${res.name}」に変えました`;
+  });
+});
+
+elDelete.addEventListener("click", function() {
+  const p = eventPatterns().find(x => x.id === elPattern.value);
+  if (!p) return;
+  if (!confirm(`組み合わせ「${p.name}」を削除します。よろしいですか？\n（カウントダウン表でこれを選んでいるタブは、選び直しになります）`)) return;
+  patternOp("削除", { action: "matchupDelete", matchupId: p.id }, () => "").then(res => {
+    if (res) { elName.value = ""; elMsg.textContent = `「${p.name}」を削除しました`; }
+  });
 });
 
 loadEvents();
