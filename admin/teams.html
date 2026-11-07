@@ -128,7 +128,7 @@
   <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#555;margin:0 0 10px;cursor:pointer;"><input type="checkbox" id="pwRemember" style="width:auto;margin:0;"> パスワードを保存する（次回から入力不要。共用の端末ではチェックしない）</label>
   <button type="button" id="loginBtn">ログイン</button>
   <div class="msg err" id="loginMsg"></div>
-  <a href="../index.html?v=20261107170151" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
+  <a href="../index.html?v=20261107170331" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
 </div>
 
 <div id="appView">
@@ -136,7 +136,7 @@
   <div class="sub">
     イベントの参加者（参加登録の内容）をチームに分けます。分けた結果は「📢 公開する」を押すまでは下書きで、管理者だけが見られます。
     公開すると <a href="../teams/" target="_blank">チーム分けの閲覧ページ</a> と参加登録ページに表示されます。
-    <br><b style="color:#b4441c;">※ 今は分け方を検討中のため、閲覧ページと参加登録ページの表示は「工事中」にしてあります（公開しても一般のメンバーには見えません）。</b>
+    <br><b style="color:#b4441c;">※ 「公開する」を押すと、パスワードなしで誰でも見られます。公開されるのは、名前・同盟・区分・印（◇VC・◆ビビアン）・参加時間・チーム（遺跡争奪は時間帯ごとの要塞・遺跡）だけです（◯マンスリー、部隊数・容量・ペット・ひとことは出ません）。</b>
   </div>
 
   <div class="card">
@@ -201,7 +201,7 @@
   <div class="targets" id="moveTargets"></div>
 </div>
 
-<script src="../config.js?v=20261107170151"></script>
+<script src="../config.js?v=20261107170331"></script>
 <script>
 (function() {
   "use strict";
@@ -314,8 +314,8 @@
           '<button type="button" class="ks-menu-btn" aria-label="メニュー" aria-expanded="false">☰</button></div>' +
         "<nav>" + links +
           '<div class="ks-group"></div>' +
-          '<a href="../kvk-matchup/kvk-matchup-index.html?v=20261107170151" class="ks-link" title="KvK相手突合せ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ</span></a>' +
-          '<a href="../index.html?v=20261107170151" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a>' +
+          '<a href="../kvk-matchup/kvk-matchup-index.html?v=20261107170331" class="ks-link" title="KvK相手突合せ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ</span></a>' +
+          '<a href="../index.html?v=20261107170331" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a>' +
           '<button type="button" class="ks-link" id="logoutBtn" title="ログアウト"><span class="ks-icon">🚪</span><span class="ks-label">ログアウト</span></button>' +
         "</nav>" +
       "</div>" +
@@ -1198,8 +1198,9 @@
   // 公開用（閲覧ページ・参加登録ページ）。ユーザーIDではなく表示に使う値を埋め込む
   function buildView() {
     if (draft.mode === "ruins") return buildRuinsView();
+    // 公開用の印は◇（VC）◆（ビビアン）だけ。◯（マンスリー＝課金の状況）は公開しない
     function person(p, leader) {
-      return { name: p.name, alliance: p.alliance, grade: p.grade, marks: marks(p), time: timeLabel(p), leader: !!leader };
+      return { name: p.name, alliance: p.alliance, grade: p.grade, marks: (p.vc ? "◇" : "") + (p.vivian4 ? "◆" : ""), time: timeLabel(p), leader: !!leader };
     }
     var ev = eventById(eventId);
     return {

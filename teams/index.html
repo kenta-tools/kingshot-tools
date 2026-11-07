@@ -40,6 +40,8 @@
   .team li .t { color: #b4441c; font-size: 11.5px; }
   .team li.me { background: #fff6cc; border-radius: 4px; padding-left: 4px; font-weight: bold; }
   .team.extra { background: #f8f9fb; }
+  .slot-h { font-size: 16px; margin: 20px 0 8px; padding-left: 8px; border-left: 4px solid #2d6cdf; }
+  .found .slot-chip { display: inline-block; background: #fff; border: 1px solid #e2c56b; border-radius: 999px; padding: 1px 10px; margin: 2px 4px 2px 0; }
   pre { white-space: pre-wrap; font-size: 12.5px; background: #f6f7f9; border-radius: 8px; padding: 10px; margin: 0; }
 </style>
 </head>
@@ -47,7 +49,7 @@
 
 <div style="display:flex; justify-content:space-between; align-items:center;">
   <h1>🧩 チーム分け</h1>
-  <a href="../index.html?v=20261107170151" class="top-link">← TOP</a>
+  <a href="../index.html?v=20261107170331" class="top-link">← TOP</a>
 </div>
 <div class="sub" id="subText">管理者が公開したイベントのチーム分けです。イベントを選ぶと見られます。</div>
 
@@ -68,7 +70,7 @@
 
 <div id="area" class="empty">読み込み中…</div>
 
-<script src="../config.js?v=20261107170151"></script>
+<script src="../config.js?v=20261107170331"></script>
 <script>
 (function() {
   "use strict";
@@ -76,8 +78,8 @@
   var NAME_KEY = "ksTeamsMyName";
   var $ = function(id) { return document.getElementById(id); };
   var list = [];
-  // 2026-11-03: チーム分けの方法が確定するまで工事中（ユーザー指示）。確定したら false にする
-  var UNDER_CONSTRUCTION = true;
+  // 工事中の切り替え（2026-11-07：チーム分けの方法が決まったので false＝公開。true にすると「工事中です」だけを出す）
+  var UNDER_CONSTRUCTION = false;
   if (UNDER_CONSTRUCTION) {
     $("wipCard").style.display = "block";
     $("mainCard").style.display = "none";
@@ -108,31 +110,50 @@
     try { localStorage.setItem(NAME_KEY, $("nameInput").value); } catch (e) {}
     $("info").textContent = "公開: " + formatTime(rec.publishedAt) + (v.battle ? "　戦闘時間: " + v.battle : "") + (rec.done ? "　（このイベントは終わっています）" : "");
     var hit = [];
+    var ruins = v.mode === "ruins";
+    // ◯（マンスリー）は公開しない（以前に公開したデータに入っていても表示しない）
+    function pubMarks(s) { return String(s || "").replace(/◯/g, ""); }
     function li(p) {
       var isMe = me && norm(p.name) === me;
+      if (ruins) {
+        return "<li" + (isMe ? ' class="me"' : "") + ">" + (p.leader ? "👑 " : "") + escapeHtml(p.name) + (p.maybe ? ' <span class="t">△</span>' : "") +
+          ' <span class="a">' + escapeHtml(p.alliance) + "</span></li>";
+      }
       return "<li" + (isMe ? ' class="me"' : "") + ">" + (p.leader ? "👑 " : "") + escapeHtml(p.name) +
-        ' <span class="m">' + escapeHtml(p.marks) + "</span>" +
+        ' <span class="m">' + escapeHtml(pubMarks(p.marks)) + "</span>" +
         ' <span class="a">' + escapeHtml(p.alliance) + "・" + escapeHtml(p.grade) + "</span>" +
         (p.time ? ' <span class="t">' + escapeHtml(p.time) + "</span>" : "") + "</li>";
     }
-    function box(name, lead, members, extra) {
-      members.forEach(function(p) { if (me && norm(p.name) === me) hit.push(name); });
+    function box(name, lead, members, extra, hitLabel) {
+      members.forEach(function(p) { if (me && norm(p.name) === me) hit.push(hitLabel || name); });
       return '<div class="team' + (extra ? " extra" : "") + '"><h3>' + escapeHtml(name) + ' <span class="note">' + members.length + "人</span></h3>" +
-        (lead ? '<div class="lead">リーダー: ' + escapeHtml(lead) + "</div>" : "") +
+        (lead ? '<div class="lead">' + (ruins ? "集結主" : "リーダー") + ": " + escapeHtml(lead) + "</div>" : "") +
         "<ul>" + (members.length ? members.map(li).join("") : '<li class="note">（なし）</li>') + "</ul></div>";
     }
-    var html = '<div class="teams">';
-    v.teams.forEach(function(t) { html += box(t.name, t.leader, t.members, false); });
-    if (v.standby && v.standby.length) html += box("待機", "", v.standby, true);
-    if (v.pending && v.pending.length) html += box("時間未定", "", v.pending, true);
-    html += "</div>";
-    html += '<div class="card" style="margin-top:14px;"><div class="note" style="margin-bottom:6px;">Discordに貼られたものと同じテキスト ／ ◇=VC参加OK ◆=ビビアン星4以上 ◯=マンスリー、色付きの時刻は参加時間</div><pre>' + escapeHtml(v.text || "") + "</pre></div>";
+    var html = "";
+    if (ruins) {
+      // 遺跡争奪：時間帯ごとに、要塞・遺跡ごとの一覧
+      (v.slots || []).forEach(function(s) {
+        html += '<h2 class="slot-h">' + escapeHtml(s.label) + '</h2><div class="teams">';
+        (s.targets || []).forEach(function(t) { html += box(t.name, t.leader, t.members || [], false, s.label + "：" + t.name); });
+        if (s.standby && s.standby.length) html += box("待機", "", s.standby, true, s.label + "：待機");
+        html += "</div>";
+      });
+      if (!(v.slots || []).length) html += '<div class="card empty">時間帯の情報がありません。</div>';
+    } else {
+      html += '<div class="teams">';
+      v.teams.forEach(function(t) { html += box(t.name, t.leader, t.members, false); });
+      if (v.standby && v.standby.length) html += box("待機", "", v.standby, true);
+      if (v.pending && v.pending.length) html += box("時間未定", "", v.pending, true);
+      html += "</div>";
+    }
+    html += '<div class="card" style="margin-top:14px;"><div class="note" style="margin-bottom:6px;">Discordに貼られたものと同じテキスト ／ ' + (ruins ? "△=行けるかも" : "◇=VC参加OK ◆=ビビアン星4以上、色付きの時刻は参加時間") + '</div><pre>' + escapeHtml(v.text || "") + "</pre></div>";
     $("area").className = "";
     $("area").innerHTML = html;
     var found = $("found");
     if (me) {
       found.style.display = "block";
-      found.textContent = hit.length ? "あなたは「" + hit.join("・") + "」です" : "この名前はこのイベントのチーム分けにありません（名前を確認してください）";
+      found.textContent = hit.length ? "あなたは" + hit.map(function(x) { return "「" + x + "」"; }).join(ruins ? " " : "・").replace(/」・「/g, "・") + "です" : "この名前はこのイベントのチーム分けにありません（名前を確認してください）";
     } else {
       found.style.display = "none";
     }

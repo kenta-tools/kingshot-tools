@@ -128,7 +128,7 @@
 
 <div class="row" style="justify-content: space-between;">
   <h1>📝 イベント参加登録</h1>
-  <a href="../index.html?v=20261107170151" class="top-link">← TOP</a>
+  <a href="../index.html?v=20261107170331" class="top-link">← TOP</a>
 </div>
 <div class="howto">
   ① 名前を入れて「次へ」<br>
@@ -389,7 +389,7 @@
   <button type="button" class="sub-btn" id="retryBtn" style="margin-top: 10px;">もう一度読み込む</button>
 </div>
 
-<script src="../config.js?v=20261107170151"></script>
+<script src="../config.js?v=20261107170331"></script>
 <script>
 (function() {
   // 保存は中継役（Google Apps Script: work/gas_members_proxy.gs）の pubGet / selfSave を使う（パスワード不要）。
@@ -1129,7 +1129,6 @@
   var box = document.getElementById("teamsBanner");
   var input = document.getElementById("nameInput");
   var teams = [];
-  if (true) return; // 2026-11-03: チーム分けは方法が確定するまで工事中（teams/index.html の UNDER_CONSTRUCTION と一緒に外す）
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function(c) {
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
@@ -1150,6 +1149,13 @@
       (v.teams || []).forEach(function(team) {
         (team.members || []).forEach(function(p) { if (me && norm(p.name) === me) where.push(team.name); });
       });
+      // 遺跡争奪は時間帯ごと（「12時：要塞1」のように、時間帯ごとの場所を並べる）
+      (v.slots || []).forEach(function(s) {
+        (s.targets || []).forEach(function(tg) {
+          (tg.members || []).forEach(function(p) { if (me && norm(p.name) === me) where.push(s.label + "：" + tg.name); });
+        });
+        (s.standby || []).forEach(function(p) { if (me && norm(p.name) === me) where.push(s.label + "：待機"); });
+      });
       (v.standby || []).forEach(function(p) { if (me && norm(p.name) === me) where.push("待機"); });
       (v.pending || []).forEach(function(p) { if (me && norm(p.name) === me) where.push("時間未定"); });
       var url = "../teams/?event=" + encodeURIComponent(t.eventId) + (me ? "&name=" + encodeURIComponent(myName()) : "");
@@ -1164,7 +1170,8 @@
     .then(function(r) { return r.json(); })
     .then(function(res) {
       if (!res.ok) return;
-      teams = (res.teams || []).filter(function(t) { return !t.done; });
+      // この登録ページは遺跡争奪以外のイベント用（遺跡争奪は専用の登録ページ ruins/ に出す）
+      teams = (res.teams || []).filter(function(t) { return !t.done && t.type !== "遺跡争奪"; });
       render();
     })
     .catch(function() {});
