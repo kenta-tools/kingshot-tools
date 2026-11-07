@@ -18,6 +18,10 @@
   button.sub2 { background:#e3e6ec; color:#333; }
   button.stop { background:#e5484d; }
   button:disabled { opacity:.4; cursor:default; }
+  .mode-row { margin-bottom:8px; font-size:14px; }
+  .mode-row label { margin:0 10px; cursor:pointer; }
+  .mode-row input[type=number] { width:64px; font-size:15px; padding:6px; border:1px solid #ccc; border-radius:6px; }
+  #time.done { color:#e5484d; }
   .memo-row { margin-top:16px; display:flex; gap:8px; }
   .memo-row input { flex:1; font-size:15px; padding:9px 10px; border:1px solid #ccc; border-radius:8px; }
   table { width:100%; border-collapse:collapse; margin-top:16px; background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,.08); }
@@ -29,7 +33,7 @@
   .empty { color:#999; text-align:center; padding:16px; }
 </style>
 <!-- 環境ごとの設定（テスト環境ではここで背景の目印が付く） -->
-<script src="../config.js?v=20261107204407"></script>
+<script src="../config.js?v=20261107204656"></script>
 </head>
 <body>
 <!-- ks-sidebar:start -->
@@ -120,7 +124,7 @@
     <button type="button" class="ks-menu-btn" aria-label="メニュー" aria-expanded="false">☰</button>
   </div>
   <nav>
-    <a href="../index.html?v=20261107204407" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261107204407" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261107204407" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261107204407" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261107204407" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="KvKストップウォッチ.html?v=20261107204407" class="ks-link ks-active" title="ストップウォッチ（メモ付き）"><span class="ks-icon">⏱️</span><span class="ks-label">ストップウォッチ（メモ付き）</span></a>
+    <a href="../index.html?v=20261107204656" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261107204656" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261107204656" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261107204656" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261107204656" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="KvKストップウォッチ.html?v=20261107204656" class="ks-link ks-active" title="ストップウォッチ（メモ付き）"><span class="ks-icon">⏱️</span><span class="ks-label">ストップウォッチ（メモ付き）</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -165,6 +169,11 @@
 <h1>⏱️ ストップウォッチ（メモ付き）</h1>
 <div class="sub">計測中に「記録」を押すと、その時点のタイムを一覧に残せます。メモは記録時にも、あとからも書き換えられます（このブラウザに自動保存）。</div>
 <div class="card">
+  <div class="mode-row">
+    <label><input type="radio" name="mode" value="up" checked> カウントアップ</label>
+    <label><input type="radio" name="mode" value="down"> カウントダウン</label>
+    <span id="downSet" style="display:none"><input id="mm" type="number" min="0" max="999" value="1"> 分 <input id="ss" type="number" min="0" max="59" value="0"> 秒から</span>
+  </div>
   <div id="time">00:00.00</div>
   <button id="startBtn">スタート</button>
   <button id="lapBtn" class="sub2" disabled>記録</button>
@@ -172,14 +181,14 @@
   <div class="memo-row"><input id="memo" type="text" placeholder="記録に付けるメモ（任意）" maxlength="60"></div>
 </div>
 <table>
-  <thead><tr><th>#</th><th>タイム</th><th>前回との差</th><th>メモ</th><th></th></tr></thead>
+  <thead><tr><th>#</th><th>タイム</th><th>経過差</th><th>メモ</th><th></th></tr></thead>
   <tbody id="laps"></tbody>
 </table>
 </div>
 <script>
 (function () {
   var KEY = "kingshot_stopwatch_v1";
-  var elapsed = 0, startAt = 0, running = false, raf = 0, laps = [];
+  var mode = "up", elapsed = 0, startAt = 0, running = false, raf = 0, laps = [];
   var $ = function (id) { return document.getElementById(id); };
   function fmt(ms) {
     var cs = Math.floor(ms / 10) % 100, s = Math.floor(ms / 1000) % 60, m = Math.floor(ms / 60000);
@@ -188,14 +197,33 @@
   function now() { return elapsed + (running ? Date.now() - startAt : 0); }
   function save() { try { localStorage.setItem(KEY, JSON.stringify({ laps: laps })); } catch (e) {} }
   function load() { try { var d = JSON.parse(localStorage.getItem(KEY) || "{}"); laps = d.laps || []; } catch (e) { laps = []; } }
-  function tick() { $("time").textContent = fmt(now()); if (running) raf = requestAnimationFrame(tick); }
+  function target() { return ((+$("mm").value || 0) * 60 + (+$("ss").value || 0)) * 1000; }
+  function shown(e) { return mode === "down" ? Math.max(0, target() - e) : e; }
+  function tick() {
+    var e = now();
+    if (mode === "down" && running && e >= target()) {
+      elapsed = target(); running = false; cancelAnimationFrame(raf);
+      $("startBtn").textContent = "再開"; $("startBtn").className = ""; $("startBtn").disabled = true; $("time").classList.add("done");
+      try { var c = new (window.AudioContext || window.webkitAudioContext)(), o = c.createOscillator(); o.connect(c.destination); o.frequency.value = 880; o.start(); o.stop(c.currentTime + 0.6); } catch (x) {}
+      e = target();
+    }
+    $("time").textContent = fmt(shown(e)); if (running) raf = requestAnimationFrame(tick);
+  }
+  function setMode(m) {
+    if (running || elapsed > 0) { if (!confirm("計測中のタイムをリセットして切り替えます。よろしいですか？")) { document.querySelector('input[name=mode][value=' + mode + ']').checked = true; return; } }
+    mode = m; running = false; cancelAnimationFrame(raf); elapsed = 0; laps = []; save(); render();
+    $("downSet").style.display = m === "down" ? "inline" : "none";
+    $("startBtn").textContent = "スタート"; $("startBtn").className = ""; $("startBtn").disabled = false; $("lapBtn").disabled = true; $("time").classList.remove("done"); tick();
+  }
+  Array.prototype.forEach.call(document.querySelectorAll("input[name=mode]"), function (r) { r.addEventListener("change", function () { setMode(r.value); }); });
+  ["mm", "ss"].forEach(function (id) { $(id).addEventListener("input", function () { if (!running && elapsed === 0) tick(); }); });
   function render() {
     var tb = $("laps"); tb.innerHTML = "";
     if (!laps.length) { tb.innerHTML = '<tr><td colspan="5" class="empty">まだ記録はありません</td></tr>'; return; }
     laps.forEach(function (l, i) {
       var tr = document.createElement("tr");
       var diff = i === 0 ? l.t : l.t - laps[i - 1].t;
-      tr.innerHTML = '<td>' + (i + 1) + '</td><td class="t">' + fmt(l.t) + '</td><td class="t">+' + fmt(diff) + '</td><td><input type="text" maxlength="60"></td><td><button class="del" title="削除">✕</button></td>';
+      tr.innerHTML = '<td>' + (i + 1) + '</td><td class="t">' + fmt(l.d != null ? l.d : l.t) + '</td><td class="t">+' + fmt(diff) + '</td><td><input type="text" maxlength="60"></td><td><button class="del" title="削除">✕</button></td>';
       var inp = tr.querySelector("input"); inp.value = l.memo || "";
       inp.addEventListener("input", function () { l.memo = inp.value; save(); });
       tr.querySelector(".del").addEventListener("click", function () { laps.splice(i, 1); save(); render(); });
@@ -207,12 +235,12 @@
     else { elapsed += Date.now() - startAt; running = false; cancelAnimationFrame(raf); $("startBtn").textContent = "再開"; $("startBtn").className = ""; tick(); }
   });
   $("lapBtn").addEventListener("click", function () {
-    laps.push({ t: now(), memo: $("memo").value }); $("memo").value = ""; save(); render();
+    laps.push({ t: now(), d: shown(now()), memo: $("memo").value }); $("memo").value = ""; save(); render();
   });
   $("resetBtn").addEventListener("click", function () {
     if (laps.length && !confirm("タイムと記録をすべて消します。よろしいですか？")) return;
     running = false; cancelAnimationFrame(raf); elapsed = 0; laps = []; save(); render();
-    $("startBtn").textContent = "スタート"; $("startBtn").className = ""; $("lapBtn").disabled = true; tick();
+    $("startBtn").textContent = "スタート"; $("startBtn").className = ""; $("startBtn").disabled = false; $("lapBtn").disabled = true; $("time").classList.remove("done"); tick();
   });
   load(); render(); tick();
 })();
