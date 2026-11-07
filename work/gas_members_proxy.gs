@@ -174,7 +174,9 @@ function kvkRows_(rows) {
   return (Array.isArray(rows) ? rows : []).slice(0, 500).map(function(r) {
     return {
       name: clip_(r.name, 30),
+      role: clip_(r.role, 10), // 役割（王城メイン／王城ゴースト／北・東・南・西砲台）
       march: numOrNull_(r.march),
+      adj: numOrNull_(r.adj) || 0, // 遅延秒数
       petLevel: count_(r.petLevel, 8) || 0,
       usePet: r.usePet !== false,
       group: clip_(r.group, 20),

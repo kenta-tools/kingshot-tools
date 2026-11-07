@@ -157,7 +157,7 @@
     <button type="button" class="ks-menu-btn" aria-label="メニュー" aria-expanded="false">☰</button>
   </div>
   <nav>
-    <a href="../index.html?v=20261107210100" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261107210100" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261107210100" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261107210100" class="ks-link ks-active" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261107210100" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a>
+    <a href="../index.html?v=20261107223035" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261107223035" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261107223035" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261107223035" class="ks-link ks-active" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261107223035" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -254,7 +254,6 @@
   <div class="row-actions">
     <button type="button" class="btn secondary small" onclick="addRow()">＋行を追加</button>
   </div>
-  <div id="petBonusEditor"></div>
   <div class="cfg-row" style="margin-top:14px;">
     <label>最大カウント秒（表示上限、最後の出発を超える分は自動でカット）: <input type="number" id="maxSec" value="120" min="1" max="600"></label>
     <button type="button" class="btn" onclick="compute()">計算する</button>
@@ -269,8 +268,7 @@
   <div class="result-wrap"><table id="result-table"></table></div>
 </div>
 
-<script src="../config.js?v=20261107210100"></script>
-<script src="pet-bonus.js?v=20261107210100"></script>
+<script src="../config.js?v=20261107223035"></script>
 <script>
 const SAMPLE = [
   { name: "じろ", march: 36, adj: 0, group: "じろ" },
@@ -282,8 +280,8 @@ const SAMPLE = [
 const NO_GROUP = new Set(["", "ー", "未所属", "-", "なし"]);
 
 // --- 速度ペット（恐怖の咆哮）：炎龍 集結タイムライン計算ページと同じ定義・表記 ---
-// 値は tools/pet-bonus.js（画面から編集・このブラウザに保存、無ければ初期値）から読む
-let MARCH_PET_BONUS = KsPetBonus.load();
+// Lv1〜7は従来どおり。Lv8は実測（36秒→30秒、39秒→32秒）から「÷1.2、小数は切り捨て」（=+20%換算）にしている
+const MARCH_PET_BONUS = [0, 15, 17, 19, 21, 23, 25, 27, 20];
 function buildPetOptions(selectedLv){
   let html = `<option value="0"${selectedLv === 0 ? " selected" : ""}>持っていない</option>`;
   for(let lv = MARCH_PET_BONUS.length - 1; lv >= 1; lv--){
@@ -294,6 +292,7 @@ function buildPetOptions(selectedLv){
 function marchWithPet(march, petLevel){
   const bonus = MARCH_PET_BONUS[petLevel] || 0;
   if(!bonus) return march;
+  if(petLevel === 8) return Math.floor(march / (1 + bonus / 100) + 1e-9); // Lv8は切り捨て
   return march / (1 + bonus / 100);
 }
 // 「到着秒数（ペットあり）」：手で上書きした値（petOverride）があればそれを使う（「採用」にチェックがあるときだけ。無ければ計算値）
@@ -440,7 +439,7 @@ let currentEventId = "";
 let sharedDirty = false;
 let sharedSnapshot = null; // 共有用を読み込んだ直後の名簿（JSON文字列）。本当に変更があったかの確認用
 
-const ROLES = ["王城メイン", "王城ゴースト", "砲台"];
+const ROLES = ["王城メイン", "王城ゴースト", "北砲台", "東砲台", "南砲台", "西砲台"];
 
 function newRow(data){
   rowSeq += 1;
@@ -451,7 +450,7 @@ function newRow(data){
     role: ROLES.includes(d.role) ? d.role : "",
     march: d.march != null ? d.march : 0,
     adj: Math.max(0, d.adj != null ? d.adj : 0),
-    petLevel: d.petLevel || 0,
+    petLevel: d.petLevel != null ? d.petLevel : 8, // 基本はLv8想定
     usePet: d.usePet !== false,
     petOverride: d.petOverride != null && d.petOverride !== "" && isFinite(Number(d.petOverride)) ? Math.round(Number(d.petOverride)) : null, // 「到着秒数（ペットあり）」の手入力の上書き（整数。null＝計算値）
     group: d.group || "",
@@ -1203,14 +1202,29 @@ function compute(){
       let people = [];
       if(base !== null) people = membersAt(roster, g, base - c);
       tr.appendChild(makeCell(people));
-      if(people.length) chatLines[g].push(`${label}：${people.map(displayName).join("、")}`);
     }
     tbody.appendChild(tr);
   }
   table.appendChild(tbody);
 
+  // グループのチャット用テキストは、そのグループの中で最後に出発する人を0秒にして数える（グループごとに基準が違う）。
+  // 1人だけのグループは出さない。
+  const chatSkip = new Set();
+  for(const g of groups){
+    const members = roster.filter(p => p.group === g);
+    if(members.length <= 1){ chatSkip.add(g); continue; }
+    const gMax = Math.max(...members.map(p => p.actual));
+    const gMin = Math.min(...members.map(p => p.actual));
+    for(let a = gMax; a >= gMin; a--){
+      if(gMax - a > maxSec) break;
+      const ppl = members.filter(p => p.actual === a);
+      if(ppl.length) chatLines[g].push(`${a - gMin}秒：${ppl.map(displayName).join("、")}`);
+    }
+  }
+
   // chat text boxes
   for(const key of chatKeys){
+    if(chatSkip.has(key)) continue;
     const titleRow = document.createElement("div");
     titleRow.className = "chat-title-row";
     const h3 = document.createElement("h3");
@@ -1267,13 +1281,6 @@ document.getElementById("maxSec").addEventListener("input", () => {
   try { localStorage.setItem(MAXSEC_KEY, document.getElementById("maxSec").value); } catch(e){}
 });
 
-// 速度ペットのボーナス%編集（炎龍 集結タイムライン計算と共通、このブラウザに保存）
-KsPetBonus.mount(document.getElementById("petBonusEditor"), arr => {
-  MARCH_PET_BONUS = arr;
-  renderRoster();
-  if(document.getElementById("result-table").innerHTML) compute();
-});
-
 // init：まずローカルのサンプル/保存データで即座に表示し、裏でユーザー登録データを取得する
 loadTabs();
 renderTabBar();
@@ -1282,6 +1289,6 @@ fetchRegData();
 fetchOpponentNames();
 </script>
 
-<script src="view-edit-gate.js?v=20261107210100"></script>
+<script src="view-edit-gate.js?v=20261107223035"></script>
 </body>
 </html>
