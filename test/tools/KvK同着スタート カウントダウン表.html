@@ -1115,7 +1115,7 @@ function getRoster(){
     return {
       name,
       // ペットで速度を補正すると行軍秒数が小数になるため、表示・突合せ判定のため整数秒に丸める
-      actual: Math.round(march + (row.adj || 0)),
+      actual: Math.max(0, Math.round(march - (row.adj || 0))),
       group: row.group || "",
       opponentName: row.opponentName || "",
       opponentSec: row.opponentSec,
