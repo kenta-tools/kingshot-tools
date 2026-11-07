@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ストップウォッチ（メモ付き）</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI","Hiragino Kaku Gothic ProN",Meiryo,sans-serif; background:#f4f5f7; color:#222; margin:0; }
+  .main { max-width: 640px; margin: 40px auto; padding: 0 20px; }
+  @media (min-width: 701px) { .main { margin-left: 240px; } }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .sub { color:#666; font-size:13px; margin-bottom:16px; }
+  .card { background:#fff; border-radius:12px; padding:24px; box-shadow:0 1px 4px rgba(0,0,0,.08); text-align:center; }
+  #time { font-size: 56px; font-weight: bold; font-variant-numeric: tabular-nums; margin: 8px 0 16px; }
+  button { font-size:15px; padding:10px 20px; border:none; border-radius:8px; cursor:pointer; margin:0 4px; background:#4a6cf7; color:#fff; }
+  button.sub2 { background:#e3e6ec; color:#333; }
+  button.stop { background:#e5484d; }
+  button:disabled { opacity:.4; cursor:default; }
+  .memo-row { margin-top:16px; display:flex; gap:8px; }
+  .memo-row input { flex:1; font-size:15px; padding:9px 10px; border:1px solid #ccc; border-radius:8px; }
+  table { width:100%; border-collapse:collapse; margin-top:16px; background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,.08); }
+  th, td { padding:8px 10px; font-size:14px; border-bottom:1px solid #eee; text-align:left; }
+  th { background:#fafbfc; color:#666; font-size:12px; }
+  td.t { font-variant-numeric: tabular-nums; white-space:nowrap; }
+  td input { width:100%; font-size:14px; padding:4px 6px; border:1px solid #ddd; border-radius:6px; }
+  .del { background:none; color:#999; padding:2px 8px; margin:0; }
+  .empty { color:#999; text-align:center; padding:16px; }
+</style>
+<!-- 環境ごとの設定（テスト環境ではここで背景の目印が付く） -->
+<script src="../config.js?v=20261107204407"></script>
+</head>
+<body>
+<!-- ks-sidebar:start -->
+<style>
+  .ks-sidebar {
+    position: fixed; top: 0; left: 0; width: 220px; height: 100vh;
+    background: #1a2332; padding: 20px 14px; box-sizing: border-box;
+    overflow-y: auto; overflow-x: hidden;
+    font-family: 'Segoe UI','Hiragino Kaku Gothic ProN',Meiryo,sans-serif;
+    z-index: 99999;
+    transition: width 0.2s ease;
+  }
+  .ks-title-row { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+  .ks-sidebar .ks-title { color: #fff; font-weight: bold; font-size: 14px; white-space: nowrap; flex: 1; overflow: hidden; }
+  .ks-toggle-btn {
+    background: transparent; border: 1px solid #3a4a63; color: #c7d0dd; border-radius: 5px;
+    width: 24px; height: 24px; font-size: 13px; line-height: 1; cursor: pointer; flex: 0 0 auto;
+  }
+  .ks-toggle-btn:hover { background: #2a374d; }
+  .ks-sidebar nav { display: flex; flex-direction: column; }
+  .ks-sidebar .ks-link {
+    display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: 6px; margin-bottom: 2px;
+    text-decoration: none; font-size: 12px; line-height: 1.35; color: #c7d0dd;
+  }
+  .ks-sidebar .ks-link .ks-icon { flex: 0 0 auto; width: 18px; text-align: center; margin-top: 1px; }
+  .ks-sidebar .ks-link .ks-label { white-space: normal; overflow-wrap: break-word; }
+  .ks-sidebar .ks-link.ks-active { background: #3a4a63; color: #fff; font-weight: bold; }
+  .ks-sidebar .ks-group {
+    color: #6b7993; font-size: 10px; font-weight: bold; letter-spacing: 0.05em;
+    text-transform: uppercase; padding: 10px 10px 4px; white-space: nowrap;
+  }
+  .ks-sidebar .ks-group:first-of-type { padding-top: 0; }
+  body.ks-collapsed .ks-sidebar .ks-group { display: none; }
+
+  .ks-open-btn {
+    display: none; position: fixed; top: 14px; left: 14px; z-index: 100001;
+    width: 34px; height: 34px; border-radius: 8px; border: none;
+    background: #1a2332; color: #fff; font-size: 16px; cursor: pointer;
+    align-items: center; justify-content: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+  }
+
+  body { margin-left: 240px !important; transition: margin-left 0.2s ease; }
+
+  /* --- 折りたたみ：デスクトップではアイコンだけの細いレールにする --- */
+  body.ks-collapsed .ks-sidebar { width: 56px; padding-left: 8px; padding-right: 8px; }
+  body.ks-collapsed .ks-sidebar .ks-title { display: none; }
+  body.ks-collapsed .ks-title-row { justify-content: center; }
+  body.ks-collapsed .ks-sidebar .ks-label { display: none; }
+  body.ks-collapsed .ks-sidebar .ks-link { justify-content: center; padding: 8px 0; }
+  body.ks-collapsed { margin-left: 76px !important; }
+
+  /* --- モバイル対応：上部に固定バー（右上の☰で下にメニューを開く）。PCの折りたたみ状態は無視 --- */
+  .ks-menu-btn { display: none; }
+  @media (max-width: 760px) {
+    .ks-sidebar, body.ks-collapsed .ks-sidebar { width: 100% !important; height: 48px; padding: 0 12px !important; overflow: visible; }
+    .ks-title-row, body.ks-collapsed .ks-title-row { height: 48px; margin-bottom: 0; justify-content: flex-start; }
+    .ks-sidebar .ks-title, body.ks-collapsed .ks-sidebar .ks-title { display: block; font-size: 14px; }
+    .ks-toggle-btn, .ks-open-btn, body.ks-collapsed .ks-open-btn { display: none !important; }
+    .ks-menu-btn {
+      display: flex; margin-left: auto; flex: 0 0 auto; width: 40px; height: 34px; border-radius: 6px;
+      border: 1px solid #3a4a63; background: transparent; color: #fff; font-size: 18px; line-height: 1;
+      cursor: pointer; align-items: center; justify-content: center;
+    }
+    .ks-sidebar nav {
+      display: none; position: absolute; top: 48px; left: 0; right: 0; max-height: calc(100vh - 48px);
+      overflow-y: auto; background: #1a2332; padding: 6px 10px 12px; box-sizing: border-box;
+      box-shadow: 0 8px 18px rgba(0,0,0,0.35);
+    }
+    body.ks-menu-open .ks-sidebar nav { display: flex; }
+    .ks-sidebar .ks-link, body.ks-collapsed .ks-sidebar .ks-link { justify-content: flex-start; padding: 10px; font-size: 14px; }
+    .ks-sidebar .ks-label, body.ks-collapsed .ks-sidebar .ks-label { display: inline; }
+    .ks-sidebar .ks-group, body.ks-collapsed .ks-sidebar .ks-group { display: block; }
+    body, body.ks-collapsed { margin-left: 0 !important; padding-top: 56px !important; }
+  }
+
+  /* --- テーブル等の横はみ出し対策（モバイル幅のみ） --- */
+  @media (max-width: 760px) {
+    table { display: block; overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; }
+    .card, .panel, .result-wrap { overflow-x: auto; }
+    img, pre, textarea { max-width: 100%; }
+  }
+</style>
+<div class="ks-sidebar">
+  <div class="ks-title-row">
+    <span class="ks-title">⚔️ キングショット</span>
+    <button type="button" class="ks-toggle-btn" id="ksToggleBtn" onclick="ksToggleSidebar()" aria-label="メニュー開閉">←</button>
+    <button type="button" class="ks-menu-btn" aria-label="メニュー" aria-expanded="false">☰</button>
+  </div>
+  <nav>
+    <a href="../index.html?v=20261107204407" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261107204407" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261107204407" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261107204407" class="ks-link" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261107204407" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="KvKストップウォッチ.html?v=20261107204407" class="ks-link ks-active" title="ストップウォッチ（メモ付き）"><span class="ks-icon">⏱️</span><span class="ks-label">ストップウォッチ（メモ付き）</span></a>
+  </nav>
+</div>
+<button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
+<script>
+(function() {
+  var collapsed = false;
+  try { collapsed = localStorage.getItem("ksSidebarCollapsed") === "1"; } catch (e) {}
+  function applyBtn() {
+    var btn = document.getElementById("ksToggleBtn");
+    if (btn) btn.textContent = document.body.classList.contains("ks-collapsed") ? "→" : "←";
+  }
+  if (collapsed) document.body.classList.add("ks-collapsed");
+  document.addEventListener("DOMContentLoaded", applyBtn);
+  applyBtn();
+  window.ksToggleSidebar = function() {
+    var next = !document.body.classList.contains("ks-collapsed");
+    document.body.classList.toggle("ks-collapsed", next);
+    try { localStorage.setItem("ksSidebarCollapsed", next ? "1" : "0"); } catch (e) {}
+    applyBtn();
+  };
+  // スマホ幅のメニュー：☰で開閉。開いているときにメニューの外をタップしたら閉じ、そのタップは下の画面に通さない
+  function setMenuOpen(open) {
+    document.body.classList.toggle("ks-menu-open", open);
+    document.querySelectorAll(".ks-menu-btn").forEach(function(b) {
+      b.textContent = open ? "✕" : "☰";
+      b.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+  }
+  function outsideMenu(t) {
+    return document.body.classList.contains("ks-menu-open") && !(t.closest && (t.closest(".ks-sidebar nav") || t.closest(".ks-menu-btn")));
+  }
+  window.addEventListener("mousedown", function(e) { if (outsideMenu(e.target)) e.preventDefault(); }, true);
+  window.addEventListener("click", function(e) {
+    if (e.target.closest && e.target.closest(".ks-menu-btn")) { setMenuOpen(!document.body.classList.contains("ks-menu-open")); return; }
+    if (outsideMenu(e.target)) { e.preventDefault(); e.stopPropagation(); setMenuOpen(false); }
+  }, true);
+})();
+</script>
+<!-- ks-sidebar:end -->
+
+<div class="main">
+<h1>⏱️ ストップウォッチ（メモ付き）</h1>
+<div class="sub">計測中に「記録」を押すと、その時点のタイムを一覧に残せます。メモは記録時にも、あとからも書き換えられます（このブラウザに自動保存）。</div>
+<div class="card">
+  <div id="time">00:00.00</div>
+  <button id="startBtn">スタート</button>
+  <button id="lapBtn" class="sub2" disabled>記録</button>
+  <button id="resetBtn" class="sub2">リセット</button>
+  <div class="memo-row"><input id="memo" type="text" placeholder="記録に付けるメモ（任意）" maxlength="60"></div>
+</div>
+<table>
+  <thead><tr><th>#</th><th>タイム</th><th>前回との差</th><th>メモ</th><th></th></tr></thead>
+  <tbody id="laps"></tbody>
+</table>
+</div>
+<script>
+(function () {
+  var KEY = "kingshot_stopwatch_v1";
+  var elapsed = 0, startAt = 0, running = false, raf = 0, laps = [];
+  var $ = function (id) { return document.getElementById(id); };
+  function fmt(ms) {
+    var cs = Math.floor(ms / 10) % 100, s = Math.floor(ms / 1000) % 60, m = Math.floor(ms / 60000);
+    return String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0") + "." + String(cs).padStart(2, "0");
+  }
+  function now() { return elapsed + (running ? Date.now() - startAt : 0); }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify({ laps: laps })); } catch (e) {} }
+  function load() { try { var d = JSON.parse(localStorage.getItem(KEY) || "{}"); laps = d.laps || []; } catch (e) { laps = []; } }
+  function tick() { $("time").textContent = fmt(now()); if (running) raf = requestAnimationFrame(tick); }
+  function render() {
+    var tb = $("laps"); tb.innerHTML = "";
+    if (!laps.length) { tb.innerHTML = '<tr><td colspan="5" class="empty">まだ記録はありません</td></tr>'; return; }
+    laps.forEach(function (l, i) {
+      var tr = document.createElement("tr");
+      var diff = i === 0 ? l.t : l.t - laps[i - 1].t;
+      tr.innerHTML = '<td>' + (i + 1) + '</td><td class="t">' + fmt(l.t) + '</td><td class="t">+' + fmt(diff) + '</td><td><input type="text" maxlength="60"></td><td><button class="del" title="削除">✕</button></td>';
+      var inp = tr.querySelector("input"); inp.value = l.memo || "";
+      inp.addEventListener("input", function () { l.memo = inp.value; save(); });
+      tr.querySelector(".del").addEventListener("click", function () { laps.splice(i, 1); save(); render(); });
+      tb.appendChild(tr);
+    });
+  }
+  $("startBtn").addEventListener("click", function () {
+    if (!running) { running = true; startAt = Date.now(); $("startBtn").textContent = "ストップ"; $("startBtn").className = "stop"; $("lapBtn").disabled = false; tick(); }
+    else { elapsed += Date.now() - startAt; running = false; cancelAnimationFrame(raf); $("startBtn").textContent = "再開"; $("startBtn").className = ""; tick(); }
+  });
+  $("lapBtn").addEventListener("click", function () {
+    laps.push({ t: now(), memo: $("memo").value }); $("memo").value = ""; save(); render();
+  });
+  $("resetBtn").addEventListener("click", function () {
+    if (laps.length && !confirm("タイムと記録をすべて消します。よろしいですか？")) return;
+    running = false; cancelAnimationFrame(raf); elapsed = 0; laps = []; save(); render();
+    $("startBtn").textContent = "スタート"; $("startBtn").className = ""; $("lapBtn").disabled = true; tick();
+  });
+  load(); render(); tick();
+})();
+</script>
+</body>
+</html>
