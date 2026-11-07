@@ -128,7 +128,7 @@
   <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#555;margin:0 0 10px;cursor:pointer;"><input type="checkbox" id="pwRemember" style="width:auto;margin:0;"> パスワードを保存する（次回から入力不要。共用の端末ではチェックしない）</label>
   <button type="button" id="loginBtn">ログイン</button>
   <div class="msg err" id="loginMsg"></div>
-  <a href="../index.html?v=20261107152337" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
+  <a href="../index.html?v=20261107153106" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
 </div>
 
 <div id="appView">
@@ -142,12 +142,9 @@
   <div class="card">
     <div class="row" style="margin-top:0;">
       <label class="inline">イベント <select id="eventSel"></select></label>
-      <label class="inline">分け方 <select id="modeSel">
-        <option value="kvk">KVK方式（集結リーダー＋乗り手）</option>
-        <option value="seiken">聖剣方式（集結主＋乗り手チーム）</option>
-        <option value="sanmei">三盟方式（上・中・下を手で決める）</option>
-        <option value="ruins">遺跡争奪方式（時間帯ごとに要塞・遺跡へ）</option>
-      </select></label>
+      <!-- 分け方はイベントの種類から自動で決まる。選べる方式が1つだけなら表示だけ（#modeText）。保存済みの方式が標準と違うときだけ、標準と保存済みを切り替えるプルダウン（#modeSel）を出す -->
+      <span id="modeText" style="font-size: 13px;"></span>
+      <label class="inline" id="modeLabel" style="display: none;">分け方 <select id="modeSel"></select></label>
       <button type="button" class="sub" id="reloadBtn">🔄 最新を読み込む</button>
     </div>
     <div class="row">
@@ -204,7 +201,7 @@
   <div class="targets" id="moveTargets"></div>
 </div>
 
-<script src="../config.js?v=20261107152337"></script>
+<script src="../config.js?v=20261107153106"></script>
 <script>
 (function() {
   "use strict";
@@ -214,6 +211,10 @@
   // GAS_URL は config.js（このファイルの直前に読み込み）で定義
   var TEAM_TYPES = ["KVK", "聖剣", "聖剣リーグ", "三盟", "遺跡争奪"]; // 炎龍はチーム分けの対象外
   var MODE_BY_TYPE = { "KVK": "kvk", "聖剣": "seiken", "聖剣リーグ": "seiken", "三盟": "sanmei", "遺跡争奪": "ruins" };
+  var MODE_LABELS = {
+    kvk: "KVK方式（集結リーダー＋乗り手）", seiken: "聖剣方式（集結主＋乗り手チーム）",
+    sanmei: "三盟方式（上・中・下を手で決める）", ruins: "遺跡争奪方式（時間帯ごとに要塞・遺跡へ）"
+  };
   // 遺跡争奪：時間帯（entries[].slots のキー。admin-common.js の RUIN_SLOTS と同じ）と、要塞・遺跡（events[].ruinTargets の値）
   var RUIN_SLOTS = ["12", "18", "22", "23", "25"];
   var RUIN_TARGETS = ["要塞1", "要塞2", "要塞3", "要塞4"].concat([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(function(n) { return "遺跡" + n; }));
@@ -313,8 +314,8 @@
           '<button type="button" class="ks-menu-btn" aria-label="メニュー" aria-expanded="false">☰</button></div>' +
         "<nav>" + links +
           '<div class="ks-group"></div>' +
-          '<a href="../kvk-matchup/kvk-matchup-index.html?v=20261107152337" class="ks-link" title="KvK相手突合せ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ</span></a>' +
-          '<a href="../index.html?v=20261107152337" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a>' +
+          '<a href="../kvk-matchup/kvk-matchup-index.html?v=20261107153106" class="ks-link" title="KvK相手突合せ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ</span></a>' +
+          '<a href="../index.html?v=20261107153106" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a>' +
           '<button type="button" class="ks-link" id="logoutBtn" title="ログアウト"><span class="ks-icon">🚪</span><span class="ks-label">ログアウト</span></button>' +
         "</nav>" +
       "</div>" +
@@ -783,9 +784,28 @@
   }
 
   // ---------- 描画 ----------
+  // 分け方の表示：イベントの種類の標準の方式が基本。保存済みの方式が標準と違うとき（古いデータなど）だけ、
+  // その方式も選べるようにして、保存済みを壊さない。選べる方式が1つだけならプルダウンは出さず表示だけ
+  function renderMode() {
+    var std = MODE_BY_TYPE[(eventById(eventId) || {}).type] || "seiken";
+    var list = [std];
+    if (draft.mode && draft.mode !== std && MODE_LABELS[draft.mode]) list.push(draft.mode);
+    if (list.length === 1) {
+      $("modeLabel").style.display = "none";
+      $("modeText").textContent = "分け方：" + MODE_LABELS[list[0]];
+      return;
+    }
+    $("modeText").textContent = "";
+    $("modeSel").innerHTML = list.map(function(m) {
+      return '<option value="' + m + '">' + MODE_LABELS[m] + (m === std ? "（標準）" : "（保存済み）") + "</option>";
+    }).join("");
+    $("modeSel").value = draft.mode;
+    $("modeLabel").style.display = "";
+  }
+
   function renderAll() {
     if (!draft) return;
-    $("modeSel").value = draft.mode;
+    renderMode();
     $("tabs").style.display = draft.mode === "ruins" ? "none" : "";
     if (draft.mode === "ruins") { renderStatus(); renderRuins(); return; }
     renderStatus();
