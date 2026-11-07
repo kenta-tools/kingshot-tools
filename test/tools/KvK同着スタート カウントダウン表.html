@@ -152,7 +152,7 @@
     <button type="button" class="ks-menu-btn" aria-label="メニュー" aria-expanded="false">☰</button>
   </div>
   <nav>
-    <a href="../index.html?v=20261107171321" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261107171321" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261107171321" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261107171321" class="ks-link ks-active" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261107171321" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a>
+    <a href="../index.html?v=20261107172845" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261107172845" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261107172845" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261107172845" class="ks-link ks-active" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261107172845" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -217,7 +217,11 @@
   </div>
   <div class="cfg-row">
     <button type="button" class="btn secondary small" id="fillOpponentBtn">相手の名前を自動入力（突合せから）</button>
-    <span class="save-note">名簿はそのままに、空欄の「相手の名前」だけをKvK相手突合せで保存済みの組み合わせから埋めます</span>
+    <span class="save-note">名簿はそのままに、空欄の「相手の名前」だけを、下で選んだ組み合わせから埋めます</span>
+  </div>
+  <div class="cfg-row" id="matchupRow">
+    <label>突合せの組み合わせ（このタブ）: <select id="matchupSelect" class="ve-exempt"><option value="">（なし）</option></select></label>
+    <span class="save-note" id="matchupNote">組み合わせの名前を付けて複数保存するのはKvK相手突合せ（管理者）です。タブごとに別の組み合わせを選べます。選び直しただけでは名簿は変わらず、「取り込む」「自動入力」を押したときに使われます</span>
   </div>
 </div>
 
@@ -259,8 +263,8 @@
   <div class="result-wrap"><table id="result-table"></table></div>
 </div>
 
-<script src="../config.js?v=20261107171321"></script>
-<script src="pet-bonus.js?v=20261107171321"></script>
+<script src="../config.js?v=20261107172845"></script>
+<script src="pet-bonus.js?v=20261107172845"></script>
 <script>
 const SAMPLE = [
   { name: "じろ", march: 36, adj: 0, group: "じろ" },
@@ -359,6 +363,7 @@ function refreshEventSelect(){
     : `<option value="">（${EVENT_TYPE}のイベントがありません）</option>`;
   if (events.some(ev => ev.id === keep)) sel.value = keep;
   currentEventId = sel.value;
+  renderMatchupSelect();
 }
 
 function refreshNameList(){
@@ -680,7 +685,7 @@ function addTab(copy){
   const title = copy && cur ? cur.title + "のコピー" : "名簿" + (tabs.length + 1);
   const rows = copy ? rosterRows : [newRow({})];
   try { localStorage.setItem(rosterKeyFor(id), JSON.stringify({ rows, rowSeq })); } catch(e){}
-  tabs.push({ id, title });
+  tabs.push({ id, title, matchupId: copy && cur ? cur.matchupId : undefined }); // コピーしたタブは突合せの選択も引き継ぐ
   saveTabs();
   switchToTab(id);
 }
@@ -733,6 +738,7 @@ function loadPersonalIntoState(){
   }
   document.getElementById("sharedSaveBtn").disabled = false;
   document.getElementById("importBtn").disabled = false;
+  renderMatchupSelect();
   renderRoster();
   compute();
 }
@@ -743,6 +749,7 @@ function loadSharedIntoState(){
   rosterRows = (rec && Array.isArray(rec.rows) ? rec.rows : []).map(r => newRow(r));
   sharedDirty = false;
   sharedSnapshot = JSON.stringify(rosterRows);
+  renderMatchupSelect();
   renderRoster();
   compute();
   const editable = isEventOpen(currentEventId);
@@ -779,6 +786,7 @@ document.getElementById("modeSharedBtn").addEventListener("click", () => setMode
 
 document.getElementById("eventSelect").addEventListener("change", function(){
   currentEventId = this.value;
+  renderMatchupSelect();
   if(mode === "shared") loadSharedIntoState();
 });
 
@@ -805,9 +813,43 @@ document.getElementById("sharedSaveBtn").addEventListener("click", () => {
   });
 });
 
-// KvK相手突合せで保存済みの組み合わせから、この名前の「相手」を探す（このイベント分のみ）
+// KvK相手突合せで保存済みの組み合わせ（名前付きで1イベントに複数）。昔の形（id・nameなし）は「標準」として扱う
+function eventMatchups(){
+  return (regData.matchupPairs || [])
+    .filter(r => r.eventId === currentEventId)
+    .map(r => Object.assign({}, r, { id: r.id || r.eventId, name: r.name || "標準", pairs: r.pairs || [] }));
+}
+// 使う組み合わせ：自分用はタブで選んだもの（無ければ標準→先頭）。共有用はタブが無いので標準（無ければ先頭）
+function activeMatchup(){
+  const list = eventMatchups();
+  if(!list.length) return null;
+  const dflt = list.find(m => m.id === currentEventId) || list.find(m => m.name === "標準") || list[0];
+  if(mode !== "personal") return dflt;
+  const tab = tabs.find(t => t.id === currentTabId);
+  return (tab && list.find(m => m.id === tab.matchupId)) || dflt;
+}
+function renderMatchupSelect(){
+  const sel = document.getElementById("matchupSelect");
+  if(!sel) return;
+  const list = eventMatchups();
+  document.getElementById("matchupRow").style.display = mode === "personal" ? "flex" : "none";
+  sel.innerHTML = list.length
+    ? list.map(m => `<option value="${escapeAttr(m.id)}">${escapeAttr(m.name)}（${m.pairs.length}人${m.opponentLabel ? "・" + escapeAttr(m.opponentLabel) : ""}）</option>`).join("")
+    : '<option value="">（保存された組み合わせがありません）</option>';
+  const act = activeMatchup();
+  sel.value = act ? act.id : "";
+  sel.disabled = !list.length;
+}
+document.getElementById("matchupSelect").addEventListener("change", function(){
+  const tab = tabs.find(t => t.id === currentTabId);
+  if(!tab) return;
+  tab.matchupId = this.value; // タブごとに保持（タブの名前・順番と一緒に保存）
+  saveTabs();
+});
+
+// KvK相手突合せで保存済みの組み合わせから、この名前の「相手」を探す（このイベント分・選んでいる組み合わせのみ）
 function opponentFromMatchup(name){
-  const rec = (regData.matchupPairs || []).find(r => r.eventId === currentEventId);
+  const rec = activeMatchup();
   if(!rec) return "";
   const pair = (rec.pairs || []).find(p => p.ourName === name);
   return pair ? pair.theirName : "";
@@ -837,7 +879,7 @@ document.getElementById("fillOpponentBtn").addEventListener("click", () => {
     const opp = opponentFromMatchup(row.name.trim());
     if(opp){ row.opponentName = opp; filled++; }
   });
-  if(!filled){ alert("突合せの保存済みデータに、該当する名前が見つかりませんでした"); return; }
+  if(!filled){ const m = activeMatchup(); alert(m ? `組み合わせ「${m.name}」に、該当する名前が見つかりませんでした` : "突合せの保存済みデータがありません"); return; }
   renderRoster();
   persistState();
   compute();
@@ -1018,6 +1060,6 @@ fetchRegData();
 fetchOpponentNames();
 </script>
 
-<script src="view-edit-gate.js?v=20261107171321"></script>
+<script src="view-edit-gate.js?v=20261107172845"></script>
 </body>
 </html>
