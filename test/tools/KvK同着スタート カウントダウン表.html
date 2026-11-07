@@ -154,7 +154,7 @@
     <button type="button" class="ks-menu-btn" aria-label="メニュー" aria-expanded="false">☰</button>
   </div>
   <nav>
-    <a href="../index.html?v=20261107184831" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261107184831" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261107184831" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261107184831" class="ks-link ks-active" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261107184831" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a>
+    <a href="../index.html?v=20261107185518" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261107185518" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261107185518" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261107185518" class="ks-link ks-active" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261107185518" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -265,8 +265,8 @@
   <div class="result-wrap"><table id="result-table"></table></div>
 </div>
 
-<script src="../config.js?v=20261107184831"></script>
-<script src="pet-bonus.js?v=20261107184831"></script>
+<script src="../config.js?v=20261107185518"></script>
+<script src="pet-bonus.js?v=20261107185518"></script>
 <script>
 const SAMPLE = [
   { name: "じろ", march: 36, adj: 0, group: "じろ" },
@@ -658,7 +658,7 @@ function sharedOp(payload){
 function sharedAddTab(copy){
   const cur = sharedTab(sharedCurrentTabId);
   const title = copy && cur ? cur.title + "のコピー" : "名簿" + (sharedTabs.length + 1);
-  sharedOp({ op: "add", title: title, rows: copy ? rosterRows : [], matchupId: copy && cur ? cur.matchupId : "" }).then(res => {
+  sharedOp({ op: "add", title: title, rows: copy ? rosterRows : rowsForNewTab(), matchupId: copy && cur ? cur.matchupId : "" }).then(res => {
     if(!res) return;
     sharedCurrentTabId = res.tabId;
     loadSharedIntoState();
@@ -797,7 +797,7 @@ function renderTabBar(){
     addBtn.type = "button";
     addBtn.className = "tab-add";
     addBtn.textContent = "+";
-    addBtn.title = "空の名簿のタブを追加";
+    addBtn.title = "今のタブと同じ人の名簿で、新しいタブを追加（相手の名前・秒数は空）";
     addBtn.addEventListener("click", () => addTab(false));
     bar.appendChild(addBtn);
     const dupBtn = document.createElement("button");
@@ -822,13 +822,19 @@ function renderTabBar(){
   }
 }
 
-// copy=true なら今の名簿をそのまま、false なら空の1行だけで新しいタブを作る
+// 「＋」で新しいタブを作るときの名簿：今開いているタブと同じ人の一覧（相手の名前・相手の秒数は空に戻す。相手は、そのタブで選ぶ突合せの組み合わせから「自動入力」で埋める）。今の名簿が空なら空のまま
+function rowsForNewTab(){
+  return rosterRows.map(r => Object.assign({}, r, { opponentName: "", opponentSec: "" }));
+}
+
+// copy=true なら今の名簿をそのまま（「このタブを複製」）、false なら今と同じ人の一覧（相手の名前・秒数は空）で新しいタブを作る
 function addTab(copy){
   if(mode === "shared") return sharedAddTab(copy);
   const id = "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const cur = tabs.find(t => t.id === currentTabId);
   const title = copy && cur ? cur.title + "のコピー" : "名簿" + (tabs.length + 1);
-  const rows = copy ? rosterRows : [newRow({})];
+  const base = copy ? rosterRows : rowsForNewTab();
+  const rows = base.length ? base : [newRow({})];
   try { localStorage.setItem(rosterKeyFor(id), JSON.stringify({ rows, rowSeq })); } catch(e){}
   tabs.push({ id, title, matchupId: copy && cur ? cur.matchupId : undefined }); // コピーしたタブは突合せの選択も引き継ぐ
   saveTabs();
@@ -1244,6 +1250,6 @@ fetchRegData();
 fetchOpponentNames();
 </script>
 
-<script src="view-edit-gate.js?v=20261107184831"></script>
+<script src="view-edit-gate.js?v=20261107185518"></script>
 </body>
 </html>
