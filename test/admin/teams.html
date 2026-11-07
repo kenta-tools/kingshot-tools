@@ -128,7 +128,7 @@
   <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#555;margin:0 0 10px;cursor:pointer;"><input type="checkbox" id="pwRemember" style="width:auto;margin:0;"> パスワードを保存する（次回から入力不要。共用の端末ではチェックしない）</label>
   <button type="button" id="loginBtn">ログイン</button>
   <div class="msg err" id="loginMsg"></div>
-  <a href="../index.html?v=20261107170331" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
+  <a href="../index.html?v=20261107171321" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
 </div>
 
 <div id="appView">
@@ -201,7 +201,7 @@
   <div class="targets" id="moveTargets"></div>
 </div>
 
-<script src="../config.js?v=20261107170331"></script>
+<script src="../config.js?v=20261107171321"></script>
 <script>
 (function() {
   "use strict";
@@ -314,8 +314,8 @@
           '<button type="button" class="ks-menu-btn" aria-label="メニュー" aria-expanded="false">☰</button></div>' +
         "<nav>" + links +
           '<div class="ks-group"></div>' +
-          '<a href="../kvk-matchup/kvk-matchup-index.html?v=20261107170331" class="ks-link" title="KvK相手突合せ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ</span></a>' +
-          '<a href="../index.html?v=20261107170331" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a>' +
+          '<a href="../kvk-matchup/kvk-matchup-index.html?v=20261107171321" class="ks-link" title="KvK相手突合せ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ</span></a>' +
+          '<a href="../index.html?v=20261107171321" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a>' +
           '<button type="button" class="ks-link" id="logoutBtn" title="ログアウト"><span class="ks-icon">🚪</span><span class="ks-label">ログアウト</span></button>' +
         "</nav>" +
       "</div>" +
@@ -1309,20 +1309,42 @@
     return out;
   }
 
-  function autoRuins(k) {
-    var T = targetsFor(k);
-    if (!T.length) return slotLabel(k) + "は対象の要塞・遺跡がありません";
-    var st = ruinState(k), P = inSlot(k);
-    // その時間に参加しなくなった人の分は消す
-    var inP = {};
+  // その人が、ほかの時間帯（k以外）で要塞に入っている回数（今の割り当てから数える。時間帯の割り当てを作るときの目安）
+  function fortCountOf(uid, k) {
+    var n = 0;
+    RUIN_SLOTS.forEach(function(s) {
+      if (s === k) return;
+      var st = draft.ruins.slots[s], a = st && st.assign && st.assign[uid];
+      if (a && a.indexOf("要塞") === 0 && targetsFor(s).indexOf(a) >= 0) n++;
+    });
+    return n;
+  }
+
+  // 時間帯kの割り当てを外す（📌固定した人の場所と、固定した集結主は残す。その時間に参加しなくなった人の分は消す）
+  function clearSlot(k) {
+    var T = targetsFor(k), st = ruinState(k), P = inSlot(k), inP = {};
     P.forEach(function(p) { inP[p.uid] = true; });
     Object.keys(st.assign).forEach(function(u) { if (!inP[u]) { delete st.assign[u]; delete st.pins[u]; } });
-    // 📌固定以外を外す（固定した人の場所と、固定した集結主は残す）
     P.forEach(function(p) { if (!st.pins[p.uid]) delete st.assign[p.uid]; });
     Object.keys(st.leaders).forEach(function(t) {
       var uid = st.leaders[t];
       if (T.indexOf(t) < 0 || !st.pins[uid] || ruinPlaceOf(k, uid) !== t) delete st.leaders[t];
     });
+  }
+
+  // 全部の時間帯：先に全部の割り当てを外してから、時間帯の順（12→18→22…）に振り分ける。
+  // あとの時間帯ほど、前の時間帯で要塞に入った回数が反映される
+  function autoRuinsAll() {
+    var slots = RUIN_SLOTS.filter(function(s) { return targetsFor(s).length; });
+    slots.forEach(clearSlot);
+    return slots.map(autoRuins);
+  }
+
+  function autoRuins(k) {
+    var T = targetsFor(k);
+    if (!T.length) return slotLabel(k) + "は対象の要塞・遺跡がありません";
+    clearSlot(k);
+    var st = ruinState(k), P = inSlot(k);
     var want = desiredCounts(T, Math.min(P.length, RUIN_CAP * T.length));
     function count(t) { return P.filter(function(p) { return st.assign[p.uid] === t; }).length; }
     // 1) 集結主を先に決める（人が入る場所だけ。「参加」の人から、集結容量の大きい順）
@@ -1337,19 +1359,25 @@
     var pool = P.filter(function(p) { return !st.assign[p.uid]; }).sort(function(a, b) {
       return ((slotStatus(a, k) === "maybe") - (slotStatus(b, k) === "maybe")) || (partCount(a) - partCount(b)) || (rnd(k + a.uid) - rnd(k + b.uid));
     });
-    // 3) 空いている席（場所ごとの目標人数 − 今いる人数）をランダムな順に並べ、優先度の高い人から座らせる。
-    //    固定した人が多い場所があって目標どおりに入りきらないときは、15人に空きがある場所で補う
-    var seats = [], spare = [];
+    // 3) 空いている席（場所ごとの目標人数 − 今いる人数）を、要塞の席・遺跡の席に分けて、それぞれ場所はランダムな順に並べる。
+    //    固定した人が多い場所があって目標どおりに入りきらないときは、15人に空きがある場所で補う（要塞→遺跡の順）
+    var fortSeats = [], ruinSeats = [], spareF = [], spareR = [];
+    function byR(a, b) { return a.r - b.r; }
     T.forEach(function(t) {
-      var c = count(t);
-      for (var i = c; i < (want[t] || 0); i++) seats.push({ t: t, r: rnd(k + t + i) });
-      for (var j = Math.max(c, want[t] || 0); j < RUIN_CAP; j++) spare.push({ t: t, r: j + rnd(k + t + "x" + j) });
+      var c = count(t), fort = t.indexOf("要塞") === 0;
+      for (var i = c; i < (want[t] || 0); i++) (fort ? fortSeats : ruinSeats).push({ t: t, r: rnd(k + t + i) });
+      for (var j = Math.max(c, want[t] || 0); j < RUIN_CAP; j++) (fort ? spareF : spareR).push({ t: t, r: j + rnd(k + t + "x" + j) });
     });
-    seats.sort(function(a, b) { return a.r - b.r; });
-    spare.sort(function(a, b) { return a.r - b.r; });
-    seats = seats.concat(spare);
+    var seats = fortSeats.sort(byR).concat(ruinSeats.sort(byR), spareF.sort(byR), spareR.sort(byR));
     var chosen = pool.slice(0, seats.length), extra = pool.slice(seats.length);
-    chosen.slice().sort(function(a, b) { return rnd(k + "deal" + a.uid) - rnd(k + "deal" + b.uid); }).forEach(function(p, i) { st.assign[p.uid] = seats[i].t; });
+    // 要塞の席には、ほかの時間帯で要塞に入った回数が少ない人から。同じなら参加する時間帯の数が少ない人から。
+    // それも同じなら「参加」の人を先に、最後はランダム（同順位のときだけ）。入りきらない人は遺跡の席へ回る
+    var fc = {};
+    chosen.forEach(function(p) { fc[p.uid] = fortCountOf(p.uid, k); });
+    chosen.sort(function(a, b) {
+      return (fc[a.uid] - fc[b.uid]) || (partCount(a) - partCount(b)) ||
+        ((slotStatus(a, k) === "maybe") - (slotStatus(b, k) === "maybe")) || (rnd(k + "deal" + a.uid) - rnd(k + "deal" + b.uid));
+    }).forEach(function(p, i) { st.assign[p.uid] = seats[i].t; });
     extra.forEach(function(p) { st.assign[p.uid] = "standby"; });
     return slotLabel(k) + "を振り分けました（" + (P.length - extra.length) + "人" + (extra.length ? "、入りきらない " + extra.length + "人は待機" : "") + "）";
   }
@@ -1391,7 +1419,7 @@
           }).join("") + "</tr>";
         }).join("") + "</tbody></table></div>";
     }
-    html += '<div class="note" style="margin-top:6px;">自動振り分け：その時間に参加する人だけで分けます。1か所' + RUIN_CAP + '人まで（集結主を含む）。①集結主を先に決める（「参加」の人から、直近のKVKの集結容量の大きい順に、要塞1→…→遺跡の順）②残りの人を、要塞に均等に入れてから余りを遺跡に均等（どこに入るかはランダム）。入りきらないときは、参加する時間帯の数が少ない人を優先し、「行けるかも（△）」の人は「参加」の人のあと、余った人は待機です。</div>';
+    html += '<div class="note" style="margin-top:6px;">自動振り分け：その時間に参加する人だけで分けます。1か所' + RUIN_CAP + '人まで（集結主を含む）。①集結主を先に決める（「参加」の人から、直近のKVKの集結容量の大きい順に、要塞1→…→遺跡の順）②残りの人を、要塞に均等に入れてから余りを遺跡に均等（どこに入るかはランダム）。要塞の席には、ほかの時間帯で要塞に入った回数が少ない人から（同じなら参加する時間帯の数が少ない人から）入れて、要塞の回数がなるべくそろうようにします（「全部の時間帯」は12時→18時…の順に振り分けます）。入りきらないときは、参加する時間帯の数が少ない人を優先し、「行けるかも（△）」の人は「参加」の人のあと、余った人は待機です。</div>';
     $("settingsBody").innerHTML = html;
     Array.prototype.forEach.call($("settingsBody").querySelectorAll("[data-rt]"), function(cb) {
       cb.addEventListener("change", function() {
@@ -1409,7 +1437,7 @@
       '<button type="button" class="sub" id="ruinClearBtn">↩ ' + slotLabel(k) + 'の割り当てを外す（📌以外）</button>';
     on("ruinAutoBtn", "click", function() { setMsg($("autoMsg"), autoRuins(k), true); changed(); });
     on("ruinAutoAllBtn", "click", function() {
-      var msgs = RUIN_SLOTS.filter(function(s) { return targetsFor(s).length; }).map(autoRuins);
+      var msgs = autoRuinsAll();
       setMsg($("autoMsg"), msgs.join("／") || "対象のある時間帯がありません", msgs.length > 0);
       changed();
     });
