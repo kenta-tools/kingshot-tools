@@ -270,6 +270,8 @@ HEAD = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
+<!-- 環境ごとの設定（テスト環境ではここで背景の目印が付く） -->
+<script src="../../config.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{scope}鯖 総合ランキング</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">

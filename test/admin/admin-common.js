@@ -437,6 +437,7 @@
       if (KEEP_ALWAYS.indexOf(k) >= 0) return;
       if (!row._given[k]) out[k] = prev[k];
     });
+    if (row._given.slots && prev.slots && out.slots) out.slots = Object.assign({}, prev.slots, out.slots); // 遺跡争奪：書かれていない時間の回答は残す
     return fitPartial(out);
   }
 
@@ -1316,14 +1317,14 @@
       card.className = "card";
       card.id = "ruinTargetsCard";
       $("eventView").insertBefore(card, $("eventView").firstChild);
-      card.addEventListener("change", function(e) {
+      // 1つの要塞・遺跡は1つの時間にだけ対応（ラジオ）。選んだ時間をもう一度押すと外れる
+      card.addEventListener("click", function(e) {
         var cb = e.target, cur = eventById(currentEventId);
         if (!cb.dataset || !cb.dataset.slot || !cur) return;
         var t = normRuinTargets(cur.ruinTargets) || normRuinTargets({});
-        var list = t[cb.dataset.slot];
-        if (cb.checked && list.indexOf(cb.dataset.target) < 0) list.push(cb.dataset.target);
-        if (!cb.checked) list = list.filter(function(x) { return x !== cb.dataset.target; });
-        t[cb.dataset.slot] = list;
+        var k = cb.dataset.slot, name = cb.dataset.target, was = t[k].indexOf(name) >= 0;
+        RUIN_SLOTS.forEach(function(s) { t[s] = t[s].filter(function(x) { return x !== name; }); });
+        if (!was) t[k].push(name);
         cur.ruinTargets = normRuinTargets(t); // 要塞→遺跡の番号順にそろえる
         commit();
       });
@@ -1331,12 +1332,12 @@
     card.style.display = "block";
     var t = ev.ruinTargets || {};
     card.innerHTML = '<h2>🏯 時間帯ごとの対象（要塞・遺跡）</h2>' +
-      '<div class="hint">この遺跡争奪で、時間帯ごとにどの要塞・遺跡を狙うかをチェックします（チーム分けで使います）。変えたら「💾 保存する」を押してください。</div>' +
+      '<div class="hint">この遺跡争奪で、時間帯ごとにどの要塞・遺跡を狙うかを選びます（チーム分けで使います）。1つの要塞・遺跡は1つの時間にだけ選べます。選んだところをもう一度押すと外れます。変えたら「💾 保存する」を押してください。</div>' +
       '<div style="overflow-x: auto;"><table style="margin-top: 8px;"><thead><tr><th>時間</th><th>要塞</th><th>遺跡</th></tr></thead><tbody>' +
       RUIN_SLOTS.map(function(k) {
         var sel = t[k] || [];
         function box(name) {
-          return '<label style="white-space: nowrap; margin-right: 8px;"><input type="checkbox" data-slot="' + k + '" data-target="' + name + '"' +
+          return '<label style="white-space: nowrap; margin-right: 8px;"><input type="radio" name="rt-' + name + '" data-slot="' + k + '" data-target="' + name + '"' +
             (sel.indexOf(name) >= 0 ? " checked" : "") + '> ' + name.replace(/^(要塞|遺跡)/, "") + '</label>';
         }
         return '<tr><td style="white-space: nowrap;">' + slotLabel(k) + '</td>' +
@@ -2004,6 +2005,78 @@
     });
   }
 
+  // ---------- 遺跡争奪の募集フォーマット ----------
+  // Discordでの募集の形（2026-11-07ユーザー提供）：
+  //   10/30遺跡
+  //   23時:3号要塞集結早撃ち勝負        ← 時間の行より前の行はメモ（読み飛ばす）
+  //   18時(4)：もち、あっきぃ、イッチー△、  ← (4)はその時間の対象の数（省略可）。名前の後ろの△＝行けるかも
+  // 書かれている時間について、名前があれば参加（△なら行けるかも）、無ければ不参加。書かれていない時間は今の回答のまま
+  var RUIN_LINE_RE = /^\s*(\d{1,2})\s*時\s*(?:[（(]\s*\d+\s*[)）])?\s*(?:・\s*\d+\s*人)?\s*[：:]\s*(.*)$/;
+  function ruinSlotKey(hour) { var h = Number(hour); return String(h <= 6 ? h + 24 : h); } // 「1時」＝25（翌1時）
+  function looksLikeRuinFormat(text) {
+    return text.split(/\r?\n/).some(function(l) { var m = l.match(RUIN_LINE_RE); return m && RUIN_SLOTS.indexOf(ruinSlotKey(m[1])) >= 0; });
+  }
+
+  function parseRuinFormat(text, defaultAlliance) {
+    var lines = text.split(/\r?\n/), times = [], byName = {}, order = [], errors = [];
+    // 「18時(4)：」のように対象の数が付いた行が1つでもあれば、数の無い時間の行（例「23時:3号要塞集結早撃ち勝負」）はメモとして読み飛ばす
+    var COUNT_RE = /^\s*\d{1,2}\s*時\s*[（(]\s*\d+\s*[)）]/;
+    var hasCount = lines.some(function(l) { return COUNT_RE.test(l); });
+    lines.forEach(function(line, i) {
+      var m = line.match(RUIN_LINE_RE);
+      if (!m || (hasCount && !COUNT_RE.test(line))) return;
+      var k = ruinSlotKey(m[1]);
+      if (RUIN_SLOTS.indexOf(k) < 0) { errors.push((i + 1) + "行目: " + m[1] + "時は遺跡争奪の時間（" + RUIN_SLOTS.map(slotLabel).join("・") + "）ではありません"); return; }
+      if (times.indexOf(k) < 0) times.push(k);
+      m[2].split(/[、,，]/).forEach(function(part) {
+        var name = part.trim(), maybe = /[△▲▵∆Δ]$/.test(name);
+        name = name.replace(/[△▲▵∆Δ]+$/, "").trim();
+        if (!name) return;
+        if (!byName[name]) { byName[name] = {}; order.push(name); }
+        byName[name][k] = maybe ? "maybe" : "yes";
+      });
+    });
+    var rows = [];
+    order.forEach(function(name) {
+      var slots = {};
+      times.forEach(function(k) { slots[k] = byName[name][k] || "no"; });
+      var u = findUserByName(name);
+      var alliance = (u && u.alliance) || defaultAlliance;
+      if (!alliance) { errors.push("「" + name + "」: 同盟が分かりません（初めての人は「同盟名」欄に入れてから取り込んでください）"); return; }
+      var src = { alliance: alliance, name: name, entry: "start", slots: slots };
+      var r = normalizeRow(src);
+      r._given = givenKeys(src);
+      rows.push(r);
+    });
+    if (!times.length) errors.push("「12時(2)：名前、名前△、」のような時間の行が見つかりません");
+    return { rows: rows, errors: errors };
+  }
+
+  function ruinFormatHeader() {
+    var ev = eventById(currentEventId), d = (ev && ev.date || "").split("-");
+    return (d.length === 3 ? Number(d[1]) + "/" + Number(d[2]) : "") + "遺跡";
+  }
+  function ruinTimeHead(k) {
+    var ev = eventById(currentEventId), n = ((ev && ev.ruinTargets) || {})[k] ? ev.ruinTargets[k].length : 0;
+    return k + "時" + (n ? "(" + n + ")" : "") + "：";
+  }
+  function ruinBlankText() { return [ruinFormatHeader()].concat(ruinTimes().map(ruinTimeHead)).join("\n"); }
+  function ruinSampleText() {
+    return [ruinFormatHeader(), "（メモ：狙う要塞・遺跡など。時間の行より前は読み飛ばします）"].concat(ruinTimes().map(function(k, i) {
+      return ruinTimeHead(k) + ["もち、あっきぃ、はる△、", "もち△、あっきぃ、", "はる、"][i % 3];
+    })).join("\n");
+  }
+  // 参加者一覧を募集フォーマットに戻す（参加＝名前、行けるかも＝名前△）
+  function buildRuinFormatText() {
+    var rows = sortRows(eventRows());
+    return [ruinFormatHeader()].concat(ruinTimes().map(function(k) {
+      return ruinTimeHead(k) + rows.map(function(m) {
+        var v = (m.slots || {})[k];
+        return v === "yes" ? m.name + "、" : v === "maybe" ? m.name + "△、" : "";
+      }).join("");
+    })).join("\n");
+  }
+
   function currentBulk() {
     var text = $("bulkText").value;
     var filename = loadedFile && loadedFile.text === text ? loadedFile.name : null;
@@ -2021,6 +2094,7 @@
       }
     }
     if (/^\uFEFF?同盟[,\t]/.test(text) || (filename && /\.(csv|tsv)$/i.test(filename))) return parseCsv(text);
+    if (isRuinEvent(currentEventId) && looksLikeRuinFormat(text)) return parseRuinFormat(text, $("defaultAlliance").value.trim());
     return parseFormatText(text, $("defaultAlliance").value.trim());
   }
 
@@ -2122,9 +2196,9 @@
     }
   }
 
-  on("copyBlankBtn", "click", function() { copyText(BLANK, this); });
+  on("copyBlankBtn", "click", function() { copyText(isRuinEvent(currentEventId) ? ruinBlankText() : BLANK, this); });
   on("copyPromptBtn", "click", function() { copyText(buildPrompt(), this); });
-  on("sampleBtn", "click", function() { $("bulkText").value = SAMPLE; });
+  on("sampleBtn", "click", function() { $("bulkText").value = isRuinEvent(currentEventId) ? ruinSampleText() : SAMPLE; });
 
   // ---------- 書き出し ----------
   function download(filename, content, type) {
@@ -2166,6 +2240,7 @@
   }
 
   function buildFormatText() {
+    if (isRuinEvent(currentEventId)) return buildRuinFormatText();
     var rows = eventRows();
     var blocks = [];
     var alliances = [];

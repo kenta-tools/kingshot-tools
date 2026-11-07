@@ -142,3 +142,10 @@ Kingshot関連の単体HTMLツールのうち、ゲームプレイの実務で�
 - 2026-11-07 方針変更（リーダー経由・ユーザー指示）：複数セッションにまたがる新機能はリーダーがまとめて実装。このセッションは担当範囲内の改修・バグ修正に専念
 - 共有インデックス注意：他セッションがステージしたファイルを巻き込んだ事故（71d5b80）あり。コミット前に必ず `git diff --cached --name-only` を単独で確認してから commit する
 - 2026-11-07 追記（遺跡争奪のチーム分け）：admin/teams.html に「遺跡争奪方式」（mode=ruins）を追加。時間帯ごと（entries[].slots の yes/maybe）に events[].ruinTargets の要塞・遺跡へ。1か所15人、集結主→要塞均等→余りを遺跡均等、参加時間帯の少ない人優先、△は後、余りは待機。区分・集結容量は直近のKVKの entry から。下書きは draft.ruins.slots[時間]={assign,leaders,pins}、乱数は draft.ruins.seed で固定（シャッフルで変更）。公開側は工事中のまま（書き出しのみ）。テスト36項目合格。今後の複数セッションにまたがる新機能はリーダーがまとめて実装する方針（2026-11-07）
+
+## 2026-11-07 テスト環境まわり＋遺跡争奪の続き（worktree: ツール作成/test-env-ui）
+- test/ の目印：test/config.js に IS_TEST_ENV と背景の斜線（style 差し込み）。config.js を読んでいなかった11ページ（ランキング・spec・tools一覧・非表示ツール）に本番側も `<script src="(../)config.js">` を追加（本番 config.js は GAS_URL 定義だけなので無影響）。mystic_ranking.py（出力先から相対パスを計算）・holy_sword_s2_refresh.py のテンプレートにも追加
+- 本番と test/ は同一ドメインのため保存領域を共有→ test/config.js で Storage.prototype の getItem/setItem/removeItem をラップしキーに "test_" を付けて分離（「保存用のパスワードが合いません」の原因）。config.js より前に保存領域を読む周期ウェーブタイマーは config.js の読込位置を本体スクリプトの前へ移動
+- TOP：ログイン中だけ「🧪 テスト環境へ」（test側は「↩ 本番へ戻る」）
+- 遺跡争奪の対象をラジオ化（1つの要塞・遺跡は1つの時間だけ、再クリックで解除）
+- 遺跡争奪の募集フォーマット（ユーザー提供の形）：読み取り parseRuinFormat（(n)付きの行があれば無い行はメモ扱い、1時→25、書かれていない時間は既存の回答を保持＝mergeImported で slots を時間ごとにマージ）、空フォーマット・記入例・書き出しも遺跡争奪形式
