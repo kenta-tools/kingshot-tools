@@ -128,7 +128,7 @@
   <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#555;margin:0 0 10px;cursor:pointer;"><input type="checkbox" id="pwRemember" style="width:auto;margin:0;"> パスワードを保存する（次回から入力不要。共用の端末ではチェックしない）</label>
   <button type="button" id="loginBtn">ログイン</button>
   <div class="msg err" id="loginMsg"></div>
-  <a href="../index.html?v=20261107123319" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
+  <a href="../index.html?v=20261107132535" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
 </div>
 
 <div id="appView">
@@ -174,6 +174,8 @@
 
   <div class="card" style="margin-top:14px;">
     <h2>💬 Discordに貼るテキスト</h2>
+    <!-- 遺跡争奪のときだけ出す：貼る時間帯を選ぶ（出力だけが対象で、画面の割り振りは変わらない） -->
+    <div class="row" id="outSlotsRow" style="display:none; margin:0 0 8px;"></div>
     <textarea class="out" id="outText" readonly></textarea>
     <div class="row">
       <button type="button" class="sub" id="copyTextBtn">📋 コピー</button>
@@ -202,7 +204,7 @@
   <div class="targets" id="moveTargets"></div>
 </div>
 
-<script src="../config.js?v=20261107123319"></script>
+<script src="../config.js?v=20261107132535"></script>
 <script>
 (function() {
   "use strict";
@@ -311,8 +313,8 @@
           '<button type="button" class="ks-menu-btn" aria-label="メニュー" aria-expanded="false">☰</button></div>' +
         "<nav>" + links +
           '<div class="ks-group"></div>' +
-          '<a href="../kvk-matchup/kvk-matchup-index.html?v=20261107123319" class="ks-link" title="KvK相手突合せ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ</span></a>' +
-          '<a href="../index.html?v=20261107123319" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a>' +
+          '<a href="../kvk-matchup/kvk-matchup-index.html?v=20261107132535" class="ks-link" title="KvK相手突合せ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ</span></a>' +
+          '<a href="../index.html?v=20261107132535" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a>' +
           '<button type="button" class="ks-link" id="logoutBtn" title="ログアウト"><span class="ks-icon">🚪</span><span class="ks-label">ログアウト</span></button>' +
         "</nav>" +
       "</div>" +
@@ -431,6 +433,7 @@
   var byUid = {};
   var tab = "board";
   var selectedUid = "";
+  var outSlots = RUIN_SLOTS.slice(); // 遺跡争奪：Discordに貼る時間帯（出力だけの設定。保存せず、イベントを開くたびに全選択）
   var tableSort = { key: "team", dir: 1 };
   var tableAlliance = "";
 
@@ -598,6 +601,7 @@
 
   function openEvent(id) {
     eventId = id;
+    outSlots = RUIN_SLOTS.slice();
     try { localStorage.setItem(LAST_EVENT_KEY, id); } catch (e) {}
     buildPeople();
     record = (data.teams || []).filter(function(t) { return t.eventId === id; })[0] || null;
@@ -797,6 +801,7 @@
     if (tab === "board") renderBoard(stats);
     else if (tab === "table") renderTable();
     else renderSlots(stats);
+    $("outSlotsRow").style.display = "none";
     $("outText").value = buildText();
     renderMoveBar();
   }
@@ -1447,7 +1452,7 @@
         if (uid) { ruinMove(k, uid, box.dataset.drop); selectedUid = ""; changed(); }
       });
     });
-    $("outText").value = buildRuinsText();
+    renderOutSlots();
     // 名前を押したときの移動バー
     var bar = $("moveBar"), p = byUid[selectedUid];
     if (!p || !slotStatus(p, k)) { bar.style.display = "none"; return; }
@@ -1478,14 +1483,36 @@
     st.pins[uid] = true;
   }
 
-  function buildRuinsText() {
+  // Discord出力の時間帯チェックボックス。切り替えたら出力欄だけ即更新する（画面の割り振りは変えない）
+  function renderOutSlots() {
+    var row = $("outSlotsRow");
+    row.style.display = "flex";
+    row.innerHTML = '<span class="note">貼る時間帯：</span>' + RUIN_SLOTS.map(function(s) {
+      return '<label class="inline"><input type="checkbox" data-outslot="' + s + '"' + (outSlots.indexOf(s) >= 0 ? " checked" : "") + "> " + slotLabel(s) + (targetsFor(s).length ? "" : '<span class="note">（対象なし）</span>') + "</label>";
+    }).join("");
+    Array.prototype.forEach.call(row.querySelectorAll("[data-outslot]"), function(cb) {
+      cb.addEventListener("change", function() {
+        outSlots = RUIN_SLOTS.filter(function(s) {
+          var c = row.querySelector('[data-outslot="' + s + '"]');
+          return c && c.checked;
+        });
+        $("outText").value = buildRuinsText(outSlots);
+      });
+    });
+    $("outText").value = buildRuinsText(outSlots);
+  }
+
+  // sel：出力する時間帯（省略なら全部。公開用データの text は常に全部）
+  function buildRuinsText(sel) {
+    sel = sel || RUIN_SLOTS;
+    if (!sel.length) return "時間帯を選んでください";
     var ev = eventById(eventId), blocks = [], lines = [];
     function flush() { if (lines.length) { blocks.push("```\n" + lines.join("\n") + "\n```"); lines = []; } }
     function push(group) { if (lines.length && lines.length + group.length > 10) flush(); lines = lines.concat(group); }
     function label(p, k) { return p.name + (slotStatus(p, k) === "maybe" ? "△" : ""); }
     RUIN_SLOTS.forEach(function(k) {
       var T = targetsFor(k);
-      if (!T.length) return;
+      if (!T.length || sel.indexOf(k) < 0) return;
       flush();
       blocks.push("【" + slotLabel(k) + "】");
       T.forEach(function(t) {
@@ -1496,7 +1523,7 @@
       if (sb.length) push(["待機（" + sb.length + "人）", sb.map(function(p) { return label(p, k); }).join("、")]);
       flush();
     });
-    if (!blocks.length) return "（対象のある時間帯がありません）";
+    if (!blocks.length) return sel.length === RUIN_SLOTS.length ? "（対象のある時間帯がありません）" : "（選んだ時間帯には対象の要塞・遺跡がありません）";
     return "■ " + eventLabel(ev) + " チーム分け\n" + blocks.join("\n") + "\n※△＝行けるかも";
   }
   function buildRuinsView() {

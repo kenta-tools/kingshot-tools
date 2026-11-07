@@ -150,3 +150,4 @@ Kingshot関連の単体HTMLツールのうち、ゲームプレイの実務で�
 - 遺跡争奪の対象をラジオ化（1つの要塞・遺跡は1つの時間だけ、再クリックで解除）
 - 遺跡争奪の募集フォーマット（ユーザー提供の形）：読み取り parseRuinFormat（(n)付きの行があれば無い行はメモ扱い、1時→25、書かれていない時間は既存の回答を保持＝mergeImported で slots を時間ごとにマージ）、空フォーマット・記入例・書き出しも遺跡争奪形式
 - テスト用TOPに「🔄 本番データで上書き」（worktree: ツール作成/copy-prod-btn）：index.html（本番・test共通）に、IS_TEST_ENV かつログイン中だけ出るボタン＋モーダル。本番 get（入力した本番パスワード、使ったら即クリア・保存なし）→ テスト get（sha）→ 件数つき confirm → テスト put。成功時にテストの管理画面下書き（test_ksMembersDraftV2）を削除。PROD_GAS_URL は test/config.js だけに定義
+- 2026-11-07 追記（遺跡争奪のDiscord出力で貼る時間帯を選べる、worktree: チーム分け機能/ruins-slot-filter）：admin/teams.html（と同じ内容の test/admin/teams.html）。#outSlotsRow に時間帯のチェック（遺跡争奪のときだけ表示、初期値は全選択、`outSlots` はメモリのみ＝保存しない・イベントを開くたびに全選択に戻る）。`buildRuinsText(sel)` が選んだ時間帯だけを出力（全部外すと「時間帯を選んでください」）。公開用データ（buildRuinsView の text）は常に全時間帯。画面の割り振りには触れない。テスト：モック29項目＋本物のテスト環境（遺跡争奪 2026-11-20、読み取りのみ）13項目すべて合格。既存の ruins_test.js のスマホ幅の項目は、画面幅を変えた直後に測るため変更前のmainでも12回中3回落ちる（テスト側のタイミングの問題）
