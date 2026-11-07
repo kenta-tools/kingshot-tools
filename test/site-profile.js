@@ -2,9 +2,8 @@
 // データ（イベント・参加者・登録）と中継役（GAS）は両サイトで共有。パスワードも分けない。
 // 出し分けるのは見た目・操作だけ（表示するイベント種別・TOPのカード）。URLを直接開けば他方のページも使える。
 //
-// どちらのサイトか：URLの ?site=egg|all → TOPでの指定（window.KS_SITE_FORCE）→ このタブの記憶（sessionStorage ksSite）→ 既定 all
-//   ・TOP（/）から入ると all、EGG用TOP（/egg/）から入ると egg が、そのタブの間だけ続く（別のタブ・別の日には持ち越さない）
-//   ・URLを直接開いたとき（?siteなし、記憶なし）は all（鯖全体用）
+// どちらのサイトか：URLの ?site=egg|all → 最後に開いたサイトの記憶（localStorage ksSite）→ 既定 all
+//   ・TOP（/）を開くと all、EGG用TOP（/egg/）を開くと egg を記憶する（window.KS_SITE_FORCE で指定）
 // 使い方：KS_SITE.eventTypes / KS_SITE.hasType(type) / KS_SITE.hasFeature(name) / KS_SITE.filterEvents(list)
 (function() {
   // type: イベント種別（admin/admin-common.js の EVENT_TYPES の部分集合）
@@ -20,10 +19,10 @@
   try { id = new URLSearchParams(location.search).get("site") || ""; } catch (e) {}
   if (!PROFILES[id]) id = (typeof window.KS_SITE_FORCE === "string" && PROFILES[window.KS_SITE_FORCE]) ? window.KS_SITE_FORCE : "";
   var fromUrl = !!id;
-  if (!id) { try { id = sessionStorage.getItem("ksSite") || ""; } catch (e) {} }
+  if (!id) { try { id = localStorage.getItem("ksSite") || ""; } catch (e) {} }
   if (!PROFILES[id]) id = "all";
-  // URLの指定（?site=）か、TOPを開いたとき（KS_SITE_FORCE）だけ、このタブの記憶を更新する。個別ページを開いても記憶は変えない
-  if (fromUrl) { try { sessionStorage.setItem("ksSite", id); } catch (e) {} }
+  // URLの指定（?site=）か、TOPを開いたとき（KS_SITE_FORCE）だけ記憶を更新する。個別ページを直接開いても記憶は変えない
+  if (fromUrl) { try { localStorage.setItem("ksSite", id); } catch (e) {} }
 
   var p = PROFILES[id];
   window.KS_SITE = {
