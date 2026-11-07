@@ -149,3 +149,4 @@ Kingshot関連の単体HTMLツールのうち、ゲームプレイの実務で�
 - TOP：ログイン中だけ「🧪 テスト環境へ」（test側は「↩ 本番へ戻る」）
 - 遺跡争奪の対象をラジオ化（1つの要塞・遺跡は1つの時間だけ、再クリックで解除）
 - 遺跡争奪の募集フォーマット（ユーザー提供の形）：読み取り parseRuinFormat（(n)付きの行があれば無い行はメモ扱い、1時→25、書かれていない時間は既存の回答を保持＝mergeImported で slots を時間ごとにマージ）、空フォーマット・記入例・書き出しも遺跡争奪形式
+- テスト用TOPに「🔄 本番データで上書き」（worktree: ツール作成/copy-prod-btn）：index.html（本番・test共通）に、IS_TEST_ENV かつログイン中だけ出るボタン＋モーダル。本番 get（入力した本番パスワード、使ったら即クリア・保存なし）→ テスト get（sha）→ 件数つき confirm → テスト put。成功時にテストの管理画面下書き（test_ksMembersDraftV2）を削除。PROD_GAS_URL は test/config.js だけに定義

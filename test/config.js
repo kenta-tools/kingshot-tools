@@ -20,6 +20,9 @@ const GAS_URL = "https://script.google.com/macros/s/AKfycbztnub9vRBiRHdL5Xea7hoT
   });
 })();
 
+// 本番の中継役のURL（テスト用TOPの「本番データで上書き」で、本番データの取得にだけ使う。本番の config.js には無い）
+const PROD_GAS_URL = "https://script.google.com/macros/s/AKfycbxu5HW9uLU9pCsUs1r_45xpuofWZmQAyZFDwSLK1C_7GvA7SDXZ4ayBEJTS0sR_8oToAw/exec";
+
 // テスト環境の目印（本番の config.js には無い）。TOPの「本番へ戻る」リンクなどの判定に使う
 const IS_TEST_ENV = true;
 
