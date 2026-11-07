@@ -52,6 +52,9 @@
   .tab-item{ display:flex; align-items:center; gap:6px; background:#fff; border:1px solid #ddd; border-radius:999px 999px 0 0; padding:7px 10px 7px 14px; font-size:13px; cursor:pointer; border-bottom:3px solid transparent; }
   .tab-item.active{ border-bottom-color:var(--accent); font-weight:bold; }
   .tab-item.tab-draft .tab-title-input{ font-style: italic; }
+  .f-march-pet.overridden{ background:#fff3cd !important; border-color:#e0a800 !important; }
+  .march-pet-cell{ white-space:nowrap; }
+  .pet-reset{ border:none; background:transparent; cursor:pointer; font-size:14px; color:#b07d00; padding:0 2px; }
   .tab-item.tab-draft::after{ content: "●"; color: #d9435e; font-size: 9px; margin-left: 2px; }
   .tab-item .tab-title-input{ border:none; background:transparent; font-size:13px; font-weight:inherit; padding:0; width:auto; min-width:2em; max-width:160px; }
   .tab-item .tab-title-input:focus{ outline:1px solid var(--accent); border-radius:4px; }
@@ -154,7 +157,7 @@
     <button type="button" class="ks-menu-btn" aria-label="メニュー" aria-expanded="false">☰</button>
   </div>
   <nav>
-    <a href="../index.html?v=20261107185518" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261107185518" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261107185518" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261107185518" class="ks-link ks-active" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261107185518" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a>
+    <a href="../index.html?v=20261107191226" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261107191226" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261107191226" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261107191226" class="ks-link ks-active" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261107191226" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -231,6 +234,7 @@
 
 <div class="panel">
   <h2>名簿</h2>
+  <p class="save-note">「到着秒数（ペットあり）」は直接書き換えられます。書き換えた行は黄色になり、その人だけ入れた値で計算します（「採用」にチェックがあるとき）。↺か、欄を空にして確定すると計算値に戻ります。</p>
   <p class="save-note" id="opponentNote">相手候補: （KvK相手突合せがまだ作られていません）</p>
   <div class="table-scroll">
   <table id="roster-table">
@@ -265,8 +269,8 @@
   <div class="result-wrap"><table id="result-table"></table></div>
 </div>
 
-<script src="../config.js?v=20261107185518"></script>
-<script src="pet-bonus.js?v=20261107185518"></script>
+<script src="../config.js?v=20261107191226"></script>
+<script src="pet-bonus.js?v=20261107191226"></script>
 <script>
 const SAMPLE = [
   { name: "じろ", march: 36, adj: 0, group: "じろ" },
@@ -292,11 +296,15 @@ function marchWithPet(march, petLevel){
   if(!bonus) return march;
   return march / (1 + bonus / 100);
 }
+// 「到着秒数（ペットあり）」：手で上書きした値（petOverride）があればそれを使う（「採用」にチェックがあるときだけ。無ければ計算値）
 function effMarch(row){
-  return row.usePet ? marchWithPet(row.march, row.petLevel) : row.march;
+  if(!row.usePet) return row.march;
+  return row.petOverride != null ? row.petOverride : marchWithPet(row.march, row.petLevel);
 }
+// 欄に出す値：上書きがあれば上書き値、無ければ計算値（ペットなしのときは空欄＝「（ペットなし）」と表示）
 function formatMarchPetDisplay(row){
-  if(!row.petLevel) return "（ペットなし）";
+  if(row.petOverride != null) return String(row.petOverride);
+  if(!row.petLevel) return "";
   return `${Math.round(marchWithPet(row.march, row.petLevel))}`;
 }
 
@@ -445,6 +453,7 @@ function newRow(data){
     adj: Math.max(0, d.adj != null ? d.adj : 0),
     petLevel: d.petLevel || 0,
     usePet: d.usePet !== false,
+    petOverride: d.petOverride != null && d.petOverride !== "" && isFinite(Number(d.petOverride)) ? Math.round(Number(d.petOverride)) : null, // 「到着秒数（ペットあり）」の手入力の上書き（整数。null＝計算値）
     group: d.group || "",
     opponentName: d.opponentName || "",
     opponentSec: d.opponentSec != null && d.opponentSec !== "" ? d.opponentSec : "",
@@ -493,7 +502,7 @@ function renderRoster(){
       <td><input type="number" data-id="${row.id}" class="f-march" value="${row.march}"></td>
       <td><input type="number" data-id="${row.id}" class="f-adj" value="${row.adj}" min="0"></td>
       <td><select data-id="${row.id}" class="f-pet">${buildPetOptions(row.petLevel)}</select></td>
-      <td><input type="text" class="f-march-pet" data-id="${row.id}" value="${formatMarchPetDisplay(row)}" readonly tabindex="-1" style="background:#f3f3f3;color:#555;"></td>
+      <td class="march-pet-cell"><input type="number" step="1" class="f-march-pet${row.petOverride != null ? " overridden" : ""}" data-id="${row.id}" value="${formatMarchPetDisplay(row)}" placeholder="（ペットなし）" title="${row.petOverride != null ? "手入力の値を使っています（↺で計算値に戻す）" : "計算値です。数字を入れると、この人だけその値で計算します"}">${row.petOverride != null ? `<button type="button" class="pet-reset" data-id="${row.id}" title="計算値に戻す">↺</button>` : ""}</td>
       <td class="pet-use"><input type="checkbox" data-id="${row.id}" class="f-use" ${row.usePet ? "checked" : ""}></td>
       <td><input type="text" data-id="${row.id}" class="f-group" list="groupDatalist" value="${escapeAttr(row.group)}"></td>
       <td><input type="text" data-id="${row.id}" class="f-oname" list="opponentNameList" value="${escapeAttr(row.opponentName)}"></td>
@@ -508,7 +517,7 @@ function renderRoster(){
   function updateMarchPetCell(id){
     const row = byId(id);
     const cell = tbody.querySelector(`.f-march-pet[data-id="${id}"]`);
-    if(row && cell) cell.value = formatMarchPetDisplay(row);
+    if(row && cell && row.petOverride == null) cell.value = formatMarchPetDisplay(row); // 手入力の上書きがある行は、計算値で書き換えない
   }
 
   tbody.querySelectorAll(".f-name").forEach(inp => {
@@ -547,6 +556,29 @@ function renderRoster(){
       row.petLevel = parseInt(sel.value, 10) || 0;
       updateMarchPetCell(row.id);
       persistState();
+    });
+  });
+  // 到着秒数（ペットあり）の手入力：数字を入れるとその人の値が計算値より優先される（整数に丸める）。空にして確定すると計算値に戻る
+  tbody.querySelectorAll(".f-march-pet").forEach(inp => {
+    inp.addEventListener("input", () => {
+      const v = parseFloat(inp.value);
+      if(isNaN(v)) return; // 空のあいだは変えない（確定したときに戻す）
+      byId(inp.dataset.id).petOverride = Math.round(v);
+      inp.classList.add("overridden");
+      persistState();
+    });
+    inp.addEventListener("change", () => {
+      const row = byId(inp.dataset.id);
+      if(isNaN(parseFloat(inp.value))) row.petOverride = null;
+      persistState();
+      renderRoster(); // 上書きの印・↺ボタンを出し直す
+    });
+  });
+  tbody.querySelectorAll(".pet-reset").forEach(btn => {
+    btn.addEventListener("click", () => {
+      byId(btn.dataset.id).petOverride = null;
+      persistState();
+      renderRoster();
     });
   });
   tbody.querySelectorAll(".f-use").forEach(cb => {
@@ -1250,6 +1282,6 @@ fetchRegData();
 fetchOpponentNames();
 </script>
 
-<script src="view-edit-gate.js?v=20261107185518"></script>
+<script src="view-edit-gate.js?v=20261107191226"></script>
 </body>
 </html>
