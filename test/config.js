@@ -35,3 +35,13 @@ const IS_TEST_ENV = true;
     "html::after { content: '🧪 テスト環境'; position: fixed; top: 0; left: 0; right: 0; height: 18px; line-height: 18px; text-align: center; font-size: 11px; font-weight: bold; letter-spacing: 0.1em; color: #7a3e00; background: rgba(255,170,60,0.92); pointer-events: none; z-index: 2147483001; }";
   (document.head || document.documentElement).appendChild(st);
 })();
+
+// 全ページ共通：マウスホイールでプルダウン（select）・数字欄の値が勝手に変わらないようにする。
+// ホイールはページのスクロールとして扱う（開いたプルダウンの中の操作には影響しない）。
+document.addEventListener("wheel", function(e) {
+  var el = e.target;
+  if (el && (el.tagName === "SELECT" || (el.tagName === "INPUT" && el.type === "number"))) {
+    e.preventDefault();
+    window.scrollBy(e.deltaX, e.deltaY);
+  }
+}, { passive: false });
