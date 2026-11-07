@@ -26,9 +26,12 @@ const PROD_GAS_URL = "https://script.google.com/macros/s/AKfycbxu5HW9uLU9pCsUs1r
 // テスト環境の目印（本番の config.js には無い）。TOPの「本番へ戻る」リンクなどの判定に使う
 const IS_TEST_ENV = true;
 
-// 本番と見分けやすいよう、テスト環境だけ背景にオレンジの斜線を重ねる（各ページの背景色はそのまま、その上に重ねる）
+// 本番と見分けやすいよう、テスト環境だけ ①ごく薄いオレンジの色味を画面全体に重ねる ②上に細い固定帯「🧪 テスト環境」を出す。
+// どちらもクリックを通す（pointer-events: none）ので操作の邪魔にならない。色味は透明度5%なので表・入力欄の上でも文字は読みやすい
 (function() {
   var st = document.createElement("style");
-  st.textContent = "html body { background-image: repeating-linear-gradient(-45deg, rgba(255,140,0,0.16) 0 16px, transparent 16px 32px) !important; background-attachment: fixed !important; }";
+  st.textContent =
+    "html::before { content: ''; position: fixed; inset: 0; background: rgba(255,140,0,0.05); pointer-events: none; z-index: 2147483000; }" +
+    "html::after { content: '🧪 テスト環境'; position: fixed; top: 0; left: 0; right: 0; height: 18px; line-height: 18px; text-align: center; font-size: 11px; font-weight: bold; letter-spacing: 0.1em; color: #7a3e00; background: rgba(255,170,60,0.92); pointer-events: none; z-index: 2147483001; }";
   (document.head || document.documentElement).appendChild(st);
 })();
