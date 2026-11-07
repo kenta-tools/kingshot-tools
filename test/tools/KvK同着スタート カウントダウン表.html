@@ -154,7 +154,7 @@
     <button type="button" class="ks-menu-btn" aria-label="メニュー" aria-expanded="false">☰</button>
   </div>
   <nav>
-    <a href="../index.html?v=20261107180711" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261107180711" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261107180711" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261107180711" class="ks-link ks-active" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261107180711" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a>
+    <a href="../index.html?v=20261107184327" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261107184327" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261107184327" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261107184327" class="ks-link ks-active" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261107184327" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -265,8 +265,8 @@
   <div class="result-wrap"><table id="result-table"></table></div>
 </div>
 
-<script src="../config.js?v=20261107180711"></script>
-<script src="pet-bonus.js?v=20261107180711"></script>
+<script src="../config.js?v=20261107184327"></script>
+<script src="pet-bonus.js?v=20261107184327"></script>
 <script>
 const SAMPLE = [
   { name: "じろ", march: 36, adj: 0, group: "じろ" },
@@ -351,10 +351,12 @@ function eventState(id){
   const h = ((regData.history && regData.history.events) || []).find(e => e.id === id);
   return !h ? "missing" : h.done ? "done" : "running";
 }
+// 共有の名簿・タブを編集できるか：受付中・進行中ならOK、完了済み・見つからないときは閲覧のみ
+function isEventEditable(id){ const st = eventState(id); return st === "open" || st === "running"; }
 // 共有の名簿・タブを変えられない理由（状態ごとに言い分ける。「終了」と「受付が終わっただけ」を混同しない）
 function closedReason(id){
   const st = eventState(id);
-  return st === "running" ? "このイベントは受付が終わっている（進行中）ため" : st === "done" ? "このイベントは終了しているため" : "イベントが見つからないため";
+  return st === "done" ? "このイベントは終了（完了）しているため" : "イベントが見つからないため";
 }
 
 function eventLabel(ev){
@@ -602,7 +604,7 @@ let sharedTabs = [];
 let sharedCurrentTabId = "";
 function isAdminLoggedIn(){ try { return !!sessionStorage.getItem("ksAdminPw"); } catch(e){ return false; } }
 function adminPw(){ try { return sessionStorage.getItem("ksAdminPw") || ""; } catch(e){ return ""; } }
-function canEditTabs(){ return mode === "personal" || (isAdminLoggedIn() && isEventOpen(currentEventId)); }
+function canEditTabs(){ return mode === "personal" || (isAdminLoggedIn() && isEventEditable(currentEventId)); }
 function curTabs(){ return mode === "personal" ? tabs : sharedTabs; }
 function curTabId(){ return mode === "personal" ? currentTabId : sharedCurrentTabId; }
 function sharedTab(id){ return sharedTabs.find(t => t.id === id); }
@@ -806,7 +808,7 @@ function renderTabBar(){
     const hint = document.createElement("span");
     hint.className = "save-note";
     hint.style.marginLeft = "8px";
-    hint.textContent = isEventOpen(currentEventId) ? "（タブの追加・名前変更・並べ替え・削除は管理者ログイン中だけできます）" : "（" + closedReason(currentEventId) + "タブは閲覧のみです）";
+    hint.textContent = isEventEditable(currentEventId) ? "（タブの追加・名前変更・並べ替え・削除は管理者ログイン中だけできます）" : "（" + closedReason(currentEventId) + "タブは閲覧のみです）";
     bar.appendChild(hint);
   }
 }
@@ -896,7 +898,7 @@ function loadSharedIntoState(){
   renderMatchupSelect();
   renderRoster();
   compute();
-  const editable = isEventOpen(currentEventId);
+  const editable = isEventEditable(currentEventId);
   document.getElementById("sharedSaveBtn").disabled = !editable;
   document.getElementById("importBtn").disabled = !editable;
   const note = document.getElementById("sharedNote");
@@ -944,7 +946,7 @@ function sharedSaveRequest(tab, force){
 }
 document.getElementById("sharedSaveBtn").addEventListener("click", () => {
   if(!currentEventId){ sharedNoteSet("イベントを選んでください"); return; }
-  if(!isEventOpen(currentEventId)){ sharedNoteSet(closedReason(currentEventId) + "更新できません"); return; }
+  if(!isEventEditable(currentEventId)){ sharedNoteSet(closedReason(currentEventId) + "更新できません"); return; }
   const tab = sharedTab(sharedCurrentTabId);
   if(!tab) return;
   sharedNoteSet("保存中…");
@@ -1016,7 +1018,7 @@ function opponentFromMatchup(name){
 
 document.getElementById("importBtn").addEventListener("click", () => {
   if(!currentEventId){ alert("イベントを選んでください"); return; }
-  if(mode === "shared" && !isEventOpen(currentEventId)){ alert(closedReason(currentEventId) + "更新できません"); return; }
+  if(mode === "shared" && !isEventEditable(currentEventId)){ alert(closedReason(currentEventId) + "更新できません"); return; }
   const targets = regData.entries.filter(e => e.eventId === currentEventId && e.entry !== "absent" && e.rallyCount != null);
   if(!targets.length){ alert("このイベントで「集結の指示があった」人がユーザー登録に見つかりません"); return; }
   if(!confirm(`名簿を一旦クリアして、${targets.length}人を取り込みます。よろしいですか？`)) return;
@@ -1219,6 +1221,6 @@ fetchRegData();
 fetchOpponentNames();
 </script>
 
-<script src="view-edit-gate.js?v=20261107180711"></script>
+<script src="view-edit-gate.js?v=20261107184327"></script>
 </body>
 </html>
