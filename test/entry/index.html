@@ -128,7 +128,7 @@
 
 <div class="row" style="justify-content: space-between;">
   <h1>📝 イベント参加登録</h1>
-  <a href="../index.html?v=20261107133203" class="top-link">← TOP</a>
+  <a href="../index.html?v=20261107132535" class="top-link">← TOP</a>
 </div>
 <div class="howto">
   ① 名前を入れて「次へ」<br>
@@ -389,8 +389,7 @@
   <button type="button" class="sub-btn" id="retryBtn" style="margin-top: 10px;">もう一度読み込む</button>
 </div>
 
-<script src="../config.js?v=20261107133203"></script>
-<script src="../site-profile.js?v=20261107133203"></script>
+<script src="../config.js?v=20261107132535"></script>
 <script>
 (function() {
   // 保存は中継役（Google Apps Script: work/gas_members_proxy.gs）の pubGet / selfSave を使う（パスワード不要）。
@@ -722,8 +721,7 @@
       // 中継役が毎日作り直している Discord の招待リンクがあれば、それを使う（なければページに書いてあるリンク）
       if (res.discordInvite) document.querySelectorAll("a.join").forEach(function(a) { a.href = res.discordInvite; });
       drawJoinQr();
-      // 鯖全体用／EGG用の出し分け（site-profile.js）：このサイトで扱う種別のイベントだけ出す
-      data = { events: (typeof KS_SITE !== "undefined" ? KS_SITE.filterEvents(res.events) : (res.events || [])), users: res.users || [], entries: res.entries || [] };
+      data = { events: res.events || [], users: res.users || [], entries: res.entries || [] };
       $("loadingView").style.display = "none";
       if (!data.events.length) {
         $("emptyView").style.display = "block";

@@ -70,7 +70,7 @@
 <div class="top-row">
   <div>
     <h1>⚔️ キングショット ツール・ランキングまとめ（テスト）</h1>
-    <div class="sub" id="siteSub">カテゴリを選んでください。</div>
+    <div class="sub">カテゴリを選んでください。</div>
   </div>
   <div class="login-box" id="loginBox"></div>
 </div>
@@ -104,63 +104,50 @@
 </div>
 
 <div class="grid">
-  <a class="tool-card" data-feature="tools" href="tools/tools-index.html?v=20261107133203">
+  <a class="tool-card" href="tools/tools-index.html?v=20261107132535">
     <div class="icon">🛠️</div>
     <div class="title">ツール一覧</div>
     <div class="desc">KvK同着スタート・占領判定・周期ウェーブタイマーなどの計算ツール</div>
   </a>
-  <a class="tool-card" data-feature="flame" href="flame-dragon/flame-dragon-index.html?v=20261107133203">
+  <a class="tool-card" href="flame-dragon/flame-dragon-index.html?v=20261107132535">
     <div class="icon">🐲</div>
     <div class="title">炎龍の覇者 ランキングまとめ</div>
     <div class="desc">炎龍の覇者イベントの総合ランキングHTML一覧</div>
   </a>
-  <a class="tool-card" data-feature="league" href="holy-sword-league/holy-sword-league-index.html?v=20261107133203">
+  <a class="tool-card" href="holy-sword-league/holy-sword-league-index.html?v=20261107132535">
     <div class="icon">⚔️</div>
     <div class="title">聖剣リーグ ランキングまとめ</div>
     <div class="desc">聖剣リーグのシーズン・ブロックごとの総合ランキングHTML一覧</div>
   </a>
-  <a class="tool-card" data-feature="entry" href="entry/">
+  <a class="tool-card" href="entry/">
     <div class="icon">📝</div>
     <div class="title">イベント参加登録</div>
     <div class="desc">受付中のイベントに、自分の参加情報を登録・変更・取消</div>
   </a>
-  <a class="tool-card" data-feature="teams" href="teams/">
+  <a class="tool-card" href="teams/">
     <span class="badge">工事中</span>
     <div class="icon">🧩</div>
     <div class="title">チーム分け</div>
     <div class="desc">イベントのチーム分けを見るページ（工事中。分け方が決まったら公開します）</div>
   </a>
-  <a class="tool-card" data-feature="inquiry" href="inquiry/">
+  <a class="tool-card" href="inquiry/">
     <div class="icon">📮</div>
     <div class="title">問い合わせ・質問</div>
     <div class="desc">サイトやゲームについての質問・意見を送る。回答済みの質問も見られます</div>
   </a>
-  <a class="tool-card" data-feature="admin" href="admin/events.html?v=20261107133203">
+  <a class="tool-card" href="admin/events.html?v=20261107132535">
     <div class="icon">🔐</div>
     <div class="title">メンバー管理（管理者）</div>
     <div class="desc">イベント参加メンバーの登録・編成管理（要パスワード）</div>
   </a>
-  <a class="tool-card" data-feature="spec" href="spec/">
+  <a class="tool-card" href="spec/">
     <div class="icon">📘</div>
     <div class="title">仕様まとめ（AIに質問用）</div>
     <div class="desc">このサイトの使い方まとめ。AIに読み込ませて使い方を質問できます</div>
   </a>
 </div>
 
-<script>window.KS_SITE_FORCE = "all";</script>
-<script src="config.js?v=20261107133203"></script>
-<script src="site-profile.js?v=20261107133203"></script>
-<script>
-// 鯖全体用／EGG同盟員用の出し分け（設定は site-profile.js）。使えない機能のカードは隠す
-(function() {
-  if (typeof KS_SITE === "undefined") return;
-  Array.prototype.forEach.call(document.querySelectorAll(".tool-card[data-feature]"), function(a) {
-    if (!KS_SITE.hasFeature(a.dataset.feature)) a.style.display = "none";
-  });
-  var sub = document.getElementById("siteSub");
-  if (sub) sub.textContent = "【" + KS_SITE.name + "】カテゴリを選んでください。";
-})();
-</script>
+<script src="config.js?v=20261107132535"></script>
 <script>
 (function() {
   var PW_KEY = "ksAdminPw";

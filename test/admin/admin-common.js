@@ -1245,10 +1245,8 @@
   }
   on("floatSaveBtn", "click", function() { publish(false); });
 
-  // 鯖全体用／EGG用の出し分け（site-profile.js）：このサイトで扱うイベント種別だけ表示する（データは消さない）
-  function siteHas(type) { return typeof KS_SITE === "undefined" || KS_SITE.hasType(type); }
   function sortedEvents() {
-    return state.events.filter(function(e) { return siteHas(e.type); }).sort(function(a, b) {
+    return state.events.slice().sort(function(a, b) {
       return b.date.localeCompare(a.date) || EVENT_TYPES.indexOf(a.type) - EVENT_TYPES.indexOf(b.type);
     });
   }
@@ -1267,7 +1265,7 @@
     var all = sortedEvents();
     var active = all.filter(function(e) { return !e.done; });
     var doneEvents = all.filter(function(e) { return e.done; });
-    if (!all.some(function(e) { return e.id === currentEventId; })) currentEventId = active.length ? active[0].id : all.length ? all[0].id : null;
+    if (!eventById(currentEventId)) currentEventId = active.length ? active[0].id : all.length ? all[0].id : null;
     // 一覧には完了していないイベント（完了したイベントを表示中ならそれも）
     var events = active.concat(doneEvents.filter(function(e) { return e.id === currentEventId; }));
     try {
@@ -1610,7 +1608,7 @@
 
   // ---------- イベント ----------
   if ($("newEventType")) { // イベント欄があるページだけ
-    $("newEventType").innerHTML = EVENT_TYPES.filter(siteHas).map(function(t) { return "<option>" + t + "</option>"; }).join("");
+    $("newEventType").innerHTML = EVENT_TYPES.map(function(t) { return "<option>" + t + "</option>"; }).join("");
     $("newEventDate").value = today();
   }
 
