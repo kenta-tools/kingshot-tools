@@ -154,7 +154,7 @@
     <button type="button" class="ks-menu-btn" aria-label="メニュー" aria-expanded="false">☰</button>
   </div>
   <nav>
-    <a href="../index.html?v=20261107184327" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261107184327" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261107184327" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261107184327" class="ks-link ks-active" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261107184327" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a>
+    <a href="../index.html?v=20261107184831" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261107184831" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261107184831" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261107184831" class="ks-link ks-active" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261107184831" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -265,8 +265,8 @@
   <div class="result-wrap"><table id="result-table"></table></div>
 </div>
 
-<script src="../config.js?v=20261107184327"></script>
-<script src="pet-bonus.js?v=20261107184327"></script>
+<script src="../config.js?v=20261107184831"></script>
+<script src="pet-bonus.js?v=20261107184831"></script>
 <script>
 const SAMPLE = [
   { name: "じろ", march: 36, adj: 0, group: "じろ" },
@@ -309,6 +309,7 @@ function escapeAttr(str){
 // --- ユーザー登録データ（entry/index.htmlと同じGAS中継役を読み取り専用で利用） ---
 // GAS_URL は config.js で定義
 let regData = { events: [], users: [], entries: [], kvkRosters: [], history: { events: [], entries: [] } };
+let regLoaded = false; // ユーザー登録データ（イベント・共有名簿）を読み込み終えたか。読み込み前に「共有用」を押しても壊れないようにする
 
 function gasCall(payload){
   return fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) })
@@ -400,8 +401,10 @@ function fetchRegData(){
       matchupPairs: res.matchupPairs || [],
       history: res.history || { events: [], entries: [] },
     };
+    regLoaded = true;
     refreshEventSelect();
     refreshNameList();
+    if(mode === "shared") loadSharedIntoState(); // 読み込み前に「共有用」を押していたときは、読み込めた時点で共有の名簿・タブを出し直す
   }).catch(e => {
     document.getElementById("sharedNote").textContent = "ユーザー登録データを読み込めませんでした: " + e.message;
   });
@@ -804,7 +807,13 @@ function renderTabBar(){
     dupBtn.addEventListener("click", () => addTab(true));
     bar.appendChild(dupBtn);
   }
-  if(mode === "shared" && !edit){
+  if(mode === "shared" && !edit && !regLoaded){
+    const hint = document.createElement("span");
+    hint.className = "save-note";
+    hint.style.marginLeft = "8px";
+    hint.textContent = "（読み込み中…）";
+    bar.appendChild(hint);
+  } else if(mode === "shared" && !edit){
     const hint = document.createElement("span");
     hint.className = "save-note";
     hint.style.marginLeft = "8px";
@@ -889,6 +898,20 @@ function loadPersonalIntoState(){
 
 // --- 共有用（みんなで見る）の読込・保存 ---
 function loadSharedIntoState(){
+  if(!regLoaded || !currentEventId){ // まだ読み込み中、またはイベントが無い：共有タブは作らず、待つ・選ぶよう案内する
+    sharedTabs = [];
+    rosterRows = [];
+    sharedDirty = false;
+    sharedSnapshot = null;
+    renderTabBar();
+    renderMatchupSelect();
+    renderRoster();
+    compute();
+    document.getElementById("sharedSaveBtn").disabled = true;
+    document.getElementById("importBtn").disabled = true;
+    sharedNoteSet(!regLoaded ? "読み込み中…（読み込みが終わると共有の名簿・タブが出ます）" : "イベントを選んでください");
+    return;
+  }
   ensureSharedTabs();
   const t = sharedTab(sharedCurrentTabId);
   rosterRows = (t.draft || t.rows || []).map(r => newRow(r));
@@ -1221,6 +1244,6 @@ fetchRegData();
 fetchOpponentNames();
 </script>
 
-<script src="view-edit-gate.js?v=20261107184327"></script>
+<script src="view-edit-gate.js?v=20261107184831"></script>
 </body>
 </html>
