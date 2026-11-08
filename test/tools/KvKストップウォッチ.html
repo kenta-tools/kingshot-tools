@@ -172,9 +172,9 @@
   <div class="mode-row">
     <label><input type="radio" name="mode" value="up" checked> カウントアップ</label>
     <label><input type="radio" name="mode" value="down"> カウントダウン</label>
-    <span id="downSet" style="display:none"><input id="mm" type="number" min="0" max="999" value="1"> 分 <input id="ss" type="number" min="0" max="59" value="0"> 秒から</span>
+    <span id="downSet" style="display:none"><input id="ss" type="number" min="0" step="0.1" value="60"> 秒から</span>
   </div>
-  <div id="time">00:00.00</div>
+  <div id="time">0.00</div>
   <button id="startBtn">スタート</button>
   <button id="lapBtn" class="sub2" disabled>記録</button>
   <button id="resetBtn" class="sub2">リセット</button>
@@ -191,13 +191,12 @@
   var mode = "up", elapsed = 0, startAt = 0, running = false, raf = 0, laps = [];
   var $ = function (id) { return document.getElementById(id); };
   function fmt(ms) {
-    var cs = Math.floor(ms / 10) % 100, s = Math.floor(ms / 1000) % 60, m = Math.floor(ms / 60000);
-    return String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0") + "." + String(cs).padStart(2, "0");
+    return (Math.floor(ms / 10) / 100).toFixed(2); // 全部秒数（小数2桁）。分には直さない
   }
   function now() { return elapsed + (running ? Date.now() - startAt : 0); }
   function save() { try { localStorage.setItem(KEY, JSON.stringify({ laps: laps })); } catch (e) {} }
   function load() { try { var d = JSON.parse(localStorage.getItem(KEY) || "{}"); laps = d.laps || []; } catch (e) { laps = []; } }
-  function target() { return ((+$("mm").value || 0) * 60 + (+$("ss").value || 0)) * 1000; }
+  function target() { return Math.max(0, +$("ss").value || 0) * 1000; }
   function shown(e) { return mode === "down" ? Math.max(0, target() - e) : e; }
   function tick() {
     var e = now();
@@ -216,14 +215,14 @@
     $("startBtn").textContent = "スタート"; $("startBtn").className = ""; $("startBtn").disabled = false; $("lapBtn").disabled = true; $("time").classList.remove("done"); tick();
   }
   Array.prototype.forEach.call(document.querySelectorAll("input[name=mode]"), function (r) { r.addEventListener("change", function () { setMode(r.value); }); });
-  ["mm", "ss"].forEach(function (id) { $(id).addEventListener("input", function () { if (!running && elapsed === 0) tick(); }); });
+  $("ss").addEventListener("input", function () { if (!running && elapsed === 0) tick(); });
   function render() {
     var tb = $("laps"); tb.innerHTML = "";
     if (!laps.length) { tb.innerHTML = '<tr><td colspan="5" class="empty">まだ記録はありません</td></tr>'; return; }
     laps.forEach(function (l, i) {
       var tr = document.createElement("tr");
       var diff = i === 0 ? l.t : l.t - laps[i - 1].t;
-      tr.innerHTML = '<td>' + (i + 1) + '</td><td class="t">' + fmt(l.d != null ? l.d : l.t) + '</td><td class="t">+' + fmt(diff) + '</td><td><input type="text" maxlength="60"></td><td><button class="del" title="削除">✕</button></td>';
+      tr.innerHTML = '<td>' + (i + 1) + '</td><td class="t">' + fmt(l.d != null ? l.d : l.t) + '秒</td><td class="t">+' + fmt(diff) + '秒</td><td><input type="text" maxlength="60"></td><td><button class="del" title="削除">✕</button></td>';
       var inp = tr.querySelector("input"); inp.value = l.memo || "";
       inp.addEventListener("input", function () { l.memo = inp.value; save(); });
       tr.querySelector(".del").addEventListener("click", function () { laps.splice(i, 1); save(); render(); });
