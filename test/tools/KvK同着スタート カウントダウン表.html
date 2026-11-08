@@ -157,7 +157,7 @@
     <button type="button" class="ks-menu-btn" aria-label="メニュー" aria-expanded="false">☰</button>
   </div>
   <nav>
-    <a href="../index.html?v=20261108100737" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261108100737" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261108100737" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261108100737" class="ks-link ks-active" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261108100737" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="KvKストップウォッチ.html?v=20261108100737" class="ks-link" title="ストップウォッチ（メモ付き）"><span class="ks-icon">⏱️</span><span class="ks-label">ストップウォッチ（メモ付き）</span></a>
+    <a href="../index.html?v=20261108101500" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">炎龍の覇者</div><a href="炎龍の覇者_攻城タイムライン計算.html?v=20261108101500" class="ks-link" title="炎龍 集結タイムライン計算"><span class="ks-icon">🐉</span><span class="ks-label">炎龍 集結タイムライン計算</span></a><a href="周期ウェーブタイマー.html?v=20261108101500" class="ks-link" title="周期ウェーブタイマー"><span class="ks-icon">🌊</span><span class="ks-label">周期ウェーブタイマー</span></a><div class="ks-group">KvK</div><a href="KvK同着スタート カウントダウン表.html?v=20261108101500" class="ks-link ks-active" title="KvK同着スタート カウントダウン表"><span class="ks-icon">⏲️</span><span class="ks-label">KvK同着スタート カウントダウン表</span></a><a href="KvK占領判定.html?v=20261108101500" class="ks-link" title="KvK占領戦 勝利判定ツール"><span class="ks-icon">🏳️</span><span class="ks-label">KvK占領戦 勝利判定ツール</span></a><a href="KvKストップウォッチ.html?v=20261108101500" class="ks-link" title="ストップウォッチ（メモ付き）"><span class="ks-icon">⏱️</span><span class="ks-label">ストップウォッチ（メモ付き）</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -268,7 +268,17 @@
   <div class="result-wrap"><table id="result-table"></table></div>
 </div>
 
-<script src="../config.js?v=20261108100737"></script>
+<div class="panel" id="histPanel" style="display:none;">
+  <h2>チャット用テキストの履歴（イベント全体・タブには関係なし）</h2>
+  <div class="save-note" id="histNote"></div>
+  <div id="histSaveBox" style="margin:8px 0;">
+    保存する項目：<span id="histChecks"></span>
+    <button type="button" class="btn small" id="histSaveBtn">履歴に保存</button>
+  </div>
+  <div id="histList"></div>
+</div>
+
+<script src="../config.js?v=20261108101500"></script>
 <script>
 const SAMPLE = [
   { name: "じろ", march: 36, adj: 0, group: "じろ" },
@@ -411,6 +421,7 @@ function fetchRegData(){
     regLoaded = true;
     refreshEventSelect();
     refreshNameList();
+    renderHistSave();
     if(mode === "shared") loadSharedIntoState(); // 読み込み前に「共有用」を押していたときは、読み込めた時点で共有の名簿・タブを出し直す
   }).catch(e => {
     document.getElementById("sharedNote").textContent = "ユーザー登録データを読み込めませんでした: " + e.message;
@@ -985,6 +996,7 @@ function setMode(newMode){
   renderTabBar();
   if(mode === "personal") loadPersonalIntoState();
   else loadSharedIntoState();
+  renderHistSave();
 }
 
 document.getElementById("modePersonalBtn").addEventListener("click", () => setMode("personal"));
@@ -994,6 +1006,7 @@ document.getElementById("eventSelect").addEventListener("change", function(){
   currentEventId = this.value;
   renderMatchupSelect();
   if(mode === "shared") loadSharedIntoState();
+  renderHistSave();
 });
 
 document.getElementById("sharedReloadBtn").addEventListener("click", () => {
@@ -1115,6 +1128,8 @@ function getRoster(){
       name,
       // ペットで速度を補正すると行軍秒数が小数になるため、表示・突合せ判定のため整数秒に丸める
       actual: Math.max(0, Math.round(march - (row.adj || 0))),
+      march: Math.round(march), // チャット用テキストに出す行軍秒数（ペットあり採用ならペット反映後、遅延は含めない）
+      hasPet: !!(row.usePet && (row.petLevel > 0 || row.petOverride != null)),
       group: row.group || "",
       opponentName: row.opponentName || "",
       opponentSec: row.opponentSec,
@@ -1141,6 +1156,17 @@ function displayName(p){
   return `${p.name}（vs ${p.opponentName || "?"}${sec ? " " + sec : ""}）`;
 }
 
+// チャット用テキストの名前表記：名前（〇秒、ペットあり/なし）［＋相手の情報］
+function chatName(p){
+  let s = `${p.name}（${p.march}秒、${p.hasPet ? "ペットあり" : "ペットなし"}）`;
+  const hasOpp = p.opponentName || (p.opponentSec !== "" && p.opponentSec != null);
+  if(hasOpp){
+    const sec = (p.opponentSec !== "" && p.opponentSec != null) ? p.opponentSec + "秒" : "";
+    s += `（vs ${p.opponentName || "?"}${sec ? " " + sec : ""}）`;
+  }
+  return s;
+}
+
 function compute(){
   const roster = getRoster();
   const maxSec = parseInt(document.getElementById("maxSec").value, 10) || 120;
@@ -1151,6 +1177,7 @@ function compute(){
 
   if(roster.length === 0){
     table.innerHTML = "<tr><td>名簿を入力してください</td></tr>";
+    lastChatItems = []; renderHistSave();
     return;
   }
 
@@ -1195,7 +1222,7 @@ function compute(){
     const overallTarget = overallBase - c;
     const overallPeople = roster.filter(p => p.actual === overallTarget);
     tr.appendChild(makeCell(overallPeople));
-    if(overallPeople.length) chatLines["全体"].push(`${label}：${overallPeople.map(displayName).join("、")}`);
+    if(overallPeople.length) chatLines["全体"].push(`${label}：${overallPeople.map(chatName).join("、")}`);
 
     for(const g of groups){
       const base = groupBase[g];
@@ -1218,7 +1245,7 @@ function compute(){
     for(let a = gMax; a >= gMin; a--){
       if(gMax - a > maxSec) break;
       const ppl = members.filter(p => p.actual === a);
-      if(ppl.length) chatLines[g].push(`${a - gMin}秒：${ppl.map(displayName).join("、")}`);
+      if(ppl.length) chatLines[g].push(`${a - gMin}秒：${ppl.map(chatName).join("、")}`);
     }
   }
 
@@ -1243,7 +1270,109 @@ function compute(){
     chatBox.appendChild(titleRow);
     chatBox.appendChild(ta);
   }
+  lastChatItems = chatKeys.filter(k => !chatSkip.has(k) && chatLines[k].length)
+    .map(k => ({ key: k, text: "ーー\n" + chatLines[k].join("\n") + "\nーー" }));
+  renderHistSave();
 }
+
+// --- チャット用テキストの履歴（共有・イベント単位。タブの外側。保存・削除は管理者のみ、閲覧とコピーは誰でも） ---
+let lastChatItems = []; // 直近の「計算する」で出たテキスト [{key, text}]
+let histChecked = {};   // 保存する項目のチェック状態 key -> bool（初期は全部ON）
+function histOfEvent(){
+  return ((regData && regData.kvkChatHistory) || []).filter(h => h.eventId === currentEventId)
+    .sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)));
+}
+function fmtHistTime(iso){
+  const d = new Date(iso);
+  if(isNaN(d)) return "";
+  const p2 = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}`;
+}
+function histCanSave(){ return mode === "shared" && !!currentEventId && isAdminLoggedIn() && isEventEditable(currentEventId); }
+function renderHistSave(){
+  const panel = document.getElementById("histPanel");
+  panel.style.display = (mode === "shared" && currentEventId) ? "" : "none";
+  if(panel.style.display === "none") return;
+  const box = document.getElementById("histSaveBox");
+  const checks = document.getElementById("histChecks");
+  checks.innerHTML = "";
+  lastChatItems.forEach(it => {
+    if(histChecked[it.key] === undefined) histChecked[it.key] = true;
+    const lab = document.createElement("label");
+    lab.style.marginRight = "12px";
+    const cb = document.createElement("input");
+    cb.type = "checkbox"; cb.checked = !!histChecked[it.key];
+    cb.addEventListener("change", () => { histChecked[it.key] = cb.checked; });
+    lab.appendChild(cb);
+    lab.appendChild(document.createTextNode(" " + it.key));
+    checks.appendChild(lab);
+  });
+  if(!lastChatItems.length) checks.textContent = "（先に「計算する」を押してください）";
+  box.style.display = histCanSave() ? "" : "none";
+  document.getElementById("histNote").textContent = histCanSave() ? "" :
+    (isAdminLoggedIn() ? "このイベントは終了しているため、履歴の保存はできません（見る・コピーはできます）" : "履歴の保存・削除は管理者ログイン中だけできます（見る・コピーは誰でもできます）");
+  renderHistList();
+}
+function renderHistList(){
+  const list = document.getElementById("histList");
+  list.innerHTML = "";
+  const hs = histOfEvent();
+  if(!hs.length){ list.innerHTML = '<div class="save-note">まだ履歴はありません</div>'; return; }
+  hs.forEach(h => {
+    const wrap = document.createElement("div");
+    wrap.style.cssText = "border-top:1px solid #ddd; padding:8px 0;";
+    const head = document.createElement("div");
+    head.style.cssText = "display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;";
+    const title = document.createElement("strong");
+    title.textContent = fmtHistTime(h.savedAt) + (h.tabTitle ? "　（タブ：" + h.tabTitle + "）" : "");
+    head.appendChild(title);
+    if(isAdminLoggedIn()){
+      const del = document.createElement("button");
+      del.type = "button"; del.className = "btn secondary small"; del.textContent = "削除";
+      del.onclick = () => histDelete(h.id);
+      head.appendChild(del);
+    }
+    wrap.appendChild(head);
+    (h.items || []).forEach(it => {
+      const row = document.createElement("div");
+      row.style.cssText = "display:flex; align-items:center; justify-content:space-between; margin:6px 0 2px;";
+      const k = document.createElement("span");
+      k.textContent = it.key;
+      k.style.fontSize = "0.85rem";
+      const cp = document.createElement("button");
+      cp.type = "button"; cp.className = "btn small copy-btn"; cp.textContent = "コピー";
+      const ta = document.createElement("textarea");
+      ta.readOnly = true; ta.value = it.text; ta.rows = Math.min(12, it.text.split("\n").length + 1);
+      cp.onclick = () => copyText(ta, cp);
+      row.appendChild(k); row.appendChild(cp);
+      wrap.appendChild(row); wrap.appendChild(ta);
+    });
+    list.appendChild(wrap);
+  });
+}
+function histApply(res){
+  if(!regData) return;
+  regData.kvkChatHistory = (regData.kvkChatHistory || []).filter(h => h.eventId !== currentEventId).concat(res.history || []);
+  renderHistSave();
+}
+function histSave(){
+  if(!histCanSave()) return;
+  const items = lastChatItems.filter(it => histChecked[it.key]);
+  if(!items.length){ alert("保存する項目にチェックを入れてください（先に「計算する」を押してください）"); return; }
+  const tab = sharedTab(sharedCurrentTabId);
+  const btn = document.getElementById("histSaveBtn"); btn.disabled = true;
+  gasCall({ action: "kvkHistSave", password: adminPw(), eventId: currentEventId, tabTitle: tab ? tab.title : "", items })
+    .then(res => { if(!res.ok) throw new Error(res.error || "保存できませんでした"); histApply(res); })
+    .catch(e => alert("履歴を保存できませんでした: " + e.message))
+    .then(() => { btn.disabled = false; });
+}
+function histDelete(id){
+  if(!confirm("この履歴を削除します。よろしいですか？")) return;
+  gasCall({ action: "kvkHistDelete", password: adminPw(), eventId: currentEventId, id })
+    .then(res => { if(!res.ok) throw new Error(res.error || "削除できませんでした"); histApply(res); })
+    .catch(e => alert("履歴を削除できませんでした: " + e.message));
+}
+document.getElementById("histSaveBtn").addEventListener("click", histSave);
 
 function copyText(ta, btn){
   navigator.clipboard.writeText(ta.value).then(() => {
@@ -1289,6 +1418,6 @@ fetchRegData();
 fetchOpponentNames();
 </script>
 
-<script src="view-edit-gate.js?v=20261108100737"></script>
+<script src="view-edit-gate.js?v=20261108101500"></script>
 </body>
 </html>

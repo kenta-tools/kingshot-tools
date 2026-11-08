@@ -91,6 +91,8 @@ function handle_(p) {
     if (p.action === "matchupDelete") return json_(matchupDelete_(token, p));
     // KvK同着カウントダウン表の共有タブの追加・名前変更・並べ替え・削除・突合せの選択（管理者のみ）
     if (p.action === "kvkTabs") return json_(kvkTabs_(token, p));
+    // KvK同着カウントダウン表「チャット用テキストの履歴」の保存・削除（管理者のみ。閲覧はpubGetのkvkChatHistory）
+    if (p.action === "kvkHistSave" || p.action === "kvkHistDelete") return json_(kvkHist_(token, p));
     // KvK相手突合せで「ゲーム内の名前」を登録済みユーザーの旧名（別表記）に追加する（次回から名前が自動で一致する）
     if (p.action === "addAlias") return json_(addAlias_(token, p));
     // 問い合わせ・質問の一覧（管理者のみ。未回答も含めて全部見られる）
@@ -147,6 +149,7 @@ function pubGet_(token) {
     entries: (d.entries || []).filter(function(x) { return ids[x.eventId]; }),
     // kvkRosters/flameRostersは終了したイベント分も含めて全部返す（終了後も閲覧はできるようにするため。
     // 更新を締め切るかどうかはクライアント側で「そのイベントがopenか」を見て判断する）
+    kvkChatHistory: d.kvkChatHistory || [], // チャット用テキストの履歴（イベントごと。閲覧は誰でも）
     kvkRosters: (d.kvkRosters || []).map(kvkRosterNorm_), // 各イベントの共有名簿。tabs（名前付きタブ）を補って返す（昔の1つの名簿は「標準」タブ）
     flameRosters: d.flameRosters || [],
     // KvK相手突合せで保存した「うちの誰が相手の誰と対戦するか」（名前のペアのみ。管理者のみ保存可、閲覧はパスワード不要）
@@ -315,6 +318,50 @@ function kvkTabs_(token, p) {
       d.updated = new Date().toISOString();
       var w = writeFile_(token, d, f.sha, "KvK shared tabs: " + op);
       if (w.ok) { result.ok = true; result.tabs = tabs; return result; }
+      if (w.status !== 409 && w.status !== 422) return w;
+    }
+    return { ok: false, status: 409, error: "混み合っています。もう一度押してください" };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// チャット用テキストの履歴: [{id, eventId, tabTitle, savedAt, items:[{key, text}]}]。イベントごとに最大50件、古いものから消える。
+// 保存（kvkHistSave）・削除（kvkHistDelete）は管理者パスワード必須（呼び出し側で確認済み）。
+var KVK_HIST_MAX = 50;
+function kvkHist_(token, p) {
+  if (!p.eventId) return { ok: false, status: 400, error: "イベントが選ばれていません" };
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) return { ok: false, status: 503, error: "混み合っています。少し待ってからもう一度押してください" };
+  try {
+    for (var attempt = 0; attempt < 3; attempt++) {
+      var f = readFile_(token);
+      if (!f.ok) return f;
+      var d = f.data;
+      var all = d.kvkChatHistory || [];
+      if (p.action === "kvkHistSave") {
+        if (!isEventEditable_(d, p.eventId)) return { ok: false, status: 403, error: "このイベントは終了（完了）しているため保存できません" };
+        var items = (Array.isArray(p.items) ? p.items : []).slice(0, 20).map(function(it) {
+          return { key: clip_(it.key, 30), text: String(it.text == null ? "" : it.text).slice(0, 5000) };
+        }).filter(function(it) { return it.key && it.text; });
+        if (!items.length) return { ok: false, status: 400, error: "保存する項目がありません" };
+        all.push({ id: "h" + Utilities.getUuid().replace(/-/g, "").slice(0, 10), eventId: p.eventId, tabTitle: clip_(p.tabTitle, 20),
+          savedAt: new Date().toISOString(), items: items });
+        var mine = all.filter(function(h) { return h.eventId === p.eventId; });
+        if (mine.length > KVK_HIST_MAX) {
+          var drop = {};
+          mine.slice(0, mine.length - KVK_HIST_MAX).forEach(function(h) { drop[h.id] = true; });
+          all = all.filter(function(h) { return !drop[h.id]; });
+        }
+      } else {
+        var before = all.length;
+        all = all.filter(function(h) { return !(h.eventId === p.eventId && h.id === p.id); });
+        if (all.length === before) return { ok: false, status: 404, error: "その履歴が見つかりません（すでに削除された可能性があります）" };
+      }
+      d.kvkChatHistory = all;
+      d.updated = new Date().toISOString();
+      var w = writeFile_(token, d, f.sha, "KvK chat history: " + p.action);
+      if (w.ok) return { ok: true, history: all.filter(function(h) { return h.eventId === p.eventId; }) };
       if (w.status !== 409 && w.status !== 422) return w;
     }
     return { ok: false, status: 409, error: "混み合っています。もう一度押してください" };
