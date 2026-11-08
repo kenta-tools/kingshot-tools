@@ -89,6 +89,20 @@
   #roBanner { display: none; background: #fff1d6; color: #8a5600; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; font-size: 13px; }
 
   /* 移動バー（チップを押したときに下に出る） */
+  /* 固定の保存バー（常に見える位置。完了イベントでは出さない） */
+  #saveBar { display: none; position: fixed; right: 12px; bottom: 12px; z-index: 100001; max-width: calc(100vw - 24px); box-sizing: border-box;
+    background: #1a2332; color: #fff; border-radius: 22px; padding: 5px 8px 5px 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.3); align-items: center; gap: 6px; flex-wrap: nowrap; font-size: 12px; }
+  #saveBar.show { display: flex; }
+  #saveBar button { font-size: 12px; padding: 4px 9px; margin: 0; white-space: nowrap; }
+  #saveBar button.sub { background: #3a4a63; color: #fff; border-color: #4a5a73; }
+  #saveBar .sb-state { white-space: nowrap; color: #b9c4d6; }
+  #saveBar.dirty .sb-state { color: #ffd66b; font-weight: bold; }
+  #saveBar .sb-msg { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #b9c4d6; }
+  @media (max-width: 600px) {
+    #saveBar { left: 8px; right: 8px; bottom: 8px; max-width: none; justify-content: space-between; padding: 4px 6px 4px 10px; }
+    #saveBar .sb-long { display: none; }
+    #saveBar .sb-msg { display: none; }
+  }
   #moveBar {
     display: none; position: fixed; left: 0; right: 0; bottom: 0; z-index: 100002; background: #1a2332; color: #fff;
     padding: 10px 14px; box-shadow: 0 -2px 8px rgba(0,0,0,0.25); font-size: 13px;
@@ -197,6 +211,13 @@
       <button type="button" class="sub" id="copyUrlBtn">🔗 閲覧ページのURLをコピー</button>
     </div>
     <div class="msg" id="saveMsg"></div>
+  </div>
+  <div id="saveBar" role="toolbar" aria-label="保存と公開">
+    <span class="sb-state" id="sbState">保存済み</span>
+    <button type="button" id="sbSave">💾<span class="sb-long"> 下書き保存</span></button>
+    <button type="button" id="sbPublish">📢<span class="sb-long"> 保存して公開する</span></button>
+    <button type="button" class="sub" id="sbUnpublish">🙈<span class="sb-long"> 非公開に戻す</span></button>
+    <span class="sb-msg" id="sbMsg"></span>
   </div>
 </div>
 
@@ -1591,6 +1612,17 @@
     if (readOnly) txt.push("🔒 完了したイベント（見るだけ）");
     txt.push("参加者 " + people.length + "人（不参加を除く）");
     $("statusText").textContent = txt.join("　");
+    // 固定の保存バー：完了イベントでは出さない。未保存のときは「まだ保存していない変更があります」
+    var bar = $("saveBar");
+    bar.className = readOnly || !draft ? "" : "show" + (unsaved ? " dirty" : "");
+    $("sbState").textContent = unsaved ? "● まだ保存していない変更があります" : "保存済み";
+    adjustSaveBar();
+  }
+  // 名前を押したときの移動バー（画面の下に出る）が出ているあいだは、その上に重ねる
+  function adjustSaveBar() {
+    var mb = $("moveBar"), bar = $("saveBar");
+    var h = mb && mb.style.display === "block" ? mb.offsetHeight : 0;
+    bar.style.bottom = (h + (window.innerWidth <= 600 ? 8 : 12)) + "px";
   }
 
   function renderSettings() {
@@ -2376,7 +2408,7 @@
   // ---------- 保存 ----------
   function save(publish, force) {
     if (readOnly) { setMsg($("saveMsg"), "完了したイベントは保存・公開できません", false); return Promise.resolve(); }
-    var btns = ["saveBtn", "publishBtn", "unpublishBtn"];
+    var btns = ["saveBtn", "publishBtn", "unpublishBtn", "sbSave", "sbPublish", "sbUnpublish"];
     btns.forEach(function(id) { $(id).disabled = true; });
     setMsg($("saveMsg"), "保存中…", true);
     var payload = { action: "teamSave", eventId: eventId, draft: draft, baseUpdatedAt: record ? record.updatedAt : "", publish: publish, force: !!force };
@@ -2430,12 +2462,23 @@
     navigator.clipboard.writeText($("outText").value).then(function() { setMsg($("copyMsg"), "コピーしました", true); },
       function() { $("outText").select(); setMsg($("copyMsg"), "コピーできませんでした。選択して手でコピーしてください", false); });
   });
-  on("saveBtn", "click", function() { save("keep"); });
-  on("publishBtn", "click", function() { save("publish"); });
-  on("unpublishBtn", "click", function() {
+  function doUnpublish() {
     if (!record || !record.published) { setMsg($("saveMsg"), "まだ公開していません", false); return; }
     if (confirm("公開をやめます（閲覧ページ・参加登録ページに出なくなります）。下書きは残ります。よろしいですか？")) save("unpublish");
-  });
+  }
+  on("saveBtn", "click", function() { save("keep"); });
+  on("publishBtn", "click", function() { save("publish"); });
+  on("unpublishBtn", "click", doUnpublish);
+  on("sbSave", "click", function() { save("keep"); });
+  on("sbPublish", "click", function() { save("publish"); });
+  on("sbUnpublish", "click", doUnpublish);
+  // 下の「保存と公開」のメッセージ（保存しました・エラーなど）を、固定バーにも写す
+  new MutationObserver(function() {
+    var m = $("saveMsg"), s = $("sbMsg");
+    s.textContent = m.textContent; s.title = m.textContent; s.style.color = m.className.indexOf("err") >= 0 ? "#ff9a9a" : "";
+  }).observe($("saveMsg"), { childList: true, characterData: true, subtree: true, attributes: true });
+  new MutationObserver(adjustSaveBar).observe($("moveBar"), { attributes: true, attributeFilter: ["style"] });
+  window.addEventListener("resize", adjustSaveBar);
   on("copyUrlBtn", "click", function() {
     var url = new URL("../teams/", location.href).href;
     navigator.clipboard.writeText(url).then(function() { setMsg($("saveMsg"), "コピーしました: " + url, true); },
