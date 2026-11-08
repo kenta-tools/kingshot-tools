@@ -133,7 +133,7 @@
   <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#555;margin:0 0 10px;cursor:pointer;"><input type="checkbox" id="pwRemember" style="width:auto;margin:0;"> パスワードを保存する（次回から入力不要。共用の端末ではチェックしない）</label>
   <button type="button" id="loginBtn">ログイン</button>
   <div class="msg err" id="loginMsg"></div>
-  <a href="../index.html?v=20261108145544" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
+  <a href="../index.html?v=20261108145818" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
 </div>
 
 <div id="appView">
@@ -208,7 +208,7 @@
   <div class="targets" id="moveTargets"></div>
 </div>
 
-<script src="../config.js?v=20261108145544"></script>
+<script src="../config.js?v=20261108145818"></script>
 <script>
 (function() {
   "use strict";
@@ -321,8 +321,8 @@
           '<button type="button" class="ks-menu-btn" aria-label="メニュー" aria-expanded="false">☰</button></div>' +
         "<nav>" + links +
           '<div class="ks-group"></div>' +
-          '<a href="../kvk-matchup/kvk-matchup-index.html?v=20261108145544" class="ks-link" title="KvK相手突合せ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ</span></a>' +
-          '<a href="../index.html?v=20261108145544" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a>' +
+          '<a href="../kvk-matchup/kvk-matchup-index.html?v=20261108145818" class="ks-link" title="KvK相手突合せ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ</span></a>' +
+          '<a href="../index.html?v=20261108145818" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a>' +
           '<button type="button" class="ks-link" id="logoutBtn" title="ログアウト"><span class="ks-icon">🚪</span><span class="ks-label">ログアウト</span></button>' +
         "</nav>" +
       "</div>" +
@@ -808,6 +808,22 @@
       var t = rest.filter(function(x) { return fits(x, p, Infinity); })[0];
       draft.assign[p.uid] = t ? t.id : "standby";
     });
+  }
+
+  // 三盟：参加者（不参加を除く）を上・中・下へ。出征容量の大きい人から順に、合計がいちばん小さいチーム（同じなら人数の少ないチーム）へ入れる
+  // （聖剣の4チーム均等分けと同じ考え方）。📌固定の人は動かさない。同盟や登録順の偏りは出ない
+  function autoSanmei() {
+    var groups = draft.teams.filter(function(t) { return t.kind === "group"; });
+    if (!groups.length) return "チームがありません。「＋チームを追加」で作ってください";
+    people.forEach(function(p) { if (!isPinned(p.uid)) delete draft.assign[p.uid]; });
+    function sum(t) { return membersOf(t.id).reduce(function(s, p) { return s + (p.marchCap || 0); }, 0); }
+    people.filter(function(p) { return !placeOf(p.uid); })
+      .sort(function(a, b) { return ((b.marchCap || 0) - (a.marchCap || 0)) || strongerFirst(a, b); })
+      .forEach(function(p) {
+        var t = groups.slice().sort(function(a, b) { return (sum(a) - sum(b)) || (membersOf(a.id).length - membersOf(b.id).length); })[0];
+        draft.assign[p.uid] = t.id;
+      });
+    return "振り分けました（" + groups.map(function(t) { return teamName(t) + membersOf(t.id).length + "人"; }).join("・") + "）";
   }
 
   // 聖剣：引き継いだあとに、まだどこにも入っていない人だけを入れる（集結部隊数の人は集結主チーム、残りは出征容量の合計が小さいチームへ）
@@ -1507,7 +1523,7 @@
     } else if (draft.mode === "seiken") {
       html += '<div class="note">自動振り分け：集結部隊数を登録した人は「集結主」チームにまとめ、残りの人を、各チームの出征容量の合計がそろうように分けます。</div>';
     } else {
-      html += '<div class="note">三盟は自動振り分けなしです。ボードか表で、上・中・下に割り当ててください（チーム名は変えられます）。</div>';
+      html += '<div class="note">自動振り分け：参加者（不参加を除く）を、出征容量の合計がそろうように、上・中・下へ均等に分けます（📌固定の人は動かしません）。あとからボードか表で手で直せます（チーム名は変えられます）。前回の同じ種類のイベントがあれば、下の「前回と同じチームにする」も使えます。</div>';
     }
     $("settingsBody").innerHTML = html;
     Array.prototype.forEach.call($("settingsBody").querySelectorAll("[data-set]"), function(el) {
@@ -1525,6 +1541,8 @@
     if (draft.mode === "kvk") {
       auto += '<button type="button" id="autoBtn">🤖 自動で振り分ける</button>' +
         '<button type="button" class="sub" id="rebuildBtn">👑 隊を作り直す（集結容量の大きい順）</button>';
+    } else if (draft.mode === "sanmei") {
+      auto += '<button type="button" id="autoBtn">🤖 自動で上・中・下に分ける</button>';
     } else if (draft.mode === "seiken") {
       auto += '<button type="button" id="autoBtn">🤖 自動で振り分ける</button>';
     }
@@ -1532,7 +1550,7 @@
       '<button type="button" class="sub" id="clearBtn">↩ 割り当てを外す（📌以外）</button>';
     $("autoRow").innerHTML = auto;
     on("autoBtn", "click", function() {
-      var msg = draft.mode === "kvk" ? autoKvk() : autoSeiken();
+      var msg = draft.mode === "kvk" ? autoKvk() : draft.mode === "sanmei" ? autoSanmei() : autoSeiken();
       setMsg($("autoMsg"), msg, msg.indexOf("振り分けました") === 0);
       changed();
     });
