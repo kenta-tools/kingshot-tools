@@ -1098,6 +1098,9 @@
       P.teams = P.teams && P.teams.length ? P.teams : skNewPhase().teams;
       P.assign = P.assign || {}; P.pins = P.pins || {}; P.raiders = P.raiders || {}; P.rally = P.rally || {};
     });
+    // ②チーム・③遊撃手（メンバーの4チーム・割り当て・📌・遊撃手）は、解放前と解放後で共通の1つ。解放前の内容を正として、解放後は同じものを指す
+    // （保存済みの古いデータで解放後だけ別のチームだったものは、読み込むときに解放前のものへ置き換わる。①拠点と集結主だけが段階ごと）
+    ["teams", "assign", "pins", "raiders"].forEach(function(k) { sk.after[k] = sk.before[k]; });
   }
   function skP(ph) { return draft.sk[ph]; }
   var SK_ALL = SK_ALTAR.concat(SK_BASE);                // 画面に出す順（祭壇・教化の間・傭兵駐屯地が先頭）
@@ -1133,14 +1136,13 @@
     if (skFacilities(ph).indexOf(f) < 0) return "⚠ 「" + f + "」は祭壇が解放されたあと（「祭壇解放後」のタブ）に使えます";
     army = Number(army);
     if (!(army >= 1 && army <= SK_ARMIES)) return "軍は1〜" + SK_ARMIES + "軍から選んでください";
-    if (P.raiders[uid]) return p.name + "は遊撃手です。先に遊撃手から外してください";
+    if (P.raiders[uid]) return p.name + "は遊撃手です（遊撃手は解放前・解放後で共通です）。先に遊撃手から外してください";
     var list = P.rally[f] = P.rally[f] || [];
     var here = list.filter(function(e) { return e.uid === uid; })[0];
     if (here) return "⚠ " + p.name + "は、この拠点に（" + here.army + "軍で）すでに入っています。1つの拠点には同じ人を1軍分だけしか入れられません。別の軍で重ねて入れることはできないので、入れ替えるなら先に外してください";
     var used = skUsedArmies(ph, uid, f);
     if (used[army]) return "⚠ " + p.name + "（" + army + "軍）はすでに「" + used[army] + "」に入っています。同じ人の同じ軍は複数の拠点に入れません。別の軍を選ぶか、先に「" + used[army] + "」から外してください";
-    list.push({ uid: uid, army: army });
-    delete P.assign[uid]; delete P.pins[uid];            // 集結主になった人は、メンバーの4チームからは外れる
+    list.push({ uid: uid, army: army });                 // 集結主になった人は、その段階のメンバーの4チームの一覧からは外れる（チームの割り当ては共通なので消さず、もう片方の段階ではメンバーのまま）
     return "";
   }
   function skRemoveRally(ph, f, uid) {
@@ -1150,7 +1152,7 @@
   function skAddRaider(ph, uid) {
     var P = skP(ph), p = byUid[uid];
     if (!p) return "人が選ばれていません";
-    if (skRallySet(ph)[uid]) return p.name + "は集結主として拠点に入っています。先に拠点から外してください";
+    if (skRallySet("before")[uid] || skRallySet("after")[uid]) return p.name + "は集結主として拠点に入っています（遊撃手は解放前・解放後で共通なので、どちらの段階でも集結主でない人だけが遊撃手になれます）。先に拠点から外してください";
     P.raiders[uid] = true;
     delete P.assign[uid]; delete P.pins[uid];
     return "";
@@ -1174,7 +1176,7 @@
   function skAutoTeams(ph) {
     var P = skP(ph), pool = skMemberPool(ph);
     pool.forEach(function(p) { if (!P.pins[p.uid]) delete P.assign[p.uid]; });
-    Object.keys(P.assign).forEach(function(u) { if (!pool.some(function(p) { return p.uid === u; })) delete P.assign[u]; });
+    Object.keys(P.assign).forEach(function(u) { if (P.raiders[u]) delete P.assign[u]; });
     function sum(t) { return skTeamMembers(ph, t).reduce(function(s, p) { return s + (p.marchCap || 0); }, 0); }
     pool.filter(function(p) { return !P.assign[p.uid]; })
       .sort(function(a, b) { return ((b.marchCap || 0) - (a.marchCap || 0)) || strongerFirst(a, b); })
@@ -1182,17 +1184,13 @@
         var t = P.teams.slice().sort(function(a, b) { return (sum(a) - sum(b)) || (skTeamMembers(ph, a).length - skTeamMembers(ph, b).length); })[0];
         P.assign[p.uid] = t.id;
       });
-    return "メンバー " + pool.length + "人を4チームに分けました";
+    return "メンバー " + pool.length + "人を4チームに分けました（チームは解放前・解放後で共通です）";
   }
-  // 解放前を土台に解放後を作る：解放前のチーム・割り当て・集結主・遊撃手を、解放後にそっくりコピーする（解放後の今の内容は置き換わる）
+  // 解放前を土台に解放後を作る：①拠点と集結主（人＋〇軍）だけをコピーする（②チーム・③遊撃手は解放前と解放後で共通なのでコピー不要）。解放後の今の集結主は置き換わる
   function skCopyBeforeToAfter() {
-    var B = skP("before"), idMap = {};
-    var A = { teams: B.teams.map(function(t) { var id = newId(); idMap[t.id] = id; return { id: id, name: t.name }; }), assign: {}, pins: {}, raiders: {}, rally: {} };
-    Object.keys(B.assign).forEach(function(u) { if (idMap[B.assign[u]]) A.assign[u] = idMap[B.assign[u]]; });
-    Object.keys(B.pins).forEach(function(u) { A.pins[u] = true; });
-    Object.keys(B.raiders).forEach(function(u) { A.raiders[u] = true; });
+    var B = skP("before"), A = skP("after");
+    A.rally = {};
     SK_BASE.forEach(function(f) { A.rally[f] = (B.rally[f] || []).map(function(e) { return { uid: e.uid, army: e.army }; }); });
-    draft.sk.after = A;
   }
   function skWarns(ph, f) {
     var list = skRallyList(ph, f), w = [];
@@ -1218,12 +1216,12 @@
     }).join("") + "</div>" +
       '<div class="note">' + (ph === "before"
         ? "祭壇が解放されるまでのチームです。拠点：" + SK_BASE.join("・") + "。祭壇・教化の間・傭兵駐屯地は、解放前は灰色で見るだけです（「祭壇解放後」のタブで使えます）。"
-        : "祭壇が解放されたあとのチームです（祭壇・教化の間・傭兵駐屯地が先頭に並び、使えるようになります）。「解放前のチームを土台に解放後を作る」で、解放前のチームをコピーしてから直せます。") + "</div>" +
+        : "祭壇が解放されたあとのチームです（祭壇・教化の間・傭兵駐屯地が先頭に並び、使えるようになります）。「解放前の集結主を土台に解放後を作る」で、解放前の拠点と集結主をコピーしてから直せます。②チームと③遊撃手は、解放前と解放後で共通の1つです（どちらのタブで直しても両方に反映）。") + "</div>" +
       '<div class="note" style="margin-top:4px;">集結主は拠点に「人＋〇軍（1〜' + SK_ARMIES + '軍）」で置きます（1つの拠点に複数、同じ人が複数の拠点にも入れます。ただし同じ拠点に同じ人は1軍分だけ、同じ「人＋〇軍」は複数の拠点に置けません）。メンバー（集結主・遊撃手以外）は、拠点とは関係なく4チームに均等に分けます。遊撃手はどこにも属さず、試合中に空いた拠点へ動く人です。</div>';
     $("autoRow").innerHTML =
       '<button type="button" id="skAutoRallyBtn">🤖 集結主を各拠点に置く（空の拠点だけ）</button>' +
       '<button type="button" id="skAutoTeamsBtn">🤖 メンバーを4チームに均等に分ける（📌以外）</button>' +
-      (ph === "after" ? '<button type="button" class="sub" id="skCopyBtn">📋 解放前のチームを土台に解放後を作る</button>' : "") +
+      (ph === "after" ? '<button type="button" class="sub" id="skCopyBtn">📋 解放前の集結主を土台に解放後を作る</button>' : "") +
       '<button type="button" class="sub" id="skClearBtn">↩ ' + SK_PHASES.filter(function(x) { return x[0] === ph; })[0][1] + 'の割り当てを外す（📌以外）</button>';
     // fn が返す文：isErr=true のときは「入れられない理由」（赤字）、false のときは結果の案内（緑）。空なら何も出さない
     function act(fn, isErr) { if (readOnly) return; skFacError = null; var msg = fn(); setMsg($("autoMsg"), msg || "", !isErr); changed(); }
@@ -1234,15 +1232,15 @@
     on("skAutoTeamsBtn", "click", function() { act(function() { return skAutoTeams(ph); }); });
     on("skCopyBtn", "click", function() {
       if (readOnly) return;
-      if (!confirm("解放前のチームを土台に、解放後を作ります。\n解放後の今の割り当て（集結主・チーム・遊撃手）はすべて置き換わります。よろしいですか？")) return;
-      act(function() { skCopyBeforeToAfter(); return "解放前のチームを土台に、解放後を作りました（祭壇・教化の間・傭兵駐屯地の集結主を決めてください）"; });
+      if (!confirm("解放前の拠点と集結主（人＋〇軍）を土台に、解放後の拠点と集結主を作ります。\n解放後の今の集結主はすべて置き換わります（チーム・遊撃手は解放前と解放後で共通なので変わりません）。よろしいですか？")) return;
+      act(function() { skCopyBeforeToAfter(); return "解放前の集結主を土台に、解放後を作りました（祭壇・教化の間・傭兵駐屯地の集結主を決めてください）"; });
     });
     on("skClearBtn", "click", function() {
       if (readOnly) return;
-      if (!confirm("この段階の、📌（固定）以外の割り当てと、集結主・遊撃手を外します。よろしいですか？")) return;
+      if (!confirm("この段階の集結主と、📌（固定）以外のチームの割り当て・遊撃手を外します。\n※チームの割り当てと遊撃手は解放前・解放後で共通なので、もう片方の段階からも外れます。よろしいですか？")) return;
       act(function() {
         Object.keys(P.assign).forEach(function(u) { if (!P.pins[u]) delete P.assign[u]; });
-        P.rally = {}; P.raiders = {};
+        P.rally = {}; Object.keys(P.raiders).forEach(function(u) { delete P.raiders[u]; });
         return "";
       });
     });
@@ -1277,7 +1275,7 @@
     });
     v += "</div>";
 
-    v += '<h3 style="margin:14px 0 6px;">② チーム（メンバーを4つに均等に）</h3><div class="board">';
+    v += '<h3 style="margin:14px 0 6px;">② チーム（メンバーを4つに均等に・解放前と解放後で共通）</h3><div class="board">';
     P.teams.forEach(function(t) {
       var ms = skTeamMembers(ph, t).sort(function(a, b) { return ((b.marchCap || 0) - (a.marchCap || 0)) || (a.order - b.order); });
       var cap = ms.reduce(function(s, p) { return s + (p.marchCap || 0); }, 0);
@@ -1290,7 +1288,7 @@
       '<div class="team-body">' + (un.length ? un.map(function(p) { return skChip(p, ph); }).join("") : '<span class="empty-hint">（なし）</span>') + "</div></div></div>";
 
     var rd = people.filter(function(p) { return P.raiders[p.uid]; });
-    v += '<h3 style="margin:14px 0 6px;">③ 遊撃手（どの拠点にも属さない）</h3><div class="board"><div class="team special" data-drop="raider"><div class="team-head"><div class="team-title"><b>🏃 遊撃手</b><span class="note">' + rd.length + '人（拠点の人数には数えません）</span></div></div>' +
+    v += '<h3 style="margin:14px 0 6px;">③ 遊撃手（どの拠点にも属さない・解放前と解放後で共通）</h3><div class="board"><div class="team special" data-drop="raider"><div class="team-head"><div class="team-title"><b>🏃 遊撃手</b><span class="note">' + rd.length + '人（拠点の人数には数えません）</span></div></div>' +
       '<div class="team-body">' + (rd.length ? rd.map(function(p) {
         return '<div class="chip"><b>' + escapeHtml(p.name) + '</b> <span class="m">' + escapeHtml(p.alliance) + '</span> <button type="button" class="sub mini" data-skraiderdel="' + escapeHtml(p.uid) + '" title="外す">✕</button></div>';
       }).join("") : '<span class="empty-hint">遊撃手を入れる</span>') + "</div>" +
@@ -1439,37 +1437,36 @@
     $("outText").value = buildSeikenText(outPhases);
   }
 
-  // 聖剣の引き継ぎ：前回の解放前・解放後それぞれの、チーム（4つ）・メンバーの所属・集結主（人＋〇軍）・遊撃手・📌をそのまま。
-  // 今回いない人は外す。集結主のいなくなった拠点は、まだどこにも入っていない「集結部隊数を登録した人」を集結容量の大きい順に置き、
-  // 今回新しく参加したメンバーだけを4チームへ均等に入れる（引き継いだ人は動かさない）
+  // 聖剣の引き継ぎ：前回のチーム（4つ）・メンバーの所属・遊撃手・📌は、解放前と解放後で共通の1つ（前回の解放前を正とする。前回が古い形で解放後だけ別だった場合も解放前のものを使う）。
+  // 集結主（人＋〇軍）だけ、解放前・解放後それぞれ前回のものをそのまま。今回いない人は外す。集結主のいなくなった拠点は、
+  // まだどこにも入っていない「集結部隊数を登録した人」を集結容量の大きい順に置き、今回新しく参加したメンバーだけを4チームへ均等に入れる（引き継いだ人は動かさない）
   function carrySeiken(pd, info) {
     skEnsure();
+    var base = pd.sk && (pd.sk.before || pd.sk.after);
+    if (!base) return;
+    var N = skNewPhase(), idMap = {};
+    (base.teams || []).forEach(function(t, i) { if (N.teams[i]) { N.teams[i].name = t.name; idMap[t.id] = N.teams[i].id; } });
+    Object.keys(base.assign || {}).forEach(function(u) {
+      if (!byUid[u]) { info.gone++; return; }
+      if (idMap[base.assign[u]]) { N.assign[u] = idMap[base.assign[u]]; info.same++; if (base.pins && base.pins[u]) N.pins[u] = true; }
+    });
+    Object.keys(base.raiders || {}).forEach(function(u) { if (byUid[u]) { N.raiders[u] = true; info.same++; } else info.gone++; });
     ["before", "after"].forEach(function(ph) {
-      var S = pd.sk && pd.sk[ph];
-      if (!S) return;
-      var N = skNewPhase(), idMap = {};
-      (S.teams || []).forEach(function(t, i) { if (N.teams[i]) { N.teams[i].name = t.name; idMap[t.id] = N.teams[i].id; } });
-      Object.keys(S.assign || {}).forEach(function(u) {
-        if (!byUid[u]) { info.gone++; return; }
-        if (idMap[S.assign[u]]) { N.assign[u] = idMap[S.assign[u]]; info.same++; if (S.pins && S.pins[u]) N.pins[u] = true; }
-      });
-      Object.keys(S.raiders || {}).forEach(function(u) { if (byUid[u]) { N.raiders[u] = true; info.same++; } else info.gone++; });
-      Object.keys(S.rally || {}).forEach(function(f) {
+      var S = pd.sk && pd.sk[ph], R = {};
+      if (S) Object.keys(S.rally || {}).forEach(function(f) {
         if (skFacilities(ph).indexOf(f) < 0) return;
-        N.rally[f] = (S.rally[f] || []).filter(function(e) { if (byUid[e.uid]) { info.same++; return true; } info.gone++; return false; })
+        R[f] = (S.rally[f] || []).filter(function(e) { if (byUid[e.uid]) { info.same++; return true; } info.gone++; return false; })
           .map(function(e) { return { uid: e.uid, army: e.army }; });
       });
-      draft.sk[ph] = N;
+      draft.sk[ph] = { teams: N.teams, assign: N.assign, pins: N.pins, raiders: N.raiders, rally: R };
     });
-    ["before", "after"].forEach(function(ph) {
-      if (!(pd.sk && pd.sk[ph])) return;
-      skAutoRally(ph);
-      var P = skP(ph), tmp = [], before = Object.keys(P.assign).length;
-      Object.keys(P.assign).forEach(function(u) { if (!P.pins[u]) { P.pins[u] = true; tmp.push(u); } });
-      skAutoTeams(ph);
-      tmp.forEach(function(u) { delete P.pins[u]; });
-      info.added += Object.keys(P.assign).length - before;
-    });
+    ["before", "after"].forEach(function(ph) { if (pd.sk && pd.sk[ph]) skAutoRally(ph); });
+    var P = skP("before"), tmp = [], before = Object.keys(P.assign).length;
+    Object.keys(P.assign).forEach(function(u) { if (!P.pins[u]) { P.pins[u] = true; tmp.push(u); } });
+    skAutoTeams("before");
+    skAutoTeams("after");
+    tmp.forEach(function(u) { delete P.pins[u]; });
+    info.added += Object.keys(P.assign).length - before;
   }
 
   // ---------- 集計と注意 ----------
