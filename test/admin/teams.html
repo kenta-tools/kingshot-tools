@@ -525,6 +525,7 @@
       return d;
     }
     if (mode === "kvk") {
+      d.settings.start = KVK_START; d.settings.end = KVK_END;
       people.filter(function(p) { return p.isRallyer; }).sort(function(a, b) {
         return ((b.rallyCap || 0) - (a.rallyCap || 0)) || strongerFirst(a, b);
       }).forEach(function(p) {
@@ -868,9 +869,13 @@
     return "隊数は変わりません";
   }
   // KVKは、設定欄から消した項目（戦闘時間・人数の目安・上位隊ルール・◆を散らす）を既定値で固定する（保存済みの値は使わない）
+  // 戦闘時間はKVKだけ 21:00〜26:00（26:00＝翌2:00）。三盟・聖剣などの既定値（21:00〜25:00）は変えない
+  var KVK_START = 21 * 60, KVK_END = 26 * 60;
   function fixKvkSettings() {
     var d = defaultSettings();
     ["start", "end", "minSize", "maxSize", "topRule", "topSize", "spreadVivian"].forEach(function(k) { draft.settings[k] = d[k]; });
+    draft.settings.start = KVK_START;
+    draft.settings.end = KVK_END;
   }
 
   // 聖剣：引き継いだあとに、まだどこにも入っていない人だけを入れる（集結部隊数の人は集結主チーム、残りは出征容量の合計が小さいチームへ）
@@ -1552,7 +1557,7 @@
   function renderSettings() {
     var s = draft.settings, html = "";
     var row = "";
-    // 戦闘時間：KVK・三盟では出さない（既定値の21:00〜25:00で固定）
+    // 戦闘時間：KVK・三盟では出さない（KVKは21:00〜26:00、三盟は21:00〜25:00で固定）
     if (draft.mode !== "sanmei" && draft.mode !== "kvk") {
       row += '<label class="inline">戦闘時間 <select data-set="start">' + timeOptions(s.start) + '</select> 〜 <select data-set="end">' + timeOptions(s.end) + "</select></label>";
     }
@@ -1928,7 +1933,7 @@
     return {
       mode: draft.mode,
       title: eventLabel(ev),
-      battle: draft.mode === "sanmei" ? "" : fmtMin(draft.settings.start) + "〜" + fmtMin(draft.settings.end),
+      battle: draft.mode === "sanmei" ? "" : fmtMin(draft.settings.start) + "〜" + fmtMin(draft.settings.end) + (draft.settings.end >= 1440 ? "（翌" + fmtMin(draft.settings.end - 1440) + "）" : ""),
       teams: draft.teams.map(function(t) {
         var l = leaderOf(t);
         return {
