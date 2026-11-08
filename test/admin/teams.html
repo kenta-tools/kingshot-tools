@@ -388,6 +388,13 @@
   }
   function newId() { return "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function man(n) { return n == null ? "—" : (n / 10000).toFixed(n >= 1000000 ? 0 : 1) + "万"; }
+  // KVK：容量が未入力の人の仮置き（等級ごと）。画面は「20万（仮）」、等級もない人は「0（等級なし）」
+  var PROV_CAP = { G8: 200000, G7: 190000, G6: 180000, G5: 170000 };
+  function manP(p, key) {
+    var v = p[key], prov = key === "marchCap" ? p.marchProv : p.rallyProv;
+    if (!prov) return man(v);
+    return p.provNone ? "0（等級なし）" : man(v).replace(".0万", "万") + "（仮）";
+  }
 
   // ---------- 時刻（30分単位の時間帯） ----------
   // 分（0:00からの分）で扱う。戦闘の開始より12時間以上前の時刻は日をまたいだものとして24時間足す（0時30分 → 24:30）
@@ -475,6 +482,7 @@
     byUid = {};
     var ruinEvent = (eventById(eventId) || {}).type === "遺跡争奪";
     var kvk = ruinEvent ? latestKvkByUser() : {};
+    var kvkEvent = (eventById(eventId) || {}).type === "KVK";
     (data.entries || []).forEach(function(x, i) {
       if (x.eventId !== eventId || x.entry === "absent") return;
       var u = users[x.userId];
@@ -501,6 +509,12 @@
       p.timeUnknown = (p.entry === "late" && !p.joinAt) || (p.leaveEarly && !p.joinAt && !p.leaveAt);
       p.fullTime = !p.timeUnknown && !p.joinAt && !p.leaveAt && !p.leaveEarly && p.entry === "start";
       p.isRallyer = p.rallyCount != null && p.rallyCount > 0;
+      if (kvkEvent) {   // KVK：容量が未入力の人は等級で仮置き（G8=20万・G7=19万・G6=18万・G5=17万。等級もない人は0）。画面は「（仮）」つき
+        p.marchProv = p.marchCap == null; p.rallyProv = p.rallyCap == null;
+        if (p.marchProv) p.marchCap = PROV_CAP[p.grade] || 0;
+        if (p.rallyProv) p.rallyCap = PROV_CAP[p.grade] || 0;
+        p.provNone = !PROV_CAP[p.grade];
+      }
       p.slots = slots || {};
       p.fromKvk = !!x.fromKvk;
       people.push(p);
@@ -663,8 +677,11 @@
   // KVK: リーダーの集結容量（から本人の出征容量を引いた分）に収まるように、強い人から番号の小さい隊へ詰める。あふれたら次の隊へ
   function autoKvk() {
     var s = draft.settings;
-    var rally = draft.teams.filter(function(t) { return t.kind === "rally"; });
-    if (!rally.length) return "隊がありません。「隊を作り直す」か「＋隊を追加」で隊を作ってください";
+    var allRally = draft.teams.filter(function(t) { return t.kind === "rally"; });
+    if (!allRally.length) return "隊がありません。「隊を作り直す」か「＋隊を追加」で隊を作ってください";
+    var noLeader = allRally.filter(function(t) { return !(t.leaderId && byUid[t.leaderId]); }).length;
+    var rally = allRally.filter(function(t) { return t.leaderId && byUid[t.leaderId]; });   // リーダーが決まっていない隊には新しい人を入れない
+    if (!rally.length) return "リーダーを決めてください（リーダーが決まっている隊がありません）";
     var leaders = {};
     rally.forEach(function(t) { if (t.leaderId && byUid[t.leaderId]) { leaders[t.leaderId] = true; draft.assign[t.leaderId] = t.id; } });
     // 固定していない人を一度外す
@@ -701,7 +718,7 @@
     });
     if (s.spreadVivian) spreadVivian(rally, room, top);
     var standby = membersOf("standby").length;
-    return "振り分けました" + (standby ? "（容量に入りきらない " + standby + "人は待機にしました）" : "");
+    return "振り分けました" + (standby ? "（容量に入りきらない " + standby + "人は待機にしました）" : "") + (noLeader ? "（リーダーを決めてください：リーダー未設定の " + noLeader + " 隊には入れていません）" : "");
   }
 
   // ◆（ビビアン星4以上）のいない隊に、◆が2人以上いる隊から入れ替えで1人回す（容量・上位隊の条件を守れるときだけ）
@@ -829,13 +846,47 @@
   }
 
   // ---------- KVK：隊の数（全体で1つ） ----------
-  // 最大作成できる隊数＝参加者全体のうち、集結部隊数を登録した人（リーダーにできる人）の人数（同盟は問わない）
-  function kvkMaxTeams() { return people.filter(function(p) { return p.isRallyer; }).length; }
+  // 最大作成できる隊数（容量から計算）：リーダー候補（集結部隊数を登録した人）を集結容量の大きい順に1人ずつリーダーにしていき、
+  // 「各隊の乗り手で埋める量＝リーダーの集結容量−リーダー自身の出征容量」の合計が、リーダー以外の全員の出征容量の合計
+  // ＋（1隊あたり乗り手1人分＝リーダー以外の平均の出征容量）以内なら、その数の隊は作れるとみなす。作れる最大の数が「最大」
+  function kvkMaxInfo() {
+    var cands = people.filter(function(p) { return p.isRallyer; }).sort(function(x, y) { return ((y.rallyCap || 0) - (x.rallyCap || 0)) || strongerFirst(x, y); });
+    var total = people.reduce(function(s, p) { return s + (p.marchCap || 0); }, 0);
+    var best = 0, need = 0, leadersMarch = 0;
+    var info = { max: 0, cands: cands.length, total: total, prov: people.filter(function(p) { return p.marchProv || p.rallyProv; }).length, none: people.filter(function(p) { return (p.marchProv || p.rallyProv) && p.provNone; }).length };
+    for (var k = 1; k <= cands.length; k++) {
+      var l = cands[k - 1];
+      need += Math.max(0, (l.rallyCap || 0) - (l.marchCap || 0));
+      leadersMarch += (l.marchCap || 0);
+      var restN = people.length - k, have = total - leadersMarch, avg = restN > 0 ? have / restN : 0;
+      if (have + k * avg >= need) best = k; else break;
+    }
+    info.max = best;
+    return info;
+  }
+  function kvkMaxTeams() { return kvkMaxInfo().max; }
   function kvkTeamCountHtml() {
-    var cur = draft.teams.filter(function(t) { return t.kind === "rally"; }).length, max = kvkMaxTeams();
-    return '<div class="row" style="margin-top:0;"><label class="inline"><b style="font-size:13px;">隊の数</b> <input type="number" min="0" max="' + Math.max(max, cur) + '" data-tc="all" value="' + cur + '"> 隊 <span class="note">最大 ' + max + ' 隊</span></label>' +
-      '<button type="button" id="tcBtn">隊数を反映</button></div>' +
-      '<div class="note" style="margin:2px 0 6px;">最大＝参加者のうち、集結部隊数を登録した人（リーダーにできる人）の人数です（同盟は問いません）。増やすと、まだリーダーになっていない人を集結容量の大きい順にリーダーにして、同盟ラベルが未設定の隊を作ります（同盟は、隊ごとの「同盟」のプルダウンで選びます）。減らすと後ろの隊から消します（入っていた人は未割り当てに戻ります。確認は出ません）。</div>';
+    var cur = draft.teams.filter(function(t) { return t.kind === "rally"; }).length, mi = kvkMaxInfo();
+    var prov = mi.prov ? "容量が未入力の " + mi.prov + " 人は等級で仮置き（G8=20万・G7=19万・G6=18万・G5=17万。画面は「20万（仮）」）" + (mi.none ? "。等級もない " + mi.none + " 人は0で計算（表示は「0（等級なし）」）" : "") + "。" : "";
+    return '<div class="row" style="margin-top:0;"><label class="inline"><b style="font-size:13px;">隊の数</b> <input type="number" min="0" max="' + Math.max(mi.max, cur) + '" data-tc="all" value="' + cur + '"> 隊 <span class="note">最大 ' + mi.max + ' 隊</span></label>' +
+      '<button type="button" id="tcBtn">隊数を反映</button><button type="button" class="sub" id="leaderFillBtn">リーダー候補を自動で入れる</button></div>' +
+      '<div class="note" style="margin:2px 0 6px;">最大の計算：集結部隊数を登録した人を集結容量の大きい順にリーダーにして、「リーダーの集結容量−本人の出征容量」の合計を、リーダー以外の出征容量の合計（1隊あたり乗り手1人分の不足まで）で埋められる隊の数です（人数ではなく容量で決めます）。' + prov +
+      '「隊数を反映」はリーダー未設定の空の隊を作ります（リーダーは隊ごとのプルダウンで選びます。「リーダー候補を自動で入れる」で、集結容量の大きい順に空の隊へ入れることもできます）。減らすときは後ろの隊から消します（確認は出ません）。リーダーを決めてから「自動で振り分ける」を押してください。</div>';
+  }
+  // 「リーダー候補を自動で入れる」：リーダー未設定の隊へ、まだリーダーでない集結部隊数ありの人を集結容量の大きい順に入れる（あとから手で直せる）
+  function fillKvkLeaders() {
+    var empty = draft.teams.filter(function(t) { return t.kind === "rally" && !t.leaderId; });
+    if (!empty.length) return "リーダー未設定の隊はありません";
+    var isLeader = {};
+    draft.teams.forEach(function(x) { if (x.leaderId) isLeader[x.leaderId] = true; });
+    var cands = people.filter(function(p) { return p.isRallyer && !isLeader[p.uid]; })
+      .sort(function(x, y) { return ((y.rallyCap || 0) - (x.rallyCap || 0)) || strongerFirst(x, y); });
+    var n = 0;
+    empty.forEach(function(t) {
+      var p = cands.shift(); if (!p) return;
+      t.leaderId = p.uid; draft.assign[p.uid] = t.id; draft.pins[p.uid] = true; n++;
+    });
+    return "リーダー候補を" + n + "隊に入れました" + (n < empty.length ? "（リーダーにできる人が足りず " + (empty.length - n) + " 隊は未設定です）" : "");
   }
   function applyKvkTeamCounts() {
     var input = document.querySelector('[data-tc="all"]');
@@ -844,19 +895,8 @@
     var cur = rally.length, limit = Math.max(kvkMaxTeams(), cur);
     var n = Math.max(0, Math.min(limit, Math.floor(Number(input.value)) || 0));
     if (n > cur) {
-      var isLeader = {};
-      draft.teams.forEach(function(x) { if (x.leaderId) isLeader[x.leaderId] = true; });
-      var cands = people.filter(function(p) { return p.isRallyer && !isLeader[p.uid]; })
-        .sort(function(x, y) { return ((y.rallyCap || 0) - (x.rallyCap || 0)) || strongerFirst(x, y); });
-      var added = 0;
-      while (added < n - cur && cands.length) {
-        var p = cands.shift(), id = newId();
-        draft.teams.push({ id: id, kind: "rally", name: "", leaderId: p.uid, ally: "" });   // 同盟ラベルは未設定（あとから隊ごとに選ぶ）
-        draft.assign[p.uid] = id;
-        draft.pins[p.uid] = true;
-        added++;
-      }
-      return "隊数を反映しました：" + cur + "→" + (cur + added) + "隊" + (added < n - cur ? "（リーダーにできる人が足りません）" : "");
+      for (var a = 0; a < n - cur; a++) draft.teams.push({ id: newId(), kind: "rally", name: "", leaderId: "", ally: "" });   // リーダー未設定の空の隊
+      return "隊数を反映しました：" + cur + "→" + n + "隊（リーダー未設定の空の隊です。リーダーを選んでください）";
     }
     if (n < cur) {
       rally.slice(n).forEach(function(t) {      // 後ろの隊から消す（確認なし）。入っていた人は未割り当てに戻る
@@ -1442,6 +1482,7 @@
       count: ms.length, leader: leader,
       riderCap: riders.reduce(function(sum, p) { return sum + (p.marchCap || 0); }, 0),
       capMissing: riders.filter(function(p) { return p.marchCap == null; }).length,
+      provN: ms.filter(function(p) { return p.marchProv || (p === leader && p.rallyProv); }).length,
       capLimit: leader && leader.rallyCap != null ? leader.rallyCap - (leader.marchCap || 0) : null,
       avgG: ms.length ? ms.reduce(function(sum, p) { return sum + p.g; }, 0) / ms.length : 0,
       vc: ms.filter(function(p) { return p.vc; }).length,
@@ -1458,6 +1499,7 @@
     });
     if (draft.mode === "kvk" && t.kind === "rally") {
       if (!leader) st.warns.push("リーダーが決まっていません");
+      else if (leader.rallyProv) st.warns.push("リーダーの集結容量は未入力のため" + (leader.provNone ? "0（等級なし）" : manP(leader, "rallyCap")) + "で計算しています");
       else if (leader.rallyCap == null) st.warns.push("リーダーの集結容量が未入力です");
       if (st.capLimit != null && st.riderCap > st.capLimit) st.warns.push("容量オーバー（" + man(st.riderCap - st.capLimit) + "多い）");
       if (st.count && st.count < s.minSize) st.warns.push("人数が少なめ（" + st.count + "人／目安" + s.minSize + "〜" + s.maxSize + "人）");
@@ -1574,6 +1616,11 @@
       html += '<div class="note">自動振り分け：参加者（不参加を除く）を、出征容量の合計がそろうように、上・中・下へ均等に分けます（📌固定の人は動かしません）。あとからボードか表で手で直せます（チーム名は変えられます）。前回の同じ種類のイベントがあれば、下の「前回と同じチームにする」も使えます。</div>';
     }
     $("settingsBody").innerHTML = html;
+    on("leaderFillBtn", "click", function() {
+      if (readOnly) return;
+      setMsg($("autoMsg"), fillKvkLeaders(), true);
+      changed();
+    });
     on("tcBtn", "click", function() {
       if (readOnly) return;
       var msg = applyKvkTeamCounts();
@@ -1645,7 +1692,7 @@
   function marks(p) { return (p.monthly ? "◯" : "") + (p.vc ? "◇" : "") + (p.vivian4 ? "◆" : ""); }
   function chipHtml(p, t) {
     var isLeader = t && t.leaderId === p.uid;
-    var cap = isLeader ? "集結" + man(p.rallyCap) : draft.mode === "sanmei" ? "" : man(p.marchCap);
+    var cap = isLeader ? "集結" + manP(p, "rallyCap") : draft.mode === "sanmei" ? "" : manP(p, "marchCap");
     var tl = timeLabel(p);
     var cls = "chip" + (isLeader ? " leader" : "") + (p.uid === selectedUid ? " sel" : "") + (p.timeUnknown ? " unknown" : "");
     return '<div class="' + cls + '" draggable="true" data-uid="' + escapeHtml(p.uid) + '" title="' + escapeHtml(p.note) + '">' +
@@ -1680,7 +1727,7 @@
       if (t.kind === "rally") {
         html += '<div class="leader-row">リーダー <select data-leader="' + t.id + '"><option value="">（選ぶ）</option>' +
           people.slice().sort(function(a, b) { return (b.isRallyer - a.isRallyer) || ((b.rallyCap || 0) - (a.rallyCap || 0)) || strongerFirst(a, b); }).map(function(p) {
-            return '<option value="' + escapeHtml(p.uid) + '"' + (p.uid === t.leaderId ? " selected" : "") + ">" + escapeHtml(p.name) + (p.rallyCap != null ? "（集結" + man(p.rallyCap) + "）" : "") + "</option>";
+            return '<option value="' + escapeHtml(p.uid) + '"' + (p.uid === t.leaderId ? " selected" : "") + ">" + escapeHtml(p.name) + (p.rallyCap != null ? "（集結" + manP(p, "rallyCap") + "）" : "") + "</option>";
           }).join("") + "</select>" +
           ' 同盟 <select data-ally="' + t.id + '"><option value="">（未設定）</option>' + KVK_ALLIANCES.map(function(a) {
             return '<option value="' + escapeHtml(a.label) + '"' + (t.ally === a.label ? " selected" : "") + ">" + escapeHtml(a.label) + "</option>";
@@ -1688,8 +1735,9 @@
       }
       var line = [];
       if (draft.mode !== "sanmei") {
-        if (st.capLimit != null) line.push("容量 " + man(st.riderCap) + "／" + man(st.capLimit));
-        else line.push("出征容量 計" + man(st.riderCap));
+        var provMark = st.provN ? "（仮置き" + st.provN + "人を含む）" : "";
+        if (st.capLimit != null) line.push("容量 " + man(st.riderCap) + "／" + man(st.capLimit) + provMark);
+        else line.push("出征容量 計" + man(st.riderCap) + provMark);
       }
       line.push("平均G " + (st.count ? st.avgG.toFixed(2) : "—"), "◇" + st.vc, "◆" + st.viv, "◯" + st.monthly, "T11 " + st.t11);
       html += '<div class="team-stats">' + line.map(function(x) { return "<span>" + x + "</span>"; }).join("") + "</div>";
@@ -1870,7 +1918,7 @@
         '<td><input type="checkbox" data-pin="' + escapeHtml(p.uid) + '"' + (isPinned(p.uid) ? " checked" : "") + "></td>" +
         "<td>" + escapeHtml(p.alliance) + "</td><td>" + escapeHtml(p.name) + "</td><td>" + escapeHtml(p.grade) + "</td><td>" + marks(p) + "</td>" +
         "<td>" + (p.t11n ? escapeHtml(p.troops) : "") + "</td><td>" + escapeHtml(timeLabel(p) || "全部") + "</td>" +
-        '<td class="num">' + man(p.marchCap) + '</td><td class="num">' + (p.rallyCap != null ? man(p.rallyCap) : "") + "</td></tr>";
+        '<td class="num">' + manP(p, "marchCap") + '</td><td class="num">' + (p.rallyCap != null ? manP(p, "rallyCap") : "") + "</td></tr>";
     });
     html += "</tbody></table></div></div>";
     $("viewArea").innerHTML = html;
