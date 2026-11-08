@@ -942,9 +942,13 @@
   // 答えは entries[].survey = {設問id: "ok"|"unknown"|"check"}。代理入力モードは答えず、条件に合う設問をコピーして本人に伝え、「連携します」にチェック（entries[].surveyProxy）。
   // 不参加の登録は答えなくてよい（中継役の selfSave_ と同じ決まり）
   var surveyAns = {}, surveyLink = false;
+  // 先頭は固定の設問「そもそも{イベントの種類}のルールがあまりわかってません」（どのイベントにも出る。イベントのデータには持たない）。
+  // 古いデータの kind:"skip" の設問は、固定の設問に置き換わったので無視する
+  var RULE_ID = "q_rule";
   function surveyAll() {
     var ev = eventById(currentEventId);
-    return ev && Array.isArray(ev.survey) ? ev.survey.filter(function(q) { return q && q.id && q.text; }) : [];
+    var rule = { id: RULE_ID, text: "そもそも" + (ev ? ev.type : "") + "のルールがあまりわかってません", kind: "skip" };
+    return [rule].concat(ev && Array.isArray(ev.survey) ? ev.survey.filter(function(q) { return q && q.id && q.text && q.kind !== "skip"; }) : []);
   }
   function rallyActive() { return !isRuin() && $("fRallyOn").checked; }
   function surveyQs() { var r = rallyActive(); return surveyAll().filter(function(q) { return q.show !== "rally" || r; }); }
@@ -961,7 +965,7 @@
   // 確認事項の欄を出すか。代理入力は、本人に伝える設問（ask）があるときだけ
   function surveyShown() {
     if (formIsAbsent()) return false;
-    return proxyBy() ? askQs().length > 0 : surveyQs().length > 0;
+    return proxyBy() ? askQs().length > 0 : true; // 固定の設問があるので、代理入力でなければいつも出る
   }
   function surveyMissing() {
     if (!surveyShown()) return 0;
@@ -981,12 +985,14 @@
         '<div class="chips" style="margin-top: 10px;"><label class="chip"><input type="checkbox" id="svLink"' + (surveyLink ? " checked" : "") + '><span>連携します</span></label></div>';
     } else {
       var sk = skipQ(), html = "";
-      html += '<div class="sv-lead">' + (sk ? "ルールがわからない人は、いちばん上にチェックすれば、ほかは答えなくて大丈夫です。" : "") +
-        (skipOn() ? "" : "それぞれ読んで、「了解」か「内容わかりません」を押してください。全部に答えると登録できます。") + '</div>';
+      var hasAsk = askQs().length > 0;
+      html += '<div class="sv-lead">' + (!hasAsk ? "ルールがわからない人は、チェックしてください（チェックしなくても登録できます）。"
+        : "ルールがわからない人は、いちばん上にチェックすれば、ほかは答えなくて大丈夫です。" +
+          (skipOn() ? "" : "それぞれ読んで、「了解」か「内容わかりません」を押してください。全部に答えると登録できます。")) + '</div>';
       if (sk) {
         html += '<div class="sv-row"><div class="chips"><label class="chip"><input type="checkbox" id="svSkip"' + (skipOn() ? " checked" : "") + '><span>' + escapeHtml(sk.text) + '</span></label></div></div>';
       }
-      if (skipOn()) html += '<div class="sv-lead" style="margin-top: 8px;">ほかの確認は要りません。そのまま登録できます。</div>';
+      if (skipOn() && hasAsk) html += '<div class="sv-lead" style="margin-top: 8px;">ほかの確認は要りません。そのまま登録できます。</div>';
       else html += askQs().map(function(q, i) {
         var a = surveyAns[q.id];
         return '<div class="sv-row"><div class="sv-q">' + (i + 1) + ". " + escapeHtml(q.text) + '</div><div class="chips">' +
@@ -1001,6 +1007,8 @@
   // 設問の出し分け（不参加なら隠す）と、登録ボタンを押せるかの切り替え
   function syncSurvey() {
     $("surveyField").style.display = surveyShown() ? "block" : "none";
+    var req = $("surveyField").querySelector(".req");
+    if (req) req.style.display = askQs().length ? "" : "none"; // 設問が固定の1つだけのときは「必須」を出さない
     var miss = surveyMissing();
     $("saveBtn").disabled = saving || miss > 0;
     $("surveyNote").textContent = miss <= 0 ? "" : proxyBy() ? "「連携します」にチェックすると登録できます" : "あと" + miss + "問、答えると登録できます";
