@@ -44,8 +44,11 @@
   // 参加登録ページでは設問ごとに 了解／内容わかりません を答えてもらう（entries[].survey = {設問id: "ok"|"unknown"|"check"}）。
   // 代理入力のときは答えは持たず、「連携します」にチェックしたこと（entries[].surveyProxy）だけ残る。中継役の selfSave_ と同じ決まり
   var SURVEY_MAX = 10, SURVEY_TEXT_MAX = 80;
+  // 固定の設問（ルール未理解のチェック）：どのイベントにも必ず出る。イベントの設問データには持たない（画面と判定が自動で補う）。
+  // 答えは entries[].survey[SURVEY_RULE_ID] = "check"。文言の種類名は、そのイベントの種類
+  var SURVEY_RULE_ID = "q_rule";
+  function ruleText(type) { return "そもそも" + (type || "") + "のルールがあまりわかってません"; }
   var SURVEY_DEFAULTS = { "KVK": [
-    { text: "そもそもKVKのルールがあまりわかってません", kind: "skip" },
     { text: "Ａチーム（王城駐屯組）は、差込頑張ってください" },
     { text: "ゴースト同盟は、王城駐屯したら抜ける準備してください" },
     { text: "集結時の左英雄（アマデウス、インウー、チェンコ、あまね、マーゴ、ビビアン）" },
@@ -57,7 +60,6 @@
     return (SURVEY_DEFAULTS[type] || []).map(function(q) {
       var o = { id: newId("q"), text: q.text };
       if (q.show) o.show = q.show;
-      if (q.kind) o.kind = q.kind;
       return o;
     });
   }
@@ -67,9 +69,9 @@
     src.forEach(function(q) {
       var text = str(q && q.text).slice(0, SURVEY_TEXT_MAX);
       if (!text || out.length >= SURVEY_MAX) return;
+      if (q.kind === "skip") return; // 古い「ルール未理解」の設問は、固定の設問に置き換わった（保存し直すと消える）
       var o = { id: str(q.id) || newId("q"), text: text };
       if (q.show === "rally") o.show = "rally";
-      if (q.kind === "skip") o.kind = "skip";
       out.push(o);
     });
     return out.length ? out : undefined;
@@ -1395,18 +1397,16 @@
       }).join("") + '</tbody></table></div>';
   }
 
-  // 参加者1人の確認事項の状態（そのイベントに設問が無い・不参加なら null）。集結主のみの設問は、集結の欄を入れた人にだけ数える
+  // 参加者1人の確認事項の状態（不参加なら null）。集結主のみの設問は、集結の欄を入れた人にだけ数える
   function surveyState(ev, m) {
+    if (m.entry === "absent") return null;
     var all = (ev && ev.survey) || [];
-    if (!all.length || m.entry === "absent") return null;
     var rally = m.rallyCount != null || m.rallyPet != null || m.rallySpeedPet != null;
-    var qs = all.filter(function(q) { return q.show !== "rally" || rally; });
-    var skipQ = qs.filter(function(q) { return q.kind === "skip"; })[0];
-    var askQ = qs.filter(function(q) { return q.kind !== "skip"; });
+    var askQ = all.filter(function(q) { return q.show !== "rally" || rally; });
     var a = m.survey || {};
-    var skipOn = !!skipQ && a[skipQ.id] === "check";
+    var skipOn = Object.keys(a).some(function(k) { return a[k] === "check"; }); // 固定の設問（古いデータの「ルール未理解」の設問も同じ）
     var proxy = m.surveyProxy === true;
-    return { a: a, askQ: askQ, skipQ: skipQ, skipOn: skipOn, proxy: proxy,
+    return { a: a, askQ: askQ, skipOn: skipOn, proxy: proxy,
       unknown: skipOn || proxy ? 0 : askQ.filter(function(q) { return a[q.id] === "unknown"; }).length,
       missing: skipOn || proxy ? 0 : askQ.filter(function(q) { return !a[q.id]; }).length };
   }
@@ -1478,7 +1478,7 @@
     var qs = ev.survey || [];
     var html = '<h2>📋 参加登録のアンケート（確認事項） → <span class="event-name"></span></h2>' +
       '<div class="hint">参加登録ページに出す確認事項（チェックリスト）です。参加する人は、設問ごとに「了解」か「内容わかりません」を押し、全部に答えると登録できます（不参加の登録は答えなくてOK）。' +
-      '「表示する人」を「集結主のみ」にすると、集結の欄（集結部隊数など）を入れた人にだけ出ます。種類を「ルール未理解のチェック」にすると、その設問は「わかってません」のチェックになり、チェックした人は、ほかの設問に答えなくても登録できます。' +
+      '「表示する人」を「集結主のみ」にすると、集結の欄（集結部隊数など）を入れた人にだけ出ます。いちばん上の固定の設問（「そもそも○○のルールがあまりわかってません」。○○はイベントの種類）は、すべてのイベントに必ず出ます。チェックした人は、ほかの設問に答えなくても登録できます（チェックしなくても登録はできます）。' +
       '代理入力のときは、答えの代わりに設問の文（条件に合うもの）をコピーして本人に伝え、「連携します」にチェックしてもらいます。設問は最大' + SURVEY_MAX + '問・1問' + SURVEY_TEXT_MAX + '字までです。変えたら「💾 保存する」を押してください。' +
       '設問を変えても、すでに登録された人の答えは変わりません（登録をやり直すときは、毎回答え直しです）。</div>';
     html += surveyEditorHtml(qs, "sv", ev.type);
@@ -1489,7 +1489,10 @@
 
   // 設問を編集する欄（行・追加・既定ボタン）。p は属性の頭（"sv"＝作成後のイベントの欄、"nsv"＝新しいイベントを作る欄）
   function surveyEditorHtml(qs, p, type) {
-    var html = '<div style="margin-top: 8px;">' + (qs.length ? qs.map(function(q, i) {
+    var html = '<div style="margin-top: 8px;"><div class="rule-fixed" style="margin-bottom: 8px; padding: 6px 8px; background: #eef0f3; color: #666; border-radius: 6px;">' +
+      '🔒 <b>固定の設問</b>（すべてのイベントに必ず出ます。編集・並べ替え・削除はできません）<br>' + escapeHtml(ruleText(type)) +
+      '<span class="hint">　← チェックした人は、ほかの設問に答えなくても登録できます</span></div></div>' +
+      '<div style="margin-top: 8px;">' + (qs.length ? qs.map(function(q, i) {
       return '<div style="margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #eef0f3;"><div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">' +
         '<span style="min-width: 1.6em;">' + (i + 1) + '.</span>' +
         '<input type="text" style="flex: 1; min-width: 220px;" maxlength="' + SURVEY_TEXT_MAX + '" data-' + p + '-text="' + i + '" value="' + escapeHtml(q.text) + '">' +
@@ -1497,9 +1500,8 @@
         '<button type="button" class="small sub-btn" data-' + p + '="down" data-i="' + i + '"' + (i === qs.length - 1 ? " disabled" : "") + '>↓</button>' +
         '<button type="button" class="small danger" data-' + p + '="del" data-i="' + i + '">削除</button></div>' +
         '<div class="hint" style="margin: 4px 0 0 28px; display: flex; gap: 10px; flex-wrap: wrap;">' +
-        '<label>表示する人 <select data-' + p + '-show="' + i + '"><option value="all">全員</option><option value="rally"' + (q.show === "rally" ? " selected" : "") + '>集結主のみ（集結の欄を入れた人）</option></select></label>' +
-        '<label>種類 <select data-' + p + '-kind="' + i + '"><option value="ask">確認（了解／内容わかりません）</option><option value="skip"' + (q.kind === "skip" ? " selected" : "") + '>ルール未理解のチェック（チェックしたら他は不要）</option></select></label></div></div>';
-    }).join("") : '<div class="hint">設問はありません（参加登録ページには何も出ません）。</div>') + '</div>';
+        '<label>表示する人 <select data-' + p + '-show="' + i + '"><option value="all">全員</option><option value="rally"' + (q.show === "rally" ? " selected" : "") + '>集結主のみ（集結の欄を入れた人）</option></select></label></div></div>';
+    }).join("") : '<div class="hint">追加の設問はありません（固定の設問だけが出ます）。</div>') + '</div>';
     html += '<div style="margin-top: 6px;"><button type="button" class="small" data-' + p + '="add"' + (qs.length >= SURVEY_MAX ? " disabled" : "") + '>＋ 設問を追加</button> ' +
       (SURVEY_DEFAULTS[type] ? '<button type="button" class="small sub-btn" data-' + p + '="default">既定の設問を入れる（' + escapeHtml(type) + '）</button>' : "") + '</div>';
     return html;
@@ -1527,7 +1529,7 @@
     box.open = true;
     box.style.marginTop = "8px";
     box.innerHTML = '<summary style="cursor: pointer; font-weight: bold;">📋 参加登録のアンケート（確認事項）を作成と同時に決める <span class="hint nsv-count"></span></summary>' +
-      '<div class="hint" style="margin-top: 4px;">作ったイベントに付く設問です（KVKは既定の7問が入っています。そのまま作成しても、直してから作成してもOK）。設問は最大' + SURVEY_MAX + '問・1問' + SURVEY_TEXT_MAX + '字まで。作成後も、イベントのページの「📋 参加登録のアンケート」欄でいつでも直せます。</div>' +
+      '<div class="hint" style="margin-top: 4px;">作ったイベントに付く設問です（KVKは既定の6問が入っています。そのまま作成しても、直してから作成してもOK。ルール未理解の固定の設問は、いつも付きます）。設問は最大' + SURVEY_MAX + '問・1問' + SURVEY_TEXT_MAX + '字まで。作成後も、イベントのページの「📋 参加登録のアンケート」欄でいつでも直せます。</div>' +
       '<div class="nsv-body"></div>';
     row.parentNode.insertBefore(box, row.nextSibling);
     box.addEventListener("change", function(e) {
@@ -1580,7 +1582,6 @@
   // 参加者の答え（設問ごとに、了解／内容わかりません／まだ答えていない 人の名前）。不参加の人は数えない
   function surveyAnswersHtml(ev) {
     var qs = ev.survey || [];
-    if (!qs.length) return "";
     var rows = state.entries.filter(function(x) { return x.eventId === ev.id && x.entry !== "absent"; }).map(function(x) {
       var u = userById(x.userId);
       return { name: u ? u.name : "?", m: x, s: surveyState(ev, x) };
@@ -1592,13 +1593,11 @@
       }).join("") + '</select></div>';
     if (!rows.length) return html + '<div class="hint">まだ参加の登録がありません。</div>';
     function names(list) { return list.length ? escapeHtml(list.map(function(r) { return r.name; }).join("、")) : "なし"; }
+    var ruleOn = rows.filter(function(r) { return r.s.skipOn; });
+    html += '<div style="margin-bottom: 10px; line-height: 1.7;"><b>🔒 ' + escapeHtml(ruleText(ev.type)) + '</b> <span class="hint">（固定の設問）</span><br>' +
+      '<span class="tag new">ルール未理解 ' + ruleOn.length + '人</span> ' + names(ruleOn) + '</div>';
     html += qs.map(function(q, i) {
       var tag = q.show === "rally" ? '<span class="hint">（集結主のみ）</span> ' : "";
-      if (q.kind === "skip") {
-        var on = rows.filter(function(r) { return r.s.a[q.id] === "check"; });
-        return '<div style="margin-bottom: 10px; line-height: 1.7;"><b>' + (i + 1) + '. ' + escapeHtml(q.text) + '</b> ' + tag + '<br>' +
-          '<span class="tag new">ルール未理解 ' + on.length + '人</span> ' + names(on) + '</div>';
-      }
       var target = rows.filter(function(r) { return !r.s.proxy && !r.s.skipOn && r.s.askQ.some(function(x) { return x.id === q.id; }); });
       var ok = target.filter(function(r) { return r.s.a[q.id] === "ok"; });
       var unk = target.filter(function(r) { return r.s.a[q.id] === "unknown"; });
@@ -1608,8 +1607,6 @@
         '了解 ' + ok.length + '人：' + names(ok) + '<br>' +
         '<span class="hint">まだ答えていない ' + none.length + '人：' + names(none) + '</span></div>';
     }).join("");
-    var skipped = rows.filter(function(r) { return r.s.skipOn; });
-    if (skipped.length) html += '<div class="hint">「ルール未理解」にチェックして、ほかの設問に答えていない人（' + skipped.length + '人）：' + escapeHtml(skipped.map(function(r) { return r.name; }).join("、")) + '</div>';
     var proxyRows = rows.filter(function(r) { return r.s.proxy; });
     if (proxyRows.length) html += '<div class="hint">代理入力で「連携します」にチェックした人（' + proxyRows.length + '人・本人の答えはありません）：' + escapeHtml(proxyRows.map(function(r) { return r.name; }).join("、")) + '</div>';
     return html;

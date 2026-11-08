@@ -136,6 +136,8 @@ function handle_(p) {
 
 // 受付中のイベントと、その参加者・ユーザー一覧（名前の候補・自分の登録の読み込み用）
 // 確認事項（アンケート）の答えは管理者だけが見られる。誰でも読める pubGet には出さない
+var SURVEY_RULE_ID = "q_rule"; // 固定の設問（ルール未理解のチェック）の答えのキー。イベントの設問データには持たない
+
 function noSurvey_(x) {
   if (!x.survey && !x.surveyProxy) return x;
   var c = {};
@@ -837,27 +839,25 @@ function selfSave_(token, p) {
       } else if (row) {
         delete row.slots;
       }
-      // 確認事項（アンケート）：イベントに設問（ev.survey = [{id, text, show, kind}]）があるとき、不参加以外は答えてもらう。
-      //   show: "rally"＝集結の欄（集結部隊数など）を入れた人だけに出す／それ以外は全員。
-      //   kind: "skip"＝「わかってません」のチェック（チェックしたら、ほかの設問は答えなくてよい）／それ以外は ok（了解）・unknown（内容わかりません）を答える。
+      // 確認事項（アンケート）。固定の設問「そもそも{種類}のルールがあまりわかってません」（SURVEY_RULE_ID）は、どのイベントにも出る。
+      //   チェックした人（答えが check）は、ほかの設問に答えなくてよい。チェックしなくても登録はできる（この設問は必須ではない）。
+      // イベントの設問（ev.survey = [{id, text, show?}]）は、不参加以外は全部答えてもらう（ok＝了解／unknown＝内容わかりません）。
+      //   show: "rally"＝集結の欄（集結部隊数など）を入れた人だけに出す。古いデータの kind:"skip" の設問は、固定の設問に置き換わったので無視する。
       // 代理入力は答えを持たず、本人に伝える設問があるときに「連携します」（surveyProxy）のチェックだけ
       if (row) {
-        var sAll = Array.isArray(ev.survey) ? ev.survey.filter(function(q) { return q && q.id && q.text; }) : [];
         var rallyOn = row.rallyCount != null || row.rallyPet != null || row.rallySpeedPet != null;
-        var sq = sAll.filter(function(q) { return q.show !== "rally" || rallyOn; });
-        var skipQ = sq.filter(function(q) { return q.kind === "skip"; })[0];
-        var askQ = sq.filter(function(q) { return q.kind !== "skip"; });
+        var askQ = (Array.isArray(ev.survey) ? ev.survey : []).filter(function(q) { return q && q.id && q.text && q.kind !== "skip" && (q.show !== "rally" || rallyOn); });
         var ans = row.survey || {}, link = row.surveyProxy === true;
         delete row.survey; delete row.surveyProxy;
-        if (sq.length && row.entry !== "absent") {
+        if (row.entry !== "absent") {
           if (clip_(p.proxyBy, 30)) {
             if (askQ.length) {
               if (!link) return { ok: false, status: 400, error: "確認事項の「連携します」にチェックしてください" };
               row.surveyProxy = true;
             }
-          } else if (skipQ && ans[skipQ.id] === "check") {
+          } else if (ans[SURVEY_RULE_ID] === "check") {
             row.survey = {};
-            row.survey[skipQ.id] = "check";
+            row.survey[SURVEY_RULE_ID] = "check";
           } else {
             var keptAns = {};
             askQ.forEach(function(q) { if (ans[q.id] === "ok" || ans[q.id] === "unknown") keptAns[q.id] = ans[q.id]; });
