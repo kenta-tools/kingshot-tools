@@ -133,7 +133,7 @@
   <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#555;margin:0 0 10px;cursor:pointer;"><input type="checkbox" id="pwRemember" style="width:auto;margin:0;"> パスワードを保存する（次回から入力不要。共用の端末ではチェックしない）</label>
   <button type="button" id="loginBtn">ログイン</button>
   <div class="msg err" id="loginMsg"></div>
-  <a href="../index.html?v=20261108102132" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
+  <a href="../index.html?v=20261108103537" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
 </div>
 
 <div id="appView">
@@ -163,6 +163,7 @@
   <div class="card" id="settingsCard">
     <h2>⚙️ 設定と自動振り分け</h2>
     <div id="settingsBody"></div>
+    <div id="carryRow" style="margin: 8px 0;"></div>
     <div class="row" id="autoRow"></div>
     <div class="msg" id="autoMsg"></div>
   </div>
@@ -207,7 +208,7 @@
   <div class="targets" id="moveTargets"></div>
 </div>
 
-<script src="../config.js?v=20261108102132"></script>
+<script src="../config.js?v=20261108103537"></script>
 <script>
 (function() {
   "use strict";
@@ -320,8 +321,8 @@
           '<button type="button" class="ks-menu-btn" aria-label="メニュー" aria-expanded="false">☰</button></div>' +
         "<nav>" + links +
           '<div class="ks-group"></div>' +
-          '<a href="../kvk-matchup/kvk-matchup-index.html?v=20261108102132" class="ks-link" title="KvK相手突合せ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ</span></a>' +
-          '<a href="../index.html?v=20261108102132" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a>' +
+          '<a href="../kvk-matchup/kvk-matchup-index.html?v=20261108103537" class="ks-link" title="KvK相手突合せ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ</span></a>' +
+          '<a href="../index.html?v=20261108103537" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a>' +
           '<button type="button" class="ks-link" id="logoutBtn" title="ログアウト"><span class="ks-icon">🚪</span><span class="ks-label">ログアウト</span></button>' +
         "</nav>" +
       "</div>" +
@@ -743,6 +744,201 @@
     return "振り分けました";
   }
 
+  // ---------- 前回と同じチームにする ----------
+  // 同じ種類で日付が今回より前の、いちばん新しいイベントのうち、チーム分けが保存されているもの（完了済みでもよい）
+  function prevRecord() {
+    var ev = eventById(eventId);
+    if (!ev) return null;
+    var best = null;
+    (data.teams || []).forEach(function(t) {
+      if (t.eventId === eventId || !t.draft) return;
+      var e = eventById(t.eventId);
+      if (!e || e.type !== ev.type || String(e.date) >= String(ev.date)) return;
+      if (!best || String(e.date) > String(best.ev.date)) best = { rec: t, ev: e };
+    });
+    return best;
+  }
+
+  // KVK：前回の隊のリーダーが今回いないときの代わり。まだどこにも入っていない「集結部隊数を登録した人」から、集結容量の大きい順
+  function substituteLeaders() {
+    draft.teams.filter(function(t) { return t.kind === "rally" && !t.leaderId; }).forEach(function(t) {
+      var isLeader = {};
+      draft.teams.forEach(function(x) { if (x.leaderId) isLeader[x.leaderId] = true; });
+      var c = people.filter(function(p) { return p.isRallyer && !isLeader[p.uid] && !placeOf(p.uid); })
+        .sort(function(a, b) { return ((b.rallyCap || 0) - (a.rallyCap || 0)) || strongerFirst(a, b); })[0];
+      if (!c) return;
+      t.leaderId = c.uid;
+      draft.assign[c.uid] = t.id;
+      draft.pins[c.uid] = true;
+    });
+  }
+
+  // KVK：引き継いだあとに、まだどこにも入っていない人（新しく参加した人など）だけを、今までの自動振り分けと同じ考え方で入れる。
+  // 引き継いだ人は動かさない。リーダーがいない隊には新しい人を入れない
+  function fillNewKvk() {
+    var s = draft.settings, rally = draft.teams.filter(function(t) { return t.kind === "rally"; });
+    function room(t) {
+      var l = leaderOf(t);
+      if (!l) return -1;
+      if (l.rallyCap == null) return Infinity;
+      var used = membersOf(t.id).reduce(function(sum, p) { return p === l ? sum : sum + (p.marchCap || 0); }, 0);
+      return l.rallyCap - (l.marchCap || 0) - used;
+    }
+    function fits(t, p, maxCount) {
+      if (membersOf(t.id).length >= maxCount) return false;
+      return (p.marchCap || 0) <= room(t);
+    }
+    var pool = people.filter(function(p) { return !placeOf(p.uid); }).sort(strongerFirst);
+    pool = pool.filter(function(p) {
+      if (p.timeUnknown) { draft.assign[p.uid] = "pending"; return false; }
+      return true;
+    });
+    var top = s.topRule ? rally.slice(0, 3) : [];
+    top.forEach(function(t) {
+      pool = pool.filter(function(p) {
+        if (!(p.fullTime && p.vc) || !fits(t, p, s.topSize)) return true;
+        draft.assign[p.uid] = t.id;
+        return false;
+      });
+    });
+    var rest = rally.filter(function(t) { return top.indexOf(t) < 0; });
+    pool.forEach(function(p) {
+      var t = rest.filter(function(x) { return fits(x, p, Infinity); })[0];
+      draft.assign[p.uid] = t ? t.id : "standby";
+    });
+  }
+
+  // 聖剣：引き継いだあとに、まだどこにも入っていない人だけを入れる（集結部隊数の人は集結主チーム、残りは出征容量の合計が小さいチームへ）
+  function fillNewSeiken() {
+    var rallyers = draft.teams.filter(function(t) { return t.kind === "rallyers"; })[0];
+    var groups = draft.teams.filter(function(t) { return t.kind === "group"; });
+    var pool = people.filter(function(p) { return !placeOf(p.uid); });
+    if (rallyers) pool = pool.filter(function(p) {
+      if (!p.isRallyer) return true;
+      draft.assign[p.uid] = rallyers.id;
+      return false;
+    });
+    if (!groups.length) return;
+    function sum(t) { return membersOf(t.id).reduce(function(s, p) { return s + (p.marchCap || 0); }, 0); }
+    pool.sort(function(a, b) { return ((b.marchCap || 0) - (a.marchCap || 0)) || strongerFirst(a, b); }).forEach(function(p) {
+      var t = groups.slice().sort(function(a, b) { return (sum(a) - sum(b)) || (membersOf(a.id).length - membersOf(b.id).length); })[0];
+      draft.assign[p.uid] = t.id;
+    });
+  }
+
+  // KVK・聖剣・三盟：前回の隊（チーム）・リーダー・所属・📌をそのまま引き継ぐ。戻り値は件数
+  function carryGeneric(pd, info) {
+    var map = {};
+    var teams = (pd.teams || []).map(function(t) {
+      var id = newId();
+      map[t.id] = id;
+      return { id: id, kind: t.kind, name: t.name || "", leaderId: "" };
+    });
+    draft.teams = teams;
+    draft.settings = Object.assign(defaultSettings(), pd.settings || {});
+    draft.assign = {};
+    draft.pins = {};
+    Object.keys(pd.assign || {}).forEach(function(uid) {
+      var p = byUid[uid], a = pd.assign[uid];
+      if (!p) { info.gone++; return; }                      // 前回いたが今回は参加しない（不参加・未登録）
+      if (a === "pending") { if (p.timeUnknown) draft.assign[uid] = "pending"; return; } // 今も時間未定なら別枠のまま
+      if (map[a]) {                                         // 前回と同じチーム（待機は引き継がず、空きがあれば入れ直す）
+        draft.assign[uid] = map[a];
+        info.same++;
+        if (pd.pins && pd.pins[uid]) draft.pins[uid] = true;
+      }
+    });
+    (pd.teams || []).forEach(function(t, i) {
+      if (t.leaderId && byUid[t.leaderId] && draft.assign[t.leaderId] === map[t.id]) {
+        teams[i].leaderId = t.leaderId;
+        draft.pins[t.leaderId] = true;
+      }
+    });
+    if (draft.mode === "kvk") substituteLeaders();
+    var before = Object.keys(draft.assign).length;
+    if (draft.mode === "kvk") fillNewKvk();
+    else if (draft.mode === "seiken") fillNewSeiken();
+    info.added = Object.keys(draft.assign).length - before;
+  }
+
+  // 遺跡争奪：時間帯ごとに、同じ時間帯・同じ名前の要塞／遺跡があるときだけ前回の所属を引き継ぐ。残り（新しい人・場所が変わった人）は
+  // 時間帯の順に今までの自動振り分けで入れる（前回と同じを優先してから要塞の回数をそろえる）
+  function carryRuins(pd, info) {
+    var pr = (pd.ruins && pd.ruins.slots) || {};
+    draft.ruins.slots = {};
+    draft.ruins.seed = Math.random().toString(36).slice(2, 10);
+    var carried = {};
+    RUIN_SLOTS.forEach(function(k) {
+      var ps = pr[k];
+      if (!ps) return;
+      var T = targetsFor(k), st = ruinState(k);
+      carried[k] = 0;
+      Object.keys(ps.assign || {}).forEach(function(uid) {
+        var p = byUid[uid], a = ps.assign[uid];
+        if (!p || !slotStatus(p, k)) { info.gone++; return; }   // 前回いたが、今回その時間には参加しない
+        if (T.indexOf(a) >= 0) {                                 // 今回も同じ名前の拠点がある
+          st.assign[uid] = a;
+          carried[k]++;
+          info.same++;
+          if (ps.pins && ps.pins[uid]) st.pins[uid] = true;
+        }
+      });
+      Object.keys(ps.leaders || {}).forEach(function(t) {
+        var uid = ps.leaders[t];
+        if (T.indexOf(t) >= 0 && st.assign[uid] === t) st.leaders[t] = uid;
+      });
+    });
+    RUIN_SLOTS.filter(function(k) { return targetsFor(k).length; }).forEach(function(k) {
+      var st = ruinState(k), tmp = [];
+      // 引き継いだ人（集結主を含む）を一時的に固定して、まだ決まっていない人だけを振り分ける
+      Object.keys(st.assign).forEach(function(uid) { if (!st.pins[uid]) { st.pins[uid] = true; tmp.push(uid); } });
+      autoRuins(k);
+      tmp.forEach(function(uid) { delete st.pins[uid]; });
+      // 集結主がいなくなった拠点（前回の集結主が今回いない）は、その拠点のメンバーから集結容量の大きい順に
+      targetsFor(k).forEach(function(t) {
+        if (ruinLeader(k, t)) return;
+        var c = ruinMembers(k, t).filter(function(p) { return slotStatus(p, k) === "yes"; }).sort(leaderOrder)[0];
+        if (c) st.leaders[t] = c.uid;
+      });
+      info.added += Math.max(0, inSlot(k).length - (carried[k] || 0));
+    });
+  }
+
+  function carryOver() {
+    var pv = prevRecord();
+    if (!pv) return "前回の同じ種類のイベントのチーム分けが見つかりません";
+    var pd = pv.rec.draft;
+    if (pd.mode !== draft.mode) return "前回は別の分け方で保存されているため、引き継げません";
+    var info = { same: 0, gone: 0, added: 0 };
+    if (draft.mode === "ruins") carryRuins(pd, info);
+    else carryGeneric(pd, info);
+    draft.carriedFrom = { eventId: pv.ev.id, label: eventLabel(pv.ev), at: new Date().toISOString() };
+    return "前回（" + eventLabel(pv.ev) + "）から引き継ぎました：同じチームの人 " + info.same + "人／前回いたが今回は参加しない（または場所が無い）人 " + info.gone + "人は外しました／新しく入った人・場所が決まっていない人 " + info.added + "人は自動で振り分けました。容量オーバーや集結主なしの注意は、各チームの表示で確認してください。";
+  }
+
+  function renderCarry() {
+    var el = $("carryRow");
+    if (!el) return;
+    if (readOnly) { el.innerHTML = ""; return; }
+    var pv = prevRecord(), html = "";
+    if (!pv) {
+      html = '<div class="note">📋 前回の同じ種類のイベントのチーム分けは保存されていません（今までどおり、下の「自動で振り分ける」を使います）。</div>';
+    } else if (pv.rec.draft.mode !== draft.mode) {
+      html = '<div class="note">📋 前回（' + escapeHtml(eventLabel(pv.ev)) + '）は別の分け方で保存されているため、引き継げません。</div>';
+    } else {
+      html = '<div class="row" style="margin-top:0;"><button type="button" id="carryBtn">📋 前回と同じチームにする</button>' +
+        '<span class="note">前回：' + escapeHtml(eventLabel(pv.ev)) + '（保存 ' + escapeHtml(formatTime(pv.rec.updatedAt)) + '）。同じ人は前回と同じチームに、新しい人だけ自動で振り分けます</span></div>';
+    }
+    if (draft.carriedFrom) html += '<div class="note" style="margin-top:4px;">🔁 引き継ぎ元：' + escapeHtml(draft.carriedFrom.label) + '（' + escapeHtml(formatTime(draft.carriedFrom.at)) + '）</div>';
+    el.innerHTML = html;
+    on("carryBtn", "click", function() {
+      if (!confirm("前回（" + eventLabel(pv.ev) + "）のチーム分けを引き継ぎます。\n今の割り当て（📌も含む）は置き換わります。よろしいですか？")) return;
+      var msg = carryOver();
+      setMsg($("autoMsg"), msg, msg.indexOf("引き継ぎました") === 0);
+      changed();
+    });
+  }
+
   // ---------- 集計と注意 ----------
   function teamStats(t, index) {
     var s = draft.settings;
@@ -824,9 +1020,10 @@
     if (!draft) return;
     renderMode();
     $("tabs").style.display = draft.mode === "ruins" ? "none" : "";
-    if (draft.mode === "ruins") { renderStatus(); renderRuins(); return; }
+    if (draft.mode === "ruins") { renderStatus(); renderRuins(); renderCarry(); return; }
     renderStatus();
     renderSettings();
+    renderCarry();
     var stats = allStats();
     var hints = {
       board: "名前を押すと移動先を選べます（PCではドラッグ＆ドロップでも移せます）。📌は「固定」：自動振り分けで動かしません。",
