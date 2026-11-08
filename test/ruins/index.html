@@ -312,10 +312,10 @@
     </div>
 
     <div class="rally">
-      <div class="rally-title">⚔️ 集結の指示があった人だけ</div>
-      <div class="rally-sub">指示があった人は、下のボタンを押して3つ入れてください。</div>
+      <div class="rally-title">⚔️ 本イベントで集結主をしたことある人だけ</div>
+      <div class="rally-sub">集結主をしたことがある人は、下のボタンを押して3つ入れてください。</div>
       <div class="chips">
-        <label class="chip"><input type="checkbox" id="fRallyOn"><span>集結の指示があった（押す）</span></label>
+        <label class="chip"><input type="checkbox" id="fRallyOn"><span>集結主をしたことがある（押す）</span></label>
       </div>
       <div id="rallyFields" style="margin-top: 12px;">
         <div class="field">
@@ -864,7 +864,7 @@
     $(id).value = v == null ? "" : v;
   }
 
-  // 「一部参加」「集結の指示」を押したときだけ、時刻・集結の欄を出す
+  // 「一部参加」「集結主をしたことがある」を押したときだけ、時刻・集結の欄を出す
   function syncSubFields() {
     var ruin = isRuin();
     $("ruinField").style.display = ruin ? "block" : "none";

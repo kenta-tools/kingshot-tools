@@ -218,7 +218,7 @@
   </div>
   <div class="cfg-row">
     <button type="button" class="btn secondary small" id="importBtn">選択中イベントの集結参加者を取り込む（名簿を上書き）</button>
-    <span class="save-note">ユーザー登録で「集結の指示があった」に数を入れた人だけを、名前・速度ペットLvつきで取り込みます（KvK相手突合せで保存済みの組み合わせがあれば、相手の名前も自動で入ります）</span>
+    <span class="save-note">ユーザー登録で「集結主をしたことがある」に数を入れた人だけを、名前・速度ペットLvつきで取り込みます（KvK相手突合せで保存済みの組み合わせがあれば、相手の名前も自動で入ります）</span>
   </div>
   <div class="cfg-row">
     <button type="button" class="btn secondary small" id="fillOpponentBtn">相手の名前を自動入力（突合せから）</button>
@@ -1093,7 +1093,7 @@ document.getElementById("importBtn").addEventListener("click", () => {
   if(!currentEventId){ alert("イベントを選んでください"); return; }
   if(mode === "shared" && !isEventEditable(currentEventId)){ alert(closedReason(currentEventId) + "更新できません"); return; }
   const targets = regData.entries.filter(e => e.eventId === currentEventId && e.entry !== "absent" && e.rallyCount != null);
-  if(!targets.length){ alert("このイベントで「集結の指示があった」人がユーザー登録に見つかりません"); return; }
+  if(!targets.length){ alert("このイベントで「集結主をしたことがある」人がユーザー登録に見つかりません"); return; }
   if(!confirm(`名簿を一旦クリアして、${targets.length}人を取り込みます。よろしいですか？`)) return;
   rosterRows = targets.map(e => {
     const u = regData.users.find(x => x.id === e.userId);
