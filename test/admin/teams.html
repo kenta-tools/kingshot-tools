@@ -133,7 +133,7 @@
   <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#555;margin:0 0 10px;cursor:pointer;"><input type="checkbox" id="pwRemember" style="width:auto;margin:0;"> パスワードを保存する（次回から入力不要。共用の端末ではチェックしない）</label>
   <button type="button" id="loginBtn">ログイン</button>
   <div class="msg err" id="loginMsg"></div>
-  <a href="../index.html?v=20261108150857" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
+  <a href="../index.html?v=20261108164321" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
 </div>
 
 <div id="appView">
@@ -208,7 +208,7 @@
   <div class="targets" id="moveTargets"></div>
 </div>
 
-<script src="../config.js?v=20261108150857"></script>
+<script src="../config.js?v=20261108164321"></script>
 <script>
 (function() {
   "use strict";
@@ -321,8 +321,8 @@
           '<button type="button" class="ks-menu-btn" aria-label="メニュー" aria-expanded="false">☰</button></div>' +
         "<nav>" + links +
           '<div class="ks-group"></div>' +
-          '<a href="../kvk-matchup/kvk-matchup-index.html?v=20261108150857" class="ks-link" title="KvK相手突合せ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ</span></a>' +
-          '<a href="../index.html?v=20261108150857" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a>' +
+          '<a href="../kvk-matchup/kvk-matchup-index.html?v=20261108164321" class="ks-link" title="KvK相手突合せ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ</span></a>' +
+          '<a href="../index.html?v=20261108164321" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a>' +
           '<button type="button" class="ks-link" id="logoutBtn" title="ログアウト"><span class="ks-icon">🚪</span><span class="ks-label">ログアウト</span></button>' +
         "</nav>" +
       "</div>" +
@@ -827,58 +827,45 @@
     return "振り分けました（" + groups.map(function(t) { return teamName(t) + membersOf(t.id).length + "人"; }).join("・") + "）";
   }
 
-  // ---------- KVK：同盟ごとの隊数 ----------
-  // 隊の同盟：ラベル（ひよこ／666）があればそれ。なければ、リーダーの同盟名がラベルの同盟名と同じときのラベル
-  function kvkAllyOfTeam(t) {
-    if (t.ally) return t.ally;
-    var l = byUid[t.leaderId];
-    var a = l ? KVK_ALLIANCES.filter(function(x) { return x.name === l.alliance; })[0] : null;
-    return a ? a.label : "";
-  }
-  // 最大作成できる隊数＝その同盟の、集結部隊数を登録した人（リーダー候補）の人数
-  function kvkMaxTeams(a) { return people.filter(function(p) { return p.isRallyer && p.alliance === a.name; }).length; }
+  // ---------- KVK：隊の数（全体で1つ） ----------
+  // 最大作成できる隊数＝参加者全体のうち、集結部隊数を登録した人（リーダーにできる人）の人数（同盟は問わない）
+  function kvkMaxTeams() { return people.filter(function(p) { return p.isRallyer; }).length; }
   function kvkTeamCountHtml() {
-    var rally = draft.teams.filter(function(t) { return t.kind === "rally"; });
-    var others = rally.filter(function(t) { return !kvkAllyOfTeam(t); }).length;
-    return '<div class="row" style="margin-top:0;"><b style="font-size:13px;">隊の数（同盟ごと）</b>' + KVK_ALLIANCES.map(function(a) {
-      var cur = rally.filter(function(t) { return kvkAllyOfTeam(t) === a.label; }).length, max = kvkMaxTeams(a);
-      return '<label class="inline">' + escapeHtml(a.label) + "（" + escapeHtml(a.name) + '） <input type="number" min="0" max="' + Math.max(max, cur) + '" data-tc="' + escapeHtml(a.label) + '" value="' + cur + '"> 隊 <span class="note">最大 ' + max + " 隊</span></label>";
-    }).join("") + '<button type="button" id="tcBtn">隊数を反映</button></div>' +
-      '<div class="note" style="margin:2px 0 6px;">最大＝その同盟の、集結部隊数を登録した人（リーダーにできる人）の人数です。増やすと、まだリーダーになっていない人を集結容量の大きい順にリーダーにして隊を作り、減らすと後ろの隊から消します（入っていた人は未割り当てに戻ります）。' +
-      (others ? " ひよこ・666以外の同盟の隊が " + others + " 隊あります（ここでは増減しません）。" : "") + "</div>";
+    var cur = draft.teams.filter(function(t) { return t.kind === "rally"; }).length, max = kvkMaxTeams();
+    return '<div class="row" style="margin-top:0;"><label class="inline"><b style="font-size:13px;">隊の数</b> <input type="number" min="0" max="' + Math.max(max, cur) + '" data-tc="all" value="' + cur + '"> 隊 <span class="note">最大 ' + max + ' 隊</span></label>' +
+      '<button type="button" id="tcBtn">隊数を反映</button></div>' +
+      '<div class="note" style="margin:2px 0 6px;">最大＝参加者のうち、集結部隊数を登録した人（リーダーにできる人）の人数です（同盟は問いません）。増やすと、まだリーダーになっていない人を集結容量の大きい順にリーダーにして、同盟ラベルが未設定の隊を作ります（同盟は、隊ごとの「同盟」のプルダウンで選びます）。減らすと後ろの隊から消します（入っていた人は未割り当てに戻ります。確認は出ません）。</div>';
   }
   function applyKvkTeamCounts() {
-    var msgs = [];
-    KVK_ALLIANCES.forEach(function(a) {
-      var input = document.querySelector('[data-tc="' + a.label + '"]');
-      if (!input) return;
-      var mine = draft.teams.filter(function(t) { return t.kind === "rally" && kvkAllyOfTeam(t) === a.label; });
-      var cur = mine.length, limit = Math.max(kvkMaxTeams(a), cur);
-      var n = Math.max(0, Math.min(limit, Math.floor(Number(input.value)) || 0));
-      if (n > cur) {
-        var isLeader = {};
-        draft.teams.forEach(function(x) { if (x.leaderId) isLeader[x.leaderId] = true; });
-        var cands = people.filter(function(p) { return p.isRallyer && p.alliance === a.name && !isLeader[p.uid]; })
-          .sort(function(x, y) { return ((y.rallyCap || 0) - (x.rallyCap || 0)) || strongerFirst(x, y); });
-        var added = 0;
-        while (added < n - cur && cands.length) {
-          var p = cands.shift(), id = newId();
-          draft.teams.push({ id: id, kind: "rally", name: "", leaderId: p.uid, ally: a.label });
-          draft.assign[p.uid] = id;
-          draft.pins[p.uid] = true;
-          added++;
-        }
-        msgs.push(a.label + " " + cur + "→" + (cur + added) + "隊" + (added < n - cur ? "（リーダーにできる人が足りません）" : ""));
-      } else if (n < cur) {
-        mine.slice(n).forEach(function(t) {      // 後ろの隊から消す（確認なし）。入っていた人は未割り当てに戻る
-          membersOf(t.id).forEach(function(p) { delete draft.assign[p.uid]; delete draft.pins[p.uid]; });
-          if (t.leaderId) delete draft.pins[t.leaderId];
-          draft.teams.splice(draft.teams.indexOf(t), 1);
-        });
-        msgs.push(a.label + " " + cur + "→" + n + "隊（" + (cur - n) + "隊を削除）");
+    var input = document.querySelector('[data-tc="all"]');
+    if (!input) return "";
+    var rally = draft.teams.filter(function(t) { return t.kind === "rally"; });
+    var cur = rally.length, limit = Math.max(kvkMaxTeams(), cur);
+    var n = Math.max(0, Math.min(limit, Math.floor(Number(input.value)) || 0));
+    if (n > cur) {
+      var isLeader = {};
+      draft.teams.forEach(function(x) { if (x.leaderId) isLeader[x.leaderId] = true; });
+      var cands = people.filter(function(p) { return p.isRallyer && !isLeader[p.uid]; })
+        .sort(function(x, y) { return ((y.rallyCap || 0) - (x.rallyCap || 0)) || strongerFirst(x, y); });
+      var added = 0;
+      while (added < n - cur && cands.length) {
+        var p = cands.shift(), id = newId();
+        draft.teams.push({ id: id, kind: "rally", name: "", leaderId: p.uid, ally: "" });   // 同盟ラベルは未設定（あとから隊ごとに選ぶ）
+        draft.assign[p.uid] = id;
+        draft.pins[p.uid] = true;
+        added++;
       }
-    });
-    return msgs.length ? "隊数を反映しました：" + msgs.join("／") : "隊数は変わりません";
+      return "隊数を反映しました：" + cur + "→" + (cur + added) + "隊" + (added < n - cur ? "（リーダーにできる人が足りません）" : "");
+    }
+    if (n < cur) {
+      rally.slice(n).forEach(function(t) {      // 後ろの隊から消す（確認なし）。入っていた人は未割り当てに戻る
+        membersOf(t.id).forEach(function(p) { delete draft.assign[p.uid]; delete draft.pins[p.uid]; });
+        if (t.leaderId) delete draft.pins[t.leaderId];
+        draft.teams.splice(draft.teams.indexOf(t), 1);
+      });
+      return "隊数を反映しました：" + cur + "→" + n + "隊（" + (cur - n) + "隊を削除）";
+    }
+    return "隊数は変わりません";
   }
   // KVKは、設定欄から消した項目（戦闘時間・人数の目安・上位隊ルール・◆を散らす）を既定値で固定する（保存済みの値は使わない）
   function fixKvkSettings() {
