@@ -133,7 +133,7 @@
   <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#555;margin:0 0 10px;cursor:pointer;"><input type="checkbox" id="pwRemember" style="width:auto;margin:0;"> パスワードを保存する（次回から入力不要。共用の端末ではチェックしない）</label>
   <button type="button" id="loginBtn">ログイン</button>
   <div class="msg err" id="loginMsg"></div>
-  <a href="../index.html?v=20261108110311" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
+  <a href="../index.html?v=20261108131306" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
 </div>
 
 <div id="appView">
@@ -208,7 +208,7 @@
   <div class="targets" id="moveTargets"></div>
 </div>
 
-<script src="../config.js?v=20261108110311"></script>
+<script src="../config.js?v=20261108131306"></script>
 <script>
 (function() {
   "use strict";
@@ -321,8 +321,8 @@
           '<button type="button" class="ks-menu-btn" aria-label="メニュー" aria-expanded="false">☰</button></div>' +
         "<nav>" + links +
           '<div class="ks-group"></div>' +
-          '<a href="../kvk-matchup/kvk-matchup-index.html?v=20261108110311" class="ks-link" title="KvK相手突合せ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ</span></a>' +
-          '<a href="../index.html?v=20261108110311" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a>' +
+          '<a href="../kvk-matchup/kvk-matchup-index.html?v=20261108131306" class="ks-link" title="KvK相手突合せ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ</span></a>' +
+          '<a href="../index.html?v=20261108131306" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a>' +
           '<button type="button" class="ks-link" id="logoutBtn" title="ログアウト"><span class="ks-icon">🚪</span><span class="ks-label">ログアウト</span></button>' +
         "</nav>" +
       "</div>" +
@@ -976,6 +976,7 @@
   var SK_TEAMS = ["Aチーム", "Bチーム", "Cチーム", "Dチーム"];
   var SK_PHASES = [["before", "祭壇解放前"], ["after", "祭壇解放後"]];
   var outPhases = ["before", "after"];                  // Discordに貼る段階（出力だけの設定。保存しない）
+  var skFacError = null;                                // 集結主を追加できなかった理由 {ph, f, msg}。その拠点のカードの中に赤字で出す
   function skNewPhase() {
     return { teams: SK_TEAMS.map(function(n) { return { id: newId(), name: n }; }), assign: {}, pins: {}, raiders: {}, rally: {} };
   }
@@ -1017,14 +1018,15 @@
   // 集結主として「人＋〇軍」を拠点に入れる。入れられないときは理由の文を返す（入れたら ""）
   function skAddRally(ph, f, uid, army) {
     var P = skP(ph), p = byUid[uid];
-    if (!p) return "人が選ばれていません";
+    if (!p) return "人を選んでください";
     army = Number(army);
     if (!(army >= 1 && army <= SK_ARMIES)) return "軍は1〜" + SK_ARMIES + "軍から選んでください";
     if (P.raiders[uid]) return p.name + "は遊撃手です。先に遊撃手から外してください";
     var list = P.rally[f] = P.rally[f] || [];
-    if (list.some(function(e) { return e.uid === uid; })) return p.name + "は、この拠点にすでに入っています（1つの拠点には1軍分だけ）";
+    var here = list.filter(function(e) { return e.uid === uid; })[0];
+    if (here) return "⚠ " + p.name + "は、この拠点に（" + here.army + "軍で）すでに入っています。1つの拠点には同じ人を1軍分だけしか入れられません。別の軍で重ねて入れることはできないので、入れ替えるなら先に外してください";
     var used = skUsedArmies(ph, uid, f);
-    if (used[army]) return p.name + "（" + army + "軍）は「" + used[army] + "」に入っています（同じ人＋軍は複数の拠点に入れません）。別の軍を選ぶか、先にそちらから外してください";
+    if (used[army]) return "⚠ " + p.name + "（" + army + "軍）はすでに「" + used[army] + "」に入っています。同じ人の同じ軍は複数の拠点に入れません。別の軍を選ぶか、先に「" + used[army] + "」から外してください";
     list.push({ uid: uid, army: army });
     delete P.assign[uid]; delete P.pins[uid];            // 集結主になった人は、メンバーの4チームからは外れる
     return "";
@@ -1112,9 +1114,9 @@
       (ph === "after" ? '<button type="button" class="sub" id="skCopyBtn">📋 解放前のチームを土台に解放後を作る</button>' : "") +
       '<button type="button" class="sub" id="skClearBtn">↩ ' + SK_PHASES.filter(function(x) { return x[0] === ph; })[0][1] + 'の割り当てを外す（📌以外）</button>';
     // fn が返す文：isErr=true のときは「入れられない理由」（赤字）、false のときは結果の案内（緑）。空なら何も出さない
-    function act(fn, isErr) { if (readOnly) return; var msg = fn(); setMsg($("autoMsg"), msg || "", !isErr); changed(); }
+    function act(fn, isErr) { if (readOnly) return; skFacError = null; var msg = fn(); setMsg($("autoMsg"), msg || "", !isErr); changed(); }
     Array.prototype.forEach.call($("settingsBody").querySelectorAll("[data-skph]"), function(b) {
-      b.addEventListener("click", function() { sk.cur = b.dataset.skph; selectedUid = ""; if (!readOnly) saveLocal(); renderAll(); });
+      b.addEventListener("click", function() { sk.cur = b.dataset.skph; selectedUid = ""; skFacError = null; if (!readOnly) saveLocal(); renderAll(); });
     });
     on("skAutoRallyBtn", "click", function() { act(function() { return skAutoRally(ph); }); });
     on("skAutoTeamsBtn", "click", function() { act(function() { return skAutoTeams(ph); }); });
@@ -1147,10 +1149,12 @@
           return '<div class="chip leader"><b>' + escapeHtml(skLabel(e)) + "</b>" + (byUid[e.uid].rallyCap != null ? ' <span class="m">集結' + man(byUid[e.uid].rallyCap) + "</span>" : "") +
             ' <button type="button" class="sub mini" data-skdel="' + escapeHtml(f) + "|" + escapeHtml(e.uid) + '" title="外す">✕</button></div>';
         }).join("") : '<span class="empty-hint">集結主を入れる</span>') + "</div>" +
-        '<div class="leader-row" style="padding:0 10px 10px;"><select data-skadd-p="' + escapeHtml(f) + '"><option value="">（人を選ぶ）</option>' + candList.filter(function(p) { return !P.raiders[p.uid] && !list.some(function(e) { return e.uid === p.uid; }); }).map(function(p) {
-          return '<option value="' + escapeHtml(p.uid) + '">' + escapeHtml(p.name) + (p.rallyCap != null ? "（集結" + man(p.rallyCap) + "）" : "") + "</option>";
+        '<div class="leader-row" style="padding:0 10px 10px;"><select data-skadd-p="' + escapeHtml(f) + '"><option value="">（人を選ぶ）</option>' + candList.filter(function(p) { return !P.raiders[p.uid]; }).map(function(p) {
+          var inHere = list.filter(function(e) { return e.uid === p.uid; })[0];
+          return '<option value="' + escapeHtml(p.uid) + '">' + escapeHtml(p.name) + (p.rallyCap != null ? "（集結" + man(p.rallyCap) + "）" : "") + (inHere ? "【この拠点に" + inHere.army + "軍で入っています】" : "") + "</option>";
         }).join("") + '</select><select data-skadd-a="' + escapeHtml(f) + '">' + Array.apply(null, Array(SK_ARMIES)).map(function(_, i) { return '<option value="' + (i + 1) + '">' + (i + 1) + "軍</option>"; }).join("") + '</select>' +
-        '<button type="button" class="mini" data-skadd="' + escapeHtml(f) + '">＋追加</button></div></div>';
+        '<button type="button" class="mini" data-skadd="' + escapeHtml(f) + '">＋追加</button></div>' +
+        '<div class="msg err" style="padding:0 10px 8px;" data-skerr="' + escapeHtml(f) + '">' + (skFacError && skFacError.ph === ph && skFacError.f === f ? escapeHtml(skFacError.msg) : "") + "</div></div>";
     });
     v += "</div>";
 
@@ -1181,14 +1185,18 @@
     Array.prototype.forEach.call($("viewArea").querySelectorAll("[data-skadd]"), function(b) {
       var f = b.dataset.skadd;
       var ps = $("viewArea").querySelector('[data-skadd-p="' + f + '"]'), as = $("viewArea").querySelector('[data-skadd-a="' + f + '"]');
-      // 軍の選択肢：その人が同じ段階の別の拠点で使っている軍は選べない（同じ「人＋〇軍」は複数の拠点に置けない）
+      // 軍の選択肢：その人が別の拠点で使っている軍には「（〇〇で使用中）」と出す（選べるが、追加しようとすると断る）。人を選んだら、使っていない軍のうち先頭を選んでおく
       ps.addEventListener("change", function() {
         var used = ps.value ? skUsedArmies(ph, ps.value, f) : {}, first = 0;
-        Array.prototype.forEach.call(as.options, function(o) { o.disabled = !!used[o.value]; o.textContent = o.value + "軍" + (used[o.value] ? "（" + used[o.value] + "）" : ""); if (!o.disabled && !first) first = o.value; });
+        Array.prototype.forEach.call(as.options, function(o) { o.textContent = o.value + "軍" + (used[o.value] ? "（" + used[o.value] + "で使用中）" : ""); if (!used[o.value] && !first) first = o.value; });
         if (first) as.value = first;
       });
       b.addEventListener("click", function() {
-        act(function() { return skAddRally(ph, f, ps.value, as.value); }, true);
+        if (readOnly) return;
+        var msg = skAddRally(ph, f, ps.value, as.value);
+        skFacError = msg ? { ph: ph, f: f, msg: msg } : null;     // 断ったときは、その拠点のカードの中に赤字で理由を出す
+        setMsg($("autoMsg"), msg || "", !msg);
+        changed();
       });
     });
     Array.prototype.forEach.call($("viewArea").querySelectorAll("[data-skdel]"), function(b) {
