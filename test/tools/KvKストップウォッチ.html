@@ -172,7 +172,7 @@
   <div class="mode-row">
     <label><input type="radio" name="mode" value="up" checked> カウントアップ</label>
     <label><input type="radio" name="mode" value="down"> カウントダウン</label>
-    <span id="downSet" style="display:none"><input id="ss" type="number" min="0" step="0.1" value="60"> 秒から</span>
+    <span id="downSet" style="display:none"><input id="ss" type="number" min="0" step="1" value="60"> 秒から</span>
   </div>
   <div id="time">0.00</div>
   <button id="startBtn">スタート</button>
@@ -196,7 +196,7 @@
   function now() { return elapsed + (running ? Date.now() - startAt : 0); }
   function save() { try { localStorage.setItem(KEY, JSON.stringify({ laps: laps })); } catch (e) {} }
   function load() { try { var d = JSON.parse(localStorage.getItem(KEY) || "{}"); laps = d.laps || []; } catch (e) { laps = []; } }
-  function target() { return Math.max(0, +$("ss").value || 0) * 1000; }
+  function target() { return Math.max(0, Math.floor(+$("ss").value || 0)) * 1000; } // 設定は整数の秒だけ（ミリ秒は設定しない）
   function shown(e) { return mode === "down" ? Math.max(0, target() - e) : e; }
   function tick() {
     var e = now();
