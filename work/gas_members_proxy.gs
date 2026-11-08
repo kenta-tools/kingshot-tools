@@ -169,35 +169,69 @@ function pubGet_(token) {
 }
 
 // KvK同着カウントダウン表「共有用」画面の名簿。イベントID単位で1件、その中に名前付きの「タブ」を複数持てる（1イベント10タブまで）。
-// 1件: { eventId, rows（＝最初のタブの名簿。古い画面との互換用）, updatedAt, tabs: [{id, title, matchupId, rows, updatedAt}, ...] }
-// 昔の形（tabsなし）は、tabs=[{id:"main", title:"標準", rows}] として扱う（保存し直さなくてよい）。
-var KVK_MAX_TABS = 10;
+// 1件: { eventId, rows（＝最初のタブ＝設定の行。古い画面との互換用）, updatedAt, tabs: [{id, title, kind, site, matchupId, rows, updatedAt}, ...] }
+// 2026-11-08 タブの作り直し：tabs[0] は必ず kind:"settings"（id "settings"・左端固定・複製/削除/名前変更/移動不可）。ほかは kind:"tab"（拠点 site を選び、設定の行を id で参照する）。
+// 設定の行: {id,name,plain{拠点:秒|null},petOv{拠点:秒|null},adj,petLevel,group,opponentName,opponentSec} ／ 名簿タブの行: {id(設定の行のid),usePet,own,ownSec}
+// 昔の形（settingsタブが無い）は読まずに、設定＋名簿1の新しい形として扱う（旧データの変換はしない）。
+var KVK_MAX_TABS = 11; // 「設定」タブ＋名簿タブ10個
+var KVK_SITES = ["castle", "north", "east", "south", "west"]; // 王城・北砲台・東砲台・南砲台・西砲台
 
-function kvkRows_(rows) {
+function kvkSiteMap_(src, round) {
+  var o = {};
+  KVK_SITES.forEach(function(k) {
+    var v = src ? numOrNull_(src[k]) : null;
+    if (v !== null && round) v = Math.round(v);
+    o[k] = v;
+  });
+  return o;
+}
+
+// 設定タブの行
+function kvkSettingsRows_(rows) {
   return (Array.isArray(rows) ? rows : []).slice(0, 500).map(function(r) {
     return {
+      id: clip_(r.id, 24),
       name: clip_(r.name, 30),
-      role: clip_(r.role, 10), // 役割（王城メイン／王城ゴースト／北・東・南・西砲台）
-      march: numOrNull_(r.march),
+      plain: kvkSiteMap_(r.plain, false),
+      petOv: kvkSiteMap_(r.petOv, true),
       adj: numOrNull_(r.adj) || 0, // 遅延秒数
       petLevel: count_(r.petLevel, 8) || 0,
-      usePet: r.usePet !== false,
       group: clip_(r.group, 20),
       opponentName: clip_(r.opponentName, 30),
       opponentSec: numOrNull_(r.opponentSec)
     };
-  }).filter(function(r) { return r.name; });
+  }).filter(function(r) { return r.name && r.id; });
+}
+
+// 名簿タブの行（設定の行を id で参照する）
+function kvkTabRows_(rows) {
+  return (Array.isArray(rows) ? rows : []).slice(0, 500).map(function(r) {
+    var os = numOrNull_(r.own === true ? r.ownSec : null);
+    return { id: clip_(r.id, 24), usePet: r.usePet !== false, own: r.own === true, ownSec: os === null ? (r.own === true && numOrNull_(r.ownSec) !== null ? Math.round(numOrNull_(r.ownSec)) : null) : Math.round(os) };
+  }).filter(function(r) { return r.id; });
+}
+
+function kvkRowsFor_(kind, rows) { return kind === "settings" ? kvkSettingsRows_(rows) : kvkTabRows_(rows); }
+
+function kvkDefaultTabs_() {
+  return [
+    { id: "settings", title: "設定", kind: "settings", site: "", matchupId: "", rows: [], updatedAt: "" },
+    { id: "main", title: "名簿1", kind: "tab", site: "castle", matchupId: "", rows: [], updatedAt: "" }
+  ];
 }
 
 // 保存データの1件から、タブの一覧を取り出す（tabsなしの昔の形は「標準」1つにする）。1件も無ければ []
 function kvkTabsOf_(rec) {
   if (!rec) return [];
-  if (Array.isArray(rec.tabs) && rec.tabs.length) {
+  if (Array.isArray(rec.tabs) && rec.tabs.length && rec.tabs[0].kind === "settings") {
     return rec.tabs.map(function(t) {
-      return { id: t.id, title: t.title || "標準", matchupId: t.matchupId || "", rows: t.rows || [], updatedAt: t.updatedAt || "" };
+      var settings = t.kind === "settings";
+      return { id: t.id, title: settings ? "設定" : (t.title || "名簿"), kind: settings ? "settings" : "tab",
+        site: settings ? "" : (KVK_SITES.indexOf(t.site) >= 0 ? t.site : "castle"),
+        matchupId: t.matchupId || "", rows: t.rows || [], updatedAt: t.updatedAt || "" };
     });
   }
-  return [{ id: "main", title: "標準", matchupId: "", rows: rec.rows || [], updatedAt: rec.updatedAt || "" }];
+  return kvkDefaultTabs_(); // 昔の形：新しい形（設定＋名簿1）として扱う。保存されるまで元のデータは触らない
 }
 
 // pubGet で返す形：tabs を補う（rows は最初のタブの名簿のまま）
@@ -231,7 +265,6 @@ function kvkSave_(token, p) {
   cache.put(minuteKey, String(count + 1), 120);
 
   if (!p.eventId) return { ok: false, status: 400, error: "イベントが選ばれていません" };
-  var rows = kvkRows_(p.rows);
 
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(30000)) return { ok: false, status: 503, error: "混み合っています。少し待ってからもう一度押してください" };
@@ -242,13 +275,13 @@ function kvkSave_(token, p) {
       var d = f.data;
       if (!isEventEditable_(d, p.eventId)) return { ok: false, status: 403, error: "このイベントは終了（完了）しているため更新できません" };
       var tabs = kvkTabsOf_(kvkRecordOf_(d, p.eventId));
-      if (!tabs.length) tabs = [{ id: "main", title: "標準", matchupId: "", rows: [], updatedAt: "" }];
+      if (!tabs.length) tabs = kvkDefaultTabs_();
       var tab = p.tabId ? tabs.filter(function(t) { return t.id === p.tabId; })[0] : tabs[0];
       if (!tab) return { ok: false, status: 404, error: "そのタブが見つかりません（削除された可能性があります）" };
       if (p.tabId && p.baseUpdatedAt != null && !p.force && String(tab.updatedAt || "") !== String(p.baseUpdatedAt)) {
         return { ok: false, status: 409, conflict: true, error: "他の人が先にこのタブを更新しました", updatedAt: tab.updatedAt };
       }
-      tab.rows = rows;
+      tab.rows = kvkRowsFor_(tab.kind, p.rows);
       tab.updatedAt = new Date().toISOString();
       kvkPutTabs_(d, p.eventId, tabs);
 
@@ -279,15 +312,18 @@ function kvkTabs_(token, p) {
       var d = f.data;
       if (!isEventEditable_(d, p.eventId)) return { ok: false, status: 403, error: "このイベントは終了（完了）しているため更新できません" };
       var tabs = kvkTabsOf_(kvkRecordOf_(d, p.eventId));
-      if (!tabs.length) tabs = [{ id: "main", title: "標準", matchupId: "", rows: [], updatedAt: "" }];
+      if (!tabs.length) tabs = kvkDefaultTabs_();
       var tab = p.tabId ? tabs.filter(function(t) { return t.id === p.tabId; })[0] : null;
+      // 設定タブは、複製（kind:settingsの追加）・名前変更・削除・移動を受け付けない
+      if (tab && tab.kind === "settings" && (op === "rename" || op === "delete" || op === "setSite")) return { ok: false, status: 400, error: "設定タブは変更できません" };
       var result = {};
 
       if (op === "add") {
-        if (tabs.length >= KVK_MAX_TABS) return { ok: false, status: 400, error: "タブは1イベントに" + KVK_MAX_TABS + "個までです" };
-        var title = clip_(p.title, 20) || "名簿" + (tabs.length + 1);
-        var nt = { id: "t" + Utilities.getUuid().replace(/-/g, "").slice(0, 8), title: title, matchupId: clip_(p.matchupId, 40),
-          rows: kvkRows_(p.rows), updatedAt: new Date().toISOString() };
+        if (p.kind === "settings") return { ok: false, status: 400, error: "設定タブは追加・複製できません" };
+        if (tabs.length >= KVK_MAX_TABS) return { ok: false, status: 400, error: "タブは「設定」のほかに" + (KVK_MAX_TABS - 1) + "個までです" };
+        var title = clip_(p.title, 20) || "名簿" + tabs.length;
+        var nt = { id: "t" + Utilities.getUuid().replace(/-/g, "").slice(0, 8), title: title, kind: "tab", site: KVK_SITES.indexOf(p.site) >= 0 ? p.site : "castle", matchupId: clip_(p.matchupId, 40),
+          rows: kvkTabRows_(p.rows), updatedAt: new Date().toISOString() };
         tabs.push(nt);
         result.tabId = nt.id;
       } else if (op === "rename") {
@@ -295,6 +331,10 @@ function kvkTabs_(token, p) {
         var name = clip_(p.title, 20);
         if (!name) return { ok: false, status: 400, error: "タブの名前を入れてください" };
         tab.title = name;
+      } else if (op === "setSite") {
+        if (!tab) return { ok: false, status: 404, error: "そのタブが見つかりません" };
+        if (KVK_SITES.indexOf(p.site) < 0) return { ok: false, status: 400, error: "拠点が正しくありません" };
+        tab.site = p.site;
       } else if (op === "setMatchup") {
         if (!tab) return { ok: false, status: 404, error: "そのタブが見つかりません" };
         tab.matchupId = clip_(p.matchupId, 40);
@@ -305,10 +345,13 @@ function kvkTabs_(token, p) {
         var next = [];
         order.forEach(function(id) { if (byId[id]) { next.push(byId[id]); delete byId[id]; } });
         tabs.forEach(function(t) { if (byId[t.id]) next.push(t); }); // 指定に無かったタブは末尾へ（他の人が追加したタブを消さない）
+        // 設定タブは常に左端
+        var st = next.filter(function(t) { return t.kind === "settings"; })[0];
+        if (st) { next.splice(next.indexOf(st), 1); next.unshift(st); }
         tabs = next;
       } else if (op === "delete") {
         if (!tab) return { ok: false, status: 404, error: "そのタブが見つかりません（すでに削除された可能性があります）" };
-        if (tabs.length <= 1) return { ok: false, status: 400, error: "最後の1つのタブは削除できません" };
+        if (tabs.length <= 2) return { ok: false, status: 400, error: "名簿タブは最後の1つを削除できません" };
         tabs.splice(tabs.indexOf(tab), 1);
       } else {
         return { ok: false, status: 400, error: "不明な操作です" };
