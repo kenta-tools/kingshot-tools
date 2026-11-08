@@ -133,7 +133,7 @@
   <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#555;margin:0 0 10px;cursor:pointer;"><input type="checkbox" id="pwRemember" style="width:auto;margin:0;"> パスワードを保存する（次回から入力不要。共用の端末ではチェックしない）</label>
   <button type="button" id="loginBtn">ログイン</button>
   <div class="msg err" id="loginMsg"></div>
-  <a href="../index.html?v=20261108145818" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
+  <a href="../index.html?v=20261108150857" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
 </div>
 
 <div id="appView">
@@ -208,7 +208,7 @@
   <div class="targets" id="moveTargets"></div>
 </div>
 
-<script src="../config.js?v=20261108145818"></script>
+<script src="../config.js?v=20261108150857"></script>
 <script>
 (function() {
   "use strict";
@@ -321,8 +321,8 @@
           '<button type="button" class="ks-menu-btn" aria-label="メニュー" aria-expanded="false">☰</button></div>' +
         "<nav>" + links +
           '<div class="ks-group"></div>' +
-          '<a href="../kvk-matchup/kvk-matchup-index.html?v=20261108145818" class="ks-link" title="KvK相手突合せ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ</span></a>' +
-          '<a href="../index.html?v=20261108145818" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a>' +
+          '<a href="../kvk-matchup/kvk-matchup-index.html?v=20261108150857" class="ks-link" title="KvK相手突合せ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ</span></a>' +
+          '<a href="../index.html?v=20261108150857" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a>' +
           '<button type="button" class="ks-link" id="logoutBtn" title="ログアウト"><span class="ks-icon">🚪</span><span class="ks-label">ログアウト</span></button>' +
         "</nav>" +
       "</div>" +
@@ -645,6 +645,7 @@
     draft.pins = draft.pins || {};
     draft.teams = draft.teams || [];
     if (draft.mode === "ruins") draft.ruins = Object.assign({ seed: "s", targets: null, slots: {}, cur: "" }, draft.ruins || {});
+    if (draft.mode === "kvk") fixKvkSettings();   // 設定欄から消した項目は既定値で固定
     if (draft.mode === "sanmei") { draft.settings.start = defaultSettings().start; draft.settings.end = defaultSettings().end; }   // 三盟の戦闘時間は入力させず、既定値で固定
     if (draft.mode === "seiken") skEnsure();   // 古い形式（集結主＋乗り手チーム）で保存されていたものは、新しい形で開き直す（古い内容は使わない）
     selectedUid = "";
@@ -826,6 +827,65 @@
     return "振り分けました（" + groups.map(function(t) { return teamName(t) + membersOf(t.id).length + "人"; }).join("・") + "）";
   }
 
+  // ---------- KVK：同盟ごとの隊数 ----------
+  // 隊の同盟：ラベル（ひよこ／666）があればそれ。なければ、リーダーの同盟名がラベルの同盟名と同じときのラベル
+  function kvkAllyOfTeam(t) {
+    if (t.ally) return t.ally;
+    var l = byUid[t.leaderId];
+    var a = l ? KVK_ALLIANCES.filter(function(x) { return x.name === l.alliance; })[0] : null;
+    return a ? a.label : "";
+  }
+  // 最大作成できる隊数＝その同盟の、集結部隊数を登録した人（リーダー候補）の人数
+  function kvkMaxTeams(a) { return people.filter(function(p) { return p.isRallyer && p.alliance === a.name; }).length; }
+  function kvkTeamCountHtml() {
+    var rally = draft.teams.filter(function(t) { return t.kind === "rally"; });
+    var others = rally.filter(function(t) { return !kvkAllyOfTeam(t); }).length;
+    return '<div class="row" style="margin-top:0;"><b style="font-size:13px;">隊の数（同盟ごと）</b>' + KVK_ALLIANCES.map(function(a) {
+      var cur = rally.filter(function(t) { return kvkAllyOfTeam(t) === a.label; }).length, max = kvkMaxTeams(a);
+      return '<label class="inline">' + escapeHtml(a.label) + "（" + escapeHtml(a.name) + '） <input type="number" min="0" max="' + Math.max(max, cur) + '" data-tc="' + escapeHtml(a.label) + '" value="' + cur + '"> 隊 <span class="note">最大 ' + max + " 隊</span></label>";
+    }).join("") + '<button type="button" id="tcBtn">隊数を反映</button></div>' +
+      '<div class="note" style="margin:2px 0 6px;">最大＝その同盟の、集結部隊数を登録した人（リーダーにできる人）の人数です。増やすと、まだリーダーになっていない人を集結容量の大きい順にリーダーにして隊を作り、減らすと後ろの隊から消します（入っていた人は未割り当てに戻ります）。' +
+      (others ? " ひよこ・666以外の同盟の隊が " + others + " 隊あります（ここでは増減しません）。" : "") + "</div>";
+  }
+  function applyKvkTeamCounts() {
+    var msgs = [];
+    KVK_ALLIANCES.forEach(function(a) {
+      var input = document.querySelector('[data-tc="' + a.label + '"]');
+      if (!input) return;
+      var mine = draft.teams.filter(function(t) { return t.kind === "rally" && kvkAllyOfTeam(t) === a.label; });
+      var cur = mine.length, limit = Math.max(kvkMaxTeams(a), cur);
+      var n = Math.max(0, Math.min(limit, Math.floor(Number(input.value)) || 0));
+      if (n > cur) {
+        var isLeader = {};
+        draft.teams.forEach(function(x) { if (x.leaderId) isLeader[x.leaderId] = true; });
+        var cands = people.filter(function(p) { return p.isRallyer && p.alliance === a.name && !isLeader[p.uid]; })
+          .sort(function(x, y) { return ((y.rallyCap || 0) - (x.rallyCap || 0)) || strongerFirst(x, y); });
+        var added = 0;
+        while (added < n - cur && cands.length) {
+          var p = cands.shift(), id = newId();
+          draft.teams.push({ id: id, kind: "rally", name: "", leaderId: p.uid, ally: a.label });
+          draft.assign[p.uid] = id;
+          draft.pins[p.uid] = true;
+          added++;
+        }
+        msgs.push(a.label + " " + cur + "→" + (cur + added) + "隊" + (added < n - cur ? "（リーダーにできる人が足りません）" : ""));
+      } else if (n < cur) {
+        mine.slice(n).forEach(function(t) {      // 後ろの隊から消す（確認なし）。入っていた人は未割り当てに戻る
+          membersOf(t.id).forEach(function(p) { delete draft.assign[p.uid]; delete draft.pins[p.uid]; });
+          if (t.leaderId) delete draft.pins[t.leaderId];
+          draft.teams.splice(draft.teams.indexOf(t), 1);
+        });
+        msgs.push(a.label + " " + cur + "→" + n + "隊（" + (cur - n) + "隊を削除）");
+      }
+    });
+    return msgs.length ? "隊数を反映しました：" + msgs.join("／") : "隊数は変わりません";
+  }
+  // KVKは、設定欄から消した項目（戦闘時間・人数の目安・上位隊ルール・◆を散らす）を既定値で固定する（保存済みの値は使わない）
+  function fixKvkSettings() {
+    var d = defaultSettings();
+    ["start", "end", "minSize", "maxSize", "topRule", "topSize", "spreadVivian"].forEach(function(k) { draft.settings[k] = d[k]; });
+  }
+
   // 聖剣：引き継いだあとに、まだどこにも入っていない人だけを入れる（集結部隊数の人は集結主チーム、残りは出征容量の合計が小さいチームへ）
   function fillNewSeiken() {
     var rallyers = draft.teams.filter(function(t) { return t.kind === "rallyers"; })[0];
@@ -854,6 +914,7 @@
     });
     draft.teams = teams;
     draft.settings = Object.assign(defaultSettings(), pd.settings || {});
+    if (draft.mode === "kvk") fixKvkSettings();
     draft.assign = {};
     draft.pins = {};
     Object.keys(pd.assign || {}).forEach(function(uid) {
@@ -1503,29 +1564,30 @@
 
   function renderSettings() {
     var s = draft.settings, html = "";
-    html += '<div class="row" style="margin-top:0;">';
-    if (draft.mode !== "sanmei") {   // 三盟は戦闘時間の入力を出さない（既定値の21:00〜25:00で固定）
-      html += '<label class="inline">戦闘時間 <select data-set="start">' + timeOptions(s.start) + '</select> 〜 <select data-set="end">' + timeOptions(s.end) + "</select></label>";
-    }
-    if (draft.mode === "kvk") {
-      html += '<label class="inline">人数の目安 <input type="number" min="1" max="50" data-set="minSize" value="' + s.minSize + '">〜<input type="number" min="1" max="50" data-set="maxSize" value="' + s.maxSize + '">人</label>';
+    var row = "";
+    // 戦闘時間：KVK・三盟では出さない（既定値の21:00〜25:00で固定）
+    if (draft.mode !== "sanmei" && draft.mode !== "kvk") {
+      row += '<label class="inline">戦闘時間 <select data-set="start">' + timeOptions(s.start) + '</select> 〜 <select data-set="end">' + timeOptions(s.end) + "</select></label>";
     }
     if (draft.mode === "seiken") {
-      html += '<label class="inline">乗り手のチーム数 <input type="number" min="0" max="20" data-set="teamCount" value="' + draft.teams.filter(function(t) { return t.kind === "group"; }).length + '"></label>';
+      row += '<label class="inline">乗り手のチーム数 <input type="number" min="0" max="20" data-set="teamCount" value="' + draft.teams.filter(function(t) { return t.kind === "group"; }).length + '"></label>';
     }
-    html += "</div>";
+    if (row) html += '<div class="row" style="margin-top:0;">' + row + "</div>";
     if (draft.mode === "kvk") {
-      html += '<div class="row">' +
-        '<label class="inline"><input type="checkbox" data-set="topRule"' + (s.topRule ? " checked" : "") + '> 上位隊ルール：第1〜3隊はリーダーを含めて <input type="number" min="2" max="20" data-set="topSize" value="' + s.topSize + '">人、全部参加＋◇の人を強い順に</label>' +
-        '<label class="inline"><input type="checkbox" data-set="spreadVivian"' + (s.spreadVivian ? " checked" : "") + "> ◆を各隊に散らす</label>" +
-        "</div>" +
-        '<div class="note">自動振り分け：リーダーの集結容量（から本人の出征容量を引いた分）に収まるように、強い人（G→T11→出征容量の順）から番号の小さい隊へ詰め、あふれたら次の隊へ入れます。どこにも入らない人は「待機」、時間未定の人は「時間未定」に置きます。人数は目安で、外れたら注意を出すだけです。隊ごとの「同盟」（ひよこ／666）は、隊に付けるラベルです（自動振り分けでは使いません）。</div>' + kvkMonthlyHtml();
+      html += kvkTeamCountHtml() +
+        '<div class="note">自動振り分け：リーダーの集結容量（から本人の出征容量を引いた分）に収まるように、強い人（G→T11→出征容量の順）から番号の小さい隊へ詰め、あふれたら次の隊へ入れます。第1〜3隊は、リーダーを含めて8人まで、全部参加＋◇の人を強い順に入れます。◆（ビビアン星4以上）のいない隊には、◆が2人以上いる隊から1人回します。どこにも入らない人は「待機」、時間未定の人は「時間未定」に置きます。人数は8〜10人が目安で、外れたら注意を出すだけです（これらの決まりは固定です）。隊ごとの「同盟」（ひよこ／666）は、隊に付けるラベルです（自動振り分けでは使いません）。</div>' + kvkMonthlyHtml();
     } else if (draft.mode === "seiken") {
       html += '<div class="note">自動振り分け：集結部隊数を登録した人は「集結主」チームにまとめ、残りの人を、各チームの出征容量の合計がそろうように分けます。</div>';
     } else {
       html += '<div class="note">自動振り分け：参加者（不参加を除く）を、出征容量の合計がそろうように、上・中・下へ均等に分けます（📌固定の人は動かしません）。あとからボードか表で手で直せます（チーム名は変えられます）。前回の同じ種類のイベントがあれば、下の「前回と同じチームにする」も使えます。</div>';
     }
     $("settingsBody").innerHTML = html;
+    on("tcBtn", "click", function() {
+      if (readOnly) return;
+      var msg = applyKvkTeamCounts();
+      setMsg($("autoMsg"), msg, true);
+      changed();
+    });
     Array.prototype.forEach.call($("settingsBody").querySelectorAll("[data-set]"), function(el) {
       el.addEventListener("change", function() {
         var k = el.dataset.set;
@@ -1741,8 +1803,7 @@
       t.name = n.trim().slice(0, 20);
     }
     if (act === "del") {
-      if (!confirm("「" + teamName(t) + "」を消します。入っている人は未割り当てに戻ります。よろしいですか？")) return;
-      membersOf(t.id).forEach(function(p) { delete draft.assign[p.uid]; });
+      membersOf(t.id).forEach(function(p) { delete draft.assign[p.uid]; });   // 確認なしで消す。入っていた人は未割り当てに戻る
       draft.teams.splice(i, 1);
       if (t.kind === "group") draft.settings.teamCount = draft.teams.filter(function(x) { return x.kind === "group"; }).length;
     }
