@@ -669,6 +669,7 @@ function answerInquiry_(token, p) {
 var TEAM_JSON_MAX = 300 * 1024;
 
 // チーム分けの保存（管理者のみ）。p: { eventId, draft, baseUpdatedAt, publish: "keep"|"publish"|"unpublish", view?, by? }
+// 完了したイベント（events[].done）は、どの保存も403で拒否する（2026-11-08）
 // baseUpdatedAt は読み込んだ時点の updatedAt。違えば他の管理者が先に保存しているので、上書きせず最新を返す（force で上書き）
 function teamSave_(token, p) {
   if (!p.eventId) return { ok: false, status: 400, error: "イベントが選ばれていません" };
@@ -687,9 +688,10 @@ function teamSave_(token, p) {
       var f = readFile_(token);
       if (!f.ok) return f;
       var d = f.data;
-      if (!(d.events || []).some(function(e) { return e.id === p.eventId; })) {
-        return { ok: false, status: 400, error: "そのイベントが見つかりません" };
-      }
+      var ev = (d.events || []).filter(function(e) { return e.id === p.eventId; })[0];
+      if (!ev) return { ok: false, status: 400, error: "そのイベントが見つかりません" };
+      // 完了したイベントは、下書き保存・公開・非公開のどれも受け付けない（画面だけで止めず、ここでも拒否する）
+      if (ev.done === true) return { ok: false, status: 403, error: "このイベントは完了しているため、チーム分けは保存・公開できません" };
       d.teams = d.teams || [];
       var existing = d.teams.filter(function(x) { return x.eventId === p.eventId; })[0];
       if (existing && !p.force && (p.baseUpdatedAt || "") !== (existing.updatedAt || "")) {

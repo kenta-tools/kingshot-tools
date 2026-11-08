@@ -82,6 +82,11 @@
   .chip.unknown { background: #f1f1f1; }
   .chip.ng { border-color: #e09a8b; }
   .empty-hint { color: #aaa; font-size: 12px; }
+  /* 完了したイベント：保存済みの内容を見るだけ（編集できる部分は触れない） */
+  body.ks-readonly #settingsCard, body.ks-readonly #viewArea { pointer-events: none; opacity: 0.88; }
+  body.ks-readonly #viewArea [data-slot], body.ks-readonly #viewArea th[data-sort] { pointer-events: auto; } /* 見る画面の切り替え（時間帯・並べ替え）はできる */
+  body.ks-readonly #viewArea [draggable] { -webkit-user-drag: none; }
+  #roBanner { display: none; background: #fff1d6; color: #8a5600; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; font-size: 13px; }
 
   /* 移動バー（チップを押したときに下に出る） */
   #moveBar {
@@ -128,7 +133,7 @@
   <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#555;margin:0 0 10px;cursor:pointer;"><input type="checkbox" id="pwRemember" style="width:auto;margin:0;"> パスワードを保存する（次回から入力不要。共用の端末ではチェックしない）</label>
   <button type="button" id="loginBtn">ログイン</button>
   <div class="msg err" id="loginMsg"></div>
-  <a href="../index.html?v=20261108101500" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
+  <a href="../index.html?v=20261108102132" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
 </div>
 
 <div id="appView">
@@ -139,6 +144,7 @@
     <br><b style="color:#b4441c;">※ 「公開する」を押すと、パスワードなしで誰でも見られます。公開されるのは、名前・同盟・区分・印（◇VC・◆ビビアン）・参加時間・チーム（遺跡争奪は時間帯ごとの要塞・遺跡）だけです（◯マンスリー、部隊数・容量・ペット・ひとことは出ません）。</b>
   </div>
 
+  <div id="roBanner">🔒 このイベントは完了しているため、保存済みのチーム分けを見るだけです（編集・保存・公開はできません）。</div>
   <div class="card">
     <div class="row" style="margin-top:0;">
       <label class="inline">イベント <select id="eventSel"></select></label>
@@ -201,7 +207,7 @@
   <div class="targets" id="moveTargets"></div>
 </div>
 
-<script src="../config.js?v=20261108101500"></script>
+<script src="../config.js?v=20261108102132"></script>
 <script>
 (function() {
   "use strict";
@@ -314,8 +320,8 @@
           '<button type="button" class="ks-menu-btn" aria-label="メニュー" aria-expanded="false">☰</button></div>' +
         "<nav>" + links +
           '<div class="ks-group"></div>' +
-          '<a href="../kvk-matchup/kvk-matchup-index.html?v=20261108101500" class="ks-link" title="KvK相手突合せ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ</span></a>' +
-          '<a href="../index.html?v=20261108101500" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a>' +
+          '<a href="../kvk-matchup/kvk-matchup-index.html?v=20261108102132" class="ks-link" title="KvK相手突合せ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ</span></a>' +
+          '<a href="../index.html?v=20261108102132" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a>' +
           '<button type="button" class="ks-link" id="logoutBtn" title="ログアウト"><span class="ks-icon">🚪</span><span class="ks-label">ログアウト</span></button>' +
         "</nav>" +
       "</div>" +
@@ -434,6 +440,7 @@
   var byUid = {};
   var tab = "board";
   var selectedUid = "";
+  var readOnly = false; // 完了したイベントは見るだけ（openEvent で決める）
   var outSlots = RUIN_SLOTS.slice(); // 遺跡争奪：Discordに貼る時間帯（出力だけの設定。保存せず、イベントを開くたびに全選択）
   var tableSort = { key: "team", dir: 1 };
   var tableAlliance = "";
@@ -568,6 +575,7 @@
     try { return JSON.parse(localStorage.getItem(DRAFT_KEY + eventId) || "null"); } catch (e) { return null; }
   }
   function changed() {
+    if (readOnly) return; // 完了イベントは編集不可（念のため。画面側でも触れなくしてある）
     saveLocal();
     renderAll();
   }
@@ -602,6 +610,7 @@
 
   function openEvent(id) {
     eventId = id;
+    readOnly = !!(eventById(id) || {}).done;
     outSlots = RUIN_SLOTS.slice();
     try { localStorage.setItem(LAST_EVENT_KEY, id); } catch (e) {}
     buildPeople();
@@ -609,6 +618,11 @@
     var local = readLocal();
     var base = record ? record.updatedAt : "";
     var info = "";
+    // 完了したイベントは、保存済みの内容だけを見せる（このブラウザに残っていた保存前の変更は使わない・消さない）
+    if (readOnly) {
+      if (local) info = "※このブラウザに、このイベントの保存前の変更が残っていますが、完了したイベントなので使っていません";
+      local = null;
+    }
     // 保存済みの内容（record.draft）は「変更があるか」の比べる元なので、編集用には複製を使う
     if (local && local.draft && JSON.stringify(local.draft) !== JSON.stringify(record ? record.draft : null)) {
       if (local.base === base) {
@@ -631,6 +645,9 @@
     draft.teams = draft.teams || [];
     if (draft.mode === "ruins") draft.ruins = Object.assign({ seed: "s", targets: null, slots: {}, cur: "" }, draft.ruins || {});
     selectedUid = "";
+    document.body.classList.toggle("ks-readonly", readOnly);
+    $("roBanner").style.display = readOnly ? "block" : "none";
+    if (readOnly && !record) info = "このイベントは完了していて、保存されたチーム分けはありません。";
     setMsg($("loadMsg"), info, true);
     renderAll();
   }
@@ -828,7 +845,7 @@
 
   function renderStatus() {
     var pill = $("statusPill"), txt = [];
-    var local = readLocal();
+    var local = readOnly ? null : readLocal(); // 完了イベントは保存前の変更を持たない
     var unsaved = local && JSON.stringify(local.draft) !== JSON.stringify(record ? record.draft : null);
     if (record && record.published) {
       var same = JSON.stringify(buildView()) === JSON.stringify(record.published);
@@ -841,6 +858,7 @@
     }
     if (record) txt.push("保存: " + formatTime(record.updatedAt));
     if (unsaved) txt.push("※まだ保存していない変更があります");
+    if (readOnly) txt.push("🔒 完了したイベント（見るだけ）");
     txt.push("参加者 " + people.length + "人（不参加を除く）");
     $("statusText").textContent = txt.join("　");
   }
@@ -1019,6 +1037,7 @@
     Array.prototype.forEach.call(area.querySelectorAll(".chip"), function(c) {
       c.addEventListener("click", function(e) {
         e.stopPropagation();
+        if (readOnly) return;
         selectedUid = selectedUid === c.dataset.uid ? "" : c.dataset.uid;
         renderAll();
       });
@@ -1080,7 +1099,7 @@
   function renderMoveBar() {
     var bar = $("moveBar");
     var p = byUid[selectedUid];
-    if (!p || tab !== "board") { bar.style.display = "none"; return; }
+    if (readOnly || !p || tab !== "board") { bar.style.display = "none"; return; }
     bar.style.display = "block";
     $("moveName").textContent = p.name;
     $("pinBtn").textContent = isPinned(p.uid) ? "📌 固定を外す" : "📌 固定する";
@@ -1483,13 +1502,13 @@
     }
     $("viewArea").innerHTML = v;
     Array.prototype.forEach.call($("viewArea").querySelectorAll("[data-slot]"), function(b) {
-      b.addEventListener("click", function() { draft.ruins.cur = b.dataset.slot; selectedUid = ""; saveLocal(); renderAll(); });
+      b.addEventListener("click", function() { draft.ruins.cur = b.dataset.slot; selectedUid = ""; if (!readOnly) saveLocal(); renderAll(); });
     });
     Array.prototype.forEach.call($("viewArea").querySelectorAll("[data-rleader]"), function(sel) {
       sel.addEventListener("change", function() { setRuinLeader(k, sel.dataset.rleader, sel.value); changed(); });
     });
     Array.prototype.forEach.call($("viewArea").querySelectorAll(".chip"), function(c) {
-      c.addEventListener("click", function(e) { e.stopPropagation(); selectedUid = selectedUid === c.dataset.uid ? "" : c.dataset.uid; renderAll(); });
+      c.addEventListener("click", function(e) { e.stopPropagation(); if (readOnly) return; selectedUid = selectedUid === c.dataset.uid ? "" : c.dataset.uid; renderAll(); });
       c.addEventListener("dragstart", function(e) { e.dataTransfer.setData("text/plain", c.dataset.uid); });
     });
     Array.prototype.forEach.call($("viewArea").querySelectorAll("[data-drop]"), function(box) {
@@ -1504,7 +1523,7 @@
     renderOutSlots();
     // 名前を押したときの移動バー
     var bar = $("moveBar"), p = byUid[selectedUid];
-    if (!p || !slotStatus(p, k)) { bar.style.display = "none"; return; }
+    if (readOnly || !p || !slotStatus(p, k)) { bar.style.display = "none"; return; }
     bar.style.display = "block";
     $("moveName").textContent = p.name + "（" + slotLabel(k) + "）";
     $("pinBtn").textContent = st.pins[p.uid] ? "📌 固定を外す" : "📌 固定する";
@@ -1600,6 +1619,7 @@
 
   // ---------- 保存 ----------
   function save(publish, force) {
+    if (readOnly) { setMsg($("saveMsg"), "完了したイベントは保存・公開できません", false); return Promise.resolve(); }
     var btns = ["saveBtn", "publishBtn", "unpublishBtn"];
     btns.forEach(function(id) { $(id).disabled = true; });
     setMsg($("saveMsg"), "保存中…", true);
@@ -1666,7 +1686,7 @@
       function() { setMsg($("saveMsg"), url, true); });
   });
   window.addEventListener("beforeunload", function(e) {
-    var local = readLocal();
+    var local = readOnly ? null : readLocal();
     if (local && draft && JSON.stringify(local.draft) !== JSON.stringify(record ? record.draft : null)) { e.preventDefault(); e.returnValue = ""; }
   });
 
