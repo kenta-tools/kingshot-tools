@@ -133,7 +133,7 @@
   <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#555;margin:0 0 10px;cursor:pointer;"><input type="checkbox" id="pwRemember" style="width:auto;margin:0;"> パスワードを保存する（次回から入力不要。共用の端末ではチェックしない）</label>
   <button type="button" id="loginBtn">ログイン</button>
   <div class="msg err" id="loginMsg"></div>
-  <a href="../index.html?v=20261108131620" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
+  <a href="../index.html?v=20261108145544" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
 </div>
 
 <div id="appView">
@@ -208,7 +208,7 @@
   <div class="targets" id="moveTargets"></div>
 </div>
 
-<script src="../config.js?v=20261108131620"></script>
+<script src="../config.js?v=20261108145544"></script>
 <script>
 (function() {
   "use strict";
@@ -321,8 +321,8 @@
           '<button type="button" class="ks-menu-btn" aria-label="メニュー" aria-expanded="false">☰</button></div>' +
         "<nav>" + links +
           '<div class="ks-group"></div>' +
-          '<a href="../kvk-matchup/kvk-matchup-index.html?v=20261108131620" class="ks-link" title="KvK相手突合せ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ</span></a>' +
-          '<a href="../index.html?v=20261108131620" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a>' +
+          '<a href="../kvk-matchup/kvk-matchup-index.html?v=20261108145544" class="ks-link" title="KvK相手突合せ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ</span></a>' +
+          '<a href="../index.html?v=20261108145544" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a>' +
           '<button type="button" class="ks-link" id="logoutBtn" title="ログアウト"><span class="ks-icon">🚪</span><span class="ks-label">ログアウト</span></button>' +
         "</nav>" +
       "</div>" +
@@ -645,6 +645,7 @@
     draft.pins = draft.pins || {};
     draft.teams = draft.teams || [];
     if (draft.mode === "ruins") draft.ruins = Object.assign({ seed: "s", targets: null, slots: {}, cur: "" }, draft.ruins || {});
+    if (draft.mode === "sanmei") { draft.settings.start = defaultSettings().start; draft.settings.end = defaultSettings().end; }   // 三盟の戦闘時間は入力させず、既定値で固定
     if (draft.mode === "seiken") skEnsure();   // 古い形式（集結主＋乗り手チーム）で保存されていたものは、新しい形で開き直す（古い内容は使わない）
     selectedUid = "";
     document.body.classList.toggle("ks-readonly", readOnly);
@@ -1486,8 +1487,10 @@
 
   function renderSettings() {
     var s = draft.settings, html = "";
-    html += '<div class="row" style="margin-top:0;">' +
-      '<label class="inline">戦闘時間 <select data-set="start">' + timeOptions(s.start) + '</select> 〜 <select data-set="end">' + timeOptions(s.end) + "</select></label>";
+    html += '<div class="row" style="margin-top:0;">';
+    if (draft.mode !== "sanmei") {   // 三盟は戦闘時間の入力を出さない（既定値の21:00〜25:00で固定）
+      html += '<label class="inline">戦闘時間 <select data-set="start">' + timeOptions(s.start) + '</select> 〜 <select data-set="end">' + timeOptions(s.end) + "</select></label>";
+    }
     if (draft.mode === "kvk") {
       html += '<label class="inline">人数の目安 <input type="number" min="1" max="50" data-set="minSize" value="' + s.minSize + '">〜<input type="number" min="1" max="50" data-set="maxSize" value="' + s.maxSize + '">人</label>';
     }
@@ -1859,7 +1862,7 @@
     return {
       mode: draft.mode,
       title: eventLabel(ev),
-      battle: fmtMin(draft.settings.start) + "〜" + fmtMin(draft.settings.end),
+      battle: draft.mode === "sanmei" ? "" : fmtMin(draft.settings.start) + "〜" + fmtMin(draft.settings.end),
       teams: draft.teams.map(function(t) {
         var l = leaderOf(t);
         return {
