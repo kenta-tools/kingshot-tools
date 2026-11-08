@@ -20,6 +20,10 @@
   button:disabled { opacity:.4; cursor:default; }
   .mode-row { margin-bottom:8px; font-size:14px; }
   .mode-row label { margin:0 10px; cursor:pointer; }
+  .preset-row { margin:6px 0 10px; font-size:13px; display:none; }
+  .preset-row input[type=text] { width:120px; font-size:14px; padding:5px 6px; border:1px solid #ccc; border-radius:6px; }
+  .preset-row select { font-size:14px; padding:5px; border:1px solid #ccc; border-radius:6px; }
+  .preset-row button { font-size:13px; padding:5px 10px; margin:0 2px; }
   .mode-row input[type=number] { width:64px; font-size:15px; padding:6px; border:1px solid #ccc; border-radius:6px; }
   #time.done { color:#e5484d; }
   .memo-row { margin-top:16px; display:flex; gap:8px; }
@@ -174,6 +178,11 @@
     <label><input type="radio" name="mode" value="down"> カウントダウン</label>
     <span id="downSet" style="display:none"><input id="ss" type="number" min="0" step="1" value="60"> 秒から</span>
   </div>
+  <div class="preset-row" id="presetRow">
+    名前をつけて保存：<input id="presetName" type="text" maxlength="20" placeholder="例：王城集結"> <button id="presetSave" class="sub2">保存</button>
+    ／ 保存した設定：<select id="presetSel"></select>
+    <button id="presetDel" class="sub2">削除</button>
+  </div>
   <div id="time">0.00</div>
   <button id="startBtn">スタート</button>
   <button id="lapBtn" class="sub2" disabled>記録</button>
@@ -211,7 +220,7 @@
   function setMode(m) {
     if (running || elapsed > 0) { if (!confirm("計測中のタイムをリセットして切り替えます。よろしいですか？")) { document.querySelector('input[name=mode][value=' + mode + ']').checked = true; return; } }
     mode = m; running = false; cancelAnimationFrame(raf); elapsed = 0; laps = []; save(); render();
-    $("downSet").style.display = m === "down" ? "inline" : "none";
+    $("downSet").style.display = m === "down" ? "inline" : "none"; $("presetRow").style.display = m === "down" ? "block" : "none";
     $("startBtn").textContent = "スタート"; $("startBtn").className = ""; $("startBtn").disabled = false; $("lapBtn").disabled = true; $("time").classList.remove("done"); tick();
   }
   Array.prototype.forEach.call(document.querySelectorAll("input[name=mode]"), function (r) { r.addEventListener("change", function () { setMode(r.value); }); });
@@ -241,6 +250,42 @@
     running = false; cancelAnimationFrame(raf); elapsed = 0; laps = []; save(); render();
     $("startBtn").textContent = "スタート"; $("startBtn").className = ""; $("startBtn").disabled = false; $("lapBtn").disabled = true; $("time").classList.remove("done"); tick();
   });
+  // --- 設定した秒数に名前をつけて保存し、あとで選んで再設定できる（このブラウザに保存） ---
+  var PKEY = "kingshot_stopwatch_presets_v1";
+  var presets = [];
+  function loadPresets() { try { presets = JSON.parse(localStorage.getItem(PKEY) || "[]") || []; } catch (e) { presets = []; } }
+  function savePresets() { try { localStorage.setItem(PKEY, JSON.stringify(presets)); } catch (e) {} }
+  function renderPresets() {
+    var sel = $("presetSel"); sel.innerHTML = "";
+    var o0 = document.createElement("option"); o0.value = ""; o0.textContent = presets.length ? "（選んで再設定）" : "（まだありません）"; sel.appendChild(o0);
+    presets.forEach(function (pr, i) {
+      var o = document.createElement("option"); o.value = String(i); o.textContent = pr.name + "（" + pr.sec + "秒）"; sel.appendChild(o);
+    });
+  }
+  function applyPreset(i) {
+    var pr = presets[i]; if (!pr) return;
+    if (running || elapsed > 0) { alert("計測中・計測後は設定を変えられません。先に「リセット」を押してください。"); $("presetSel").value = ""; return; }
+    $("ss").value = pr.sec; tick();
+  }
+  $("presetSave").addEventListener("click", function () {
+    var name = ($("presetName").value || "").trim();
+    var sec = Math.max(0, Math.floor(+$("ss").value || 0));
+    if (!name) { alert("名前を入れてください"); return; }
+    var found = presets.filter(function (x) { return x.name === name; })[0];
+    if (found) { if (!confirm("「" + name + "」はすでにあります。秒数を " + sec + " 秒に上書きしますか？")) return; found.sec = sec; }
+    else { if (presets.length >= 30) { alert("保存できるのは30個までです。不要なものを削除してください。"); return; } presets.push({ name: name, sec: sec }); }
+    savePresets(); renderPresets();
+    $("presetSel").value = String(presets.indexOf(presets.filter(function (x) { return x.name === name; })[0]));
+    $("presetName").value = "";
+  });
+  $("presetSel").addEventListener("change", function () { if (this.value !== "") applyPreset(+this.value); });
+  $("presetDel").addEventListener("click", function () {
+    var v = $("presetSel").value; if (v === "") { alert("削除する設定を選んでください"); return; }
+    var pr = presets[+v]; if (!pr || !confirm("「" + pr.name + "（" + pr.sec + "秒）」を削除します。よろしいですか？")) return;
+    presets.splice(+v, 1); savePresets(); renderPresets();
+  });
+  loadPresets(); renderPresets();
+
   load(); render(); tick();
 })();
 </script>
