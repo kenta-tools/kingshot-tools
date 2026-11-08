@@ -135,6 +135,14 @@ function handle_(p) {
 // ---------- 個人登録ページ用 ----------
 
 // 受付中のイベントと、その参加者・ユーザー一覧（名前の候補・自分の登録の読み込み用）
+// 確認事項（アンケート）の答えは管理者だけが見られる。誰でも読める pubGet には出さない
+function noSurvey_(x) {
+  if (!x.survey && !x.surveyProxy) return x;
+  var c = {};
+  Object.keys(x).forEach(function(k) { if (k !== "survey" && k !== "surveyProxy") c[k] = x[k]; });
+  return c;
+}
+
 function pubGet_(token) {
   var f = readFile_(token);
   if (!f.ok) return f;
@@ -146,7 +154,7 @@ function pubGet_(token) {
     ok: true,
     events: events,
     users: (d.users || []).map(function(u) { return { id: u.id, name: u.name, alliance: u.alliance, aliases: u.aliases || [] }; }),
-    entries: (d.entries || []).filter(function(x) { return ids[x.eventId]; }),
+    entries: (d.entries || []).filter(function(x) { return ids[x.eventId]; }).map(noSurvey_),
     // kvkRosters/flameRostersは終了したイベント分も含めて全部返す（終了後も閲覧はできるようにするため。
     // 更新を締め切るかどうかはクライアント側で「そのイベントがopenか」を見て判断する）
     kvkChatHistory: d.kvkChatHistory || [], // チャット用テキストの履歴（イベントごと。閲覧は誰でも）
@@ -161,7 +169,7 @@ function pubGet_(token) {
     history: {
       // doneはKvK相手突合せ・聖剣リーグ等の自動更新が「このイベントは終わったか」を判断するのに使う（パスワード不要で見られる）
       events: (d.events || []).map(function(e) { return { id: e.id, type: e.type, date: e.date, done: e.done === true }; }),
-      entries: d.entries || []
+      entries: (d.entries || []).map(noSurvey_)
     },
     // Discord の招待リンク（GitHub Actions が毎朝作り直して setDiscordInvite で送ってくる。未設定なら ""）
     discordInvite: PropertiesService.getScriptProperties().getProperty("DISCORD_INVITE") || ""
@@ -829,6 +837,35 @@ function selfSave_(token, p) {
       } else if (row) {
         delete row.slots;
       }
+      // 確認事項（アンケート）：イベントに設問（ev.survey = [{id, text, show, kind}]）があるとき、不参加以外は答えてもらう。
+      //   show: "rally"＝集結の欄（集結部隊数など）を入れた人だけに出す／それ以外は全員。
+      //   kind: "skip"＝「わかってません」のチェック（チェックしたら、ほかの設問は答えなくてよい）／それ以外は ok（了解）・unknown（内容わかりません）を答える。
+      // 代理入力は答えを持たず、本人に伝える設問があるときに「連携します」（surveyProxy）のチェックだけ
+      if (row) {
+        var sAll = Array.isArray(ev.survey) ? ev.survey.filter(function(q) { return q && q.id && q.text; }) : [];
+        var rallyOn = row.rallyCount != null || row.rallyPet != null || row.rallySpeedPet != null;
+        var sq = sAll.filter(function(q) { return q.show !== "rally" || rallyOn; });
+        var skipQ = sq.filter(function(q) { return q.kind === "skip"; })[0];
+        var askQ = sq.filter(function(q) { return q.kind !== "skip"; });
+        var ans = row.survey || {}, link = row.surveyProxy === true;
+        delete row.survey; delete row.surveyProxy;
+        if (sq.length && row.entry !== "absent") {
+          if (clip_(p.proxyBy, 30)) {
+            if (askQ.length) {
+              if (!link) return { ok: false, status: 400, error: "確認事項の「連携します」にチェックしてください" };
+              row.surveyProxy = true;
+            }
+          } else if (skipQ && ans[skipQ.id] === "check") {
+            row.survey = {};
+            row.survey[skipQ.id] = "check";
+          } else {
+            var keptAns = {};
+            askQ.forEach(function(q) { if (ans[q.id] === "ok" || ans[q.id] === "unknown") keptAns[q.id] = ans[q.id]; });
+            if (askQ.some(function(q) { return !keptAns[q.id]; })) return { ok: false, status: 400, error: "確認事項に全部答えてください" };
+            if (askQ.length) row.survey = keptAns;
+          }
+        }
+      }
 
       // ユーザーを決める: 候補から選んだ人 → 名前（旧名含む）が一致する人 → 新規
       var user = p.userId ? d.users.filter(function(u) { return u.id === p.userId; })[0] : null;
@@ -888,6 +925,8 @@ function selfSave_(token, p) {
           note: row.note, marchCount: row.marchCount, marchPet: row.marchPet, rallyCount: row.rallyCount,
           rallyPet: row.rallyPet, rallySpeedPet: row.rallySpeedPet, marchCap: row.marchCap, rallyCap: row.rallyCap,
           slots: row.slots, // 遺跡争奪の時間ごとの参加（それ以外のイベントでは入らない）
+          survey: row.survey, // 確認事項の答え {設問id: "ok"|"unknown"}（設問のないイベント・不参加・代理入力では入らない。管理者だけが見られる）
+          surveyProxy: row.surveyProxy, // 代理入力で「連携します」にチェックした
           proxyBy: proxyBy, // 代理で入力した人の名前（本人の入力なら ""）
           updatedAt: new Date().toISOString(),
           id: existing ? existing.id : newId_("r"), eventId: ev.id, userId: user.id
@@ -1008,6 +1047,11 @@ function cleanEntry_(m) {
   var slotsIn = m.slots || {}, slots = {};
   RUIN_SLOTS.forEach(function(k) { if (["yes", "maybe", "no"].indexOf(slotsIn[k]) >= 0) slots[k] = slotsIn[k]; });
   if (Object.keys(slots).length) r.slots = slots;
+  // 確認事項（アンケート）の答え。設問のidごとに ok／unknown／check（わかってません）だけ残す（イベントの設問との突き合わせは selfSave_ で）
+  var svIn = m.survey && typeof m.survey === "object" ? m.survey : {}, sv = {};
+  Object.keys(svIn).slice(0, 20).forEach(function(k) { if (svIn[k] === "ok" || svIn[k] === "unknown" || svIn[k] === "check") sv[clip_(k, 40)] = svIn[k]; });
+  if (Object.keys(sv).length) r.survey = sv;
+  if (m.surveyProxy === true) r.surveyProxy = true;
   var c = calcCap_(r);
   r.marchCap = c.march;
   r.rallyCap = c.rally;
