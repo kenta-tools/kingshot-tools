@@ -133,7 +133,7 @@
   <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#555;margin:0 0 10px;cursor:pointer;"><input type="checkbox" id="pwRemember" style="width:auto;margin:0;"> パスワードを保存する（次回から入力不要。共用の端末ではチェックしない）</label>
   <button type="button" id="loginBtn">ログイン</button>
   <div class="msg err" id="loginMsg"></div>
-  <a href="../index.html?v=20261108131306" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
+  <a href="../index.html?v=20261108131620" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
 </div>
 
 <div id="appView">
@@ -208,7 +208,7 @@
   <div class="targets" id="moveTargets"></div>
 </div>
 
-<script src="../config.js?v=20261108131306"></script>
+<script src="../config.js?v=20261108131620"></script>
 <script>
 (function() {
   "use strict";
@@ -321,8 +321,8 @@
           '<button type="button" class="ks-menu-btn" aria-label="メニュー" aria-expanded="false">☰</button></div>' +
         "<nav>" + links +
           '<div class="ks-group"></div>' +
-          '<a href="../kvk-matchup/kvk-matchup-index.html?v=20261108131306" class="ks-link" title="KvK相手突合せ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ</span></a>' +
-          '<a href="../index.html?v=20261108131306" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a>' +
+          '<a href="../kvk-matchup/kvk-matchup-index.html?v=20261108131620" class="ks-link" title="KvK相手突合せ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ</span></a>' +
+          '<a href="../index.html?v=20261108131620" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a>' +
           '<button type="button" class="ks-link" id="logoutBtn" title="ログアウト"><span class="ks-icon">🚪</span><span class="ks-label">ログアウト</span></button>' +
         "</nav>" +
       "</div>" +
@@ -990,7 +990,8 @@
     });
   }
   function skP(ph) { return draft.sk[ph]; }
-  function skFacilities(ph) { return ph === "after" ? SK_BASE.concat(SK_ALTAR) : SK_BASE; }
+  var SK_ALL = SK_ALTAR.concat(SK_BASE);                // 画面に出す順（祭壇・教化の間・傭兵駐屯地が先頭）
+  function skFacilities(ph) { return ph === "after" ? SK_ALL : SK_BASE; }   // その段階で使える拠点（解放前は祭壇などを含めない）
   function skRallyList(ph, f) { return (skP(ph).rally[f] || []).filter(function(e) { return byUid[e.uid]; }); }
   // その段階で集結主として拠点に入っている人（メンバーの4チームには入れない）
   function skRallySet(ph) {
@@ -1019,6 +1020,7 @@
   function skAddRally(ph, f, uid, army) {
     var P = skP(ph), p = byUid[uid];
     if (!p) return "人を選んでください";
+    if (skFacilities(ph).indexOf(f) < 0) return "⚠ 「" + f + "」は祭壇が解放されたあと（「祭壇解放後」のタブ）に使えます";
     army = Number(army);
     if (!(army >= 1 && army <= SK_ARMIES)) return "軍は1〜" + SK_ARMIES + "軍から選んでください";
     if (P.raiders[uid]) return p.name + "は遊撃手です。先に遊撃手から外してください";
@@ -1105,8 +1107,8 @@
       return '<button type="button" data-skph="' + x[0] + '"' + (x[0] === ph ? ' class="active"' : "") + ">" + (x[0] === "before" ? "🏰 " : "⛩️ ") + x[1] + "</button>";
     }).join("") + "</div>" +
       '<div class="note">' + (ph === "before"
-        ? "祭壇が解放されるまでのチームです。拠点：" + SK_BASE.join("・") + "。「祭壇解放後」のタブで祭壇・教化の間・傭兵駐屯地が出ます。"
-        : "祭壇が解放されたあとのチームです（拠点に祭壇・教化の間・傭兵駐屯地が増えます）。「解放前のチームを土台に解放後を作る」で、解放前のチームをコピーしてから直せます。") + "</div>" +
+        ? "祭壇が解放されるまでのチームです。拠点：" + SK_BASE.join("・") + "。祭壇・教化の間・傭兵駐屯地は、解放前は灰色で見るだけです（「祭壇解放後」のタブで使えます）。"
+        : "祭壇が解放されたあとのチームです（祭壇・教化の間・傭兵駐屯地が先頭に並び、使えるようになります）。「解放前のチームを土台に解放後を作る」で、解放前のチームをコピーしてから直せます。") + "</div>" +
       '<div class="note" style="margin-top:4px;">集結主は拠点に「人＋〇軍（1〜' + SK_ARMIES + '軍）」で置きます（1つの拠点に複数、同じ人が複数の拠点にも入れます。ただし同じ拠点に同じ人は1軍分だけ、同じ「人＋〇軍」は複数の拠点に置けません）。メンバー（集結主・遊撃手以外）は、拠点とは関係なく4チームに均等に分けます。遊撃手はどこにも属さず、試合中に空いた拠点へ動く人です。</div>';
     $("autoRow").innerHTML =
       '<button type="button" id="skAutoRallyBtn">🤖 集結主を各拠点に置く（空の拠点だけ）</button>' +
@@ -1138,7 +1140,14 @@
     // 画面：①拠点と集結主 ②4チーム ③遊撃手
     var rs = skRallySet(ph), v = '<h3 style="margin:6px 0;">① 拠点と集結主（人＋〇軍）</h3><div class="board">';
     var candList = people.slice().sort(function(a, b) { return (b.isRallyer - a.isRallyer) || leaderOrder(a, b); });
-    F.forEach(function(f) {
+    SK_ALL.forEach(function(f) {
+      if (F.indexOf(f) < 0) {
+        // 祭壇解放前の祭壇・教化の間・傭兵駐屯地：表示だけ（編集不可）。データは持たず、自動配置・出力・公開の対象にもしない
+        v += '<div class="team" data-fac-off="' + escapeHtml(f) + '" style="opacity:0.5; background:#eef0f3; pointer-events:none;"><div class="team-head"><div class="team-title"><b>' + escapeHtml(f) + '</b><span class="note">（解放後）</span></div>' +
+          '<div class="team-stats">🔒 ' + escapeHtml(f) + "は祭壇が解放されたあとに使えます（「祭壇解放後」のタブで集結主を入れられます）</div></div>" +
+          '<div class="team-body"><span class="empty-hint">解放前は編集できません</span></div></div>';
+        return;
+      }
       var list = skRallyList(ph, f), w = skWarns(ph, f);
       var cap = list.reduce(function(s, e) { return s + (byUid[e.uid].rallyCap || 0); }, 0);
       v += '<div class="team" data-fac="' + escapeHtml(f) + '"><div class="team-head"><div class="team-title"><b>' + escapeHtml(f) + '</b>' + (SK_ALTAR.indexOf(f) >= 0 ? '<span class="note">（解放後）</span>' : "") +
