@@ -133,7 +133,7 @@
   <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#555;margin:0 0 10px;cursor:pointer;"><input type="checkbox" id="pwRemember" style="width:auto;margin:0;"> パスワードを保存する（次回から入力不要。共用の端末ではチェックしない）</label>
   <button type="button" id="loginBtn">ログイン</button>
   <div class="msg err" id="loginMsg"></div>
-  <a href="../index.html?v=20261108105132" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
+  <a href="../index.html?v=20261108110311" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
 </div>
 
 <div id="appView">
@@ -141,7 +141,7 @@
   <div class="sub">
     イベントの参加者（参加登録の内容）をチームに分けます。分けた結果は「📢 公開する」を押すまでは下書きで、管理者だけが見られます。
     公開すると <a href="../teams/" target="_blank">チーム分けの閲覧ページ</a> と参加登録ページに表示されます。
-    <br><b style="color:#b4441c;">※ 「公開する」を押すと、パスワードなしで誰でも見られます。公開されるのは、名前・同盟・区分・印（◇VC・◆ビビアン）・参加時間・チーム（遺跡争奪は時間帯ごとの要塞・遺跡）だけです（◯マンスリー、部隊数・容量・ペット・ひとことは出ません）。</b>
+    <br><b style="color:#b4441c;">※ 「公開する」を押すと、パスワードなしで誰でも見られます。公開されるのは、名前・同盟・区分・印（◇VC・◆ビビアン）・参加時間・チーム（遺跡争奪は時間帯ごとの要塞・遺跡）だけです（◯マンスリー、部隊数・容量・ペット・ひとことは出ません）。ただしKVKでは、同盟（ひよこ・666）ごとの「マンスリー持ちの人数と合計分数」の集計は公開されます（誰が◯かは出ません）。</b>
   </div>
 
   <div id="roBanner">🔒 このイベントは完了しているため、保存済みのチーム分けを見るだけです（編集・保存・公開はできません）。</div>
@@ -208,7 +208,7 @@
   <div class="targets" id="moveTargets"></div>
 </div>
 
-<script src="../config.js?v=20261108105132"></script>
+<script src="../config.js?v=20261108110311"></script>
 <script>
 (function() {
   "use strict";
@@ -321,8 +321,8 @@
           '<button type="button" class="ks-menu-btn" aria-label="メニュー" aria-expanded="false">☰</button></div>' +
         "<nav>" + links +
           '<div class="ks-group"></div>' +
-          '<a href="../kvk-matchup/kvk-matchup-index.html?v=20261108105132" class="ks-link" title="KvK相手突合せ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ</span></a>' +
-          '<a href="../index.html?v=20261108105132" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a>' +
+          '<a href="../kvk-matchup/kvk-matchup-index.html?v=20261108110311" class="ks-link" title="KvK相手突合せ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ</span></a>' +
+          '<a href="../index.html?v=20261108110311" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a>' +
           '<button type="button" class="ks-link" id="logoutBtn" title="ログアウト"><span class="ks-icon">🚪</span><span class="ks-label">ログアウト</span></button>' +
         "</nav>" +
       "</div>" +
@@ -833,7 +833,7 @@
     var teams = (pd.teams || []).map(function(t) {
       var id = newId();
       map[t.id] = id;
-      return { id: id, kind: t.kind, name: t.name || "", leaderId: "" };
+      return { id: id, kind: t.kind, name: t.name || "", leaderId: "", ally: t.ally || "" };
     });
     draft.teams = teams;
     draft.settings = Object.assign(defaultSettings(), pd.settings || {});
@@ -951,6 +951,25 @@
   //     raiders: {uid:true},                   遊撃手（どの拠点・チームにも属さない）
   //     rally: {拠点名: [{uid, army}]} }       拠点の集結主。「人＋〇軍」の組を1つの単位にして、1つの拠点に複数置ける
   // 決まり：同じ拠点に同じ人は1軍分だけ（別の軍で重ねて入れない）／別の拠点には入れる／同じ「人＋〇軍」は複数の拠点に置けない
+  // KVKの同盟ラベル（隊に付ける）と、マンスリー人数の数え方（2026-11-08 ユーザー回答：ひよこ＝同盟名EGG、参加できる人＝全部参加＋一部参加）。変えるときはここだけ直す
+  var KVK_ALLIANCES = [{ label: "ひよこ", name: "EGG" }, { label: "666", name: "666" }];
+  var MONTHLY_MIN = 3;            // マンスリー持ち1人あたりの分数（「1人×3分」）
+  var MONTHLY_SCOPE_PARTIAL = true;  // 「参加できる人」に一部参加（途中参加・途中抜け。時刻が未定の人も）を含める。false にすると全部参加の人だけ
+  // 参加できる人のうち、同盟ごとのマンスリー持ちの人数と、人数×3分の合計（◯が誰かは出さない。人数だけ）
+  function kvkMonthly() {
+    return KVK_ALLIANCES.map(function(a) {
+      var n = people.filter(function(p) {
+        return p.alliance === a.name && p.monthly && (MONTHLY_SCOPE_PARTIAL || p.fullTime);   // people は不参加の人を含まない
+      }).length;
+      return { label: a.label, name: a.name, count: n, minutes: n * MONTHLY_MIN };
+    });
+  }
+  function kvkMonthlyHtml() {
+    return '<div class="note" style="margin-top:6px;">👥 マンスリー持ち（参加できる人＝' + (MONTHLY_SCOPE_PARTIAL ? "全部参加＋一部参加" : "全部参加") + '）：' + kvkMonthly().map(function(m) {
+      return "<b>" + escapeHtml(m.label) + "</b>（同盟 " + escapeHtml(m.name) + "）" + m.count + "人（1人×" + MONTHLY_MIN + "分＝" + m.minutes + "分）";
+    }).join("　／　") + "</div>";
+  }
+
   var SK_BASE = ["西北聖域", "東南聖域", "修道院 第一", "修道院 第二", "修道院 第三", "修道院 第四", "厩舎", "鐘楼"];
   var SK_ALTAR = ["祭壇", "教化の間", "傭兵駐屯地"];   // 祭壇が解放されるまでは出さない（解放後だけ）
   var SK_ARMIES = 6;                                    // 1人が出せる軍の数（1〜6軍）
@@ -1464,7 +1483,7 @@
         '<label class="inline"><input type="checkbox" data-set="topRule"' + (s.topRule ? " checked" : "") + '> 上位隊ルール：第1〜3隊はリーダーを含めて <input type="number" min="2" max="20" data-set="topSize" value="' + s.topSize + '">人、全部参加＋◇の人を強い順に</label>' +
         '<label class="inline"><input type="checkbox" data-set="spreadVivian"' + (s.spreadVivian ? " checked" : "") + "> ◆を各隊に散らす</label>" +
         "</div>" +
-        '<div class="note">自動振り分け：リーダーの集結容量（から本人の出征容量を引いた分）に収まるように、強い人（G→T11→出征容量の順）から番号の小さい隊へ詰め、あふれたら次の隊へ入れます。どこにも入らない人は「待機」、時間未定の人は「時間未定」に置きます。人数は目安で、外れたら注意を出すだけです。</div>';
+        '<div class="note">自動振り分け：リーダーの集結容量（から本人の出征容量を引いた分）に収まるように、強い人（G→T11→出征容量の順）から番号の小さい隊へ詰め、あふれたら次の隊へ入れます。どこにも入らない人は「待機」、時間未定の人は「時間未定」に置きます。人数は目安で、外れたら注意を出すだけです。隊ごとの「同盟」（ひよこ／666）は、隊に付けるラベルです（自動振り分けでは使いません）。</div>' + kvkMonthlyHtml();
     } else if (draft.mode === "seiken") {
       html += '<div class="note">自動振り分け：集結部隊数を登録した人は「集結主」チームにまとめ、残りの人を、各チームの出征容量の合計がそろうように分けます。</div>';
     } else {
@@ -1558,7 +1577,7 @@
     draft.teams.forEach(function(t, i) {
       var st = stats[t.id];
       html += '<div class="team" data-drop="' + t.id + '">' +
-        '<div class="team-head"><div class="team-title"><b>' + escapeHtml(teamName(t)) + "</b>" +
+        '<div class="team-head"><div class="team-title"><b>' + escapeHtml(teamName(t)) + "</b>" + (t.ally ? '<span class="status-pill pub">' + escapeHtml(t.ally) + "</span>" : "") +
         '<span class="note">' + st.count + "人</span>" +
         '<span class="tools">' +
           '<button type="button" class="sub mini" data-act="up" data-id="' + t.id + '"' + (i === 0 ? " disabled" : "") + ">↑</button>" +
@@ -1570,6 +1589,9 @@
         html += '<div class="leader-row">リーダー <select data-leader="' + t.id + '"><option value="">（選ぶ）</option>' +
           people.slice().sort(function(a, b) { return (b.isRallyer - a.isRallyer) || ((b.rallyCap || 0) - (a.rallyCap || 0)) || strongerFirst(a, b); }).map(function(p) {
             return '<option value="' + escapeHtml(p.uid) + '"' + (p.uid === t.leaderId ? " selected" : "") + ">" + escapeHtml(p.name) + (p.rallyCap != null ? "（集結" + man(p.rallyCap) + "）" : "") + "</option>";
+          }).join("") + "</select>" +
+          ' 同盟 <select data-ally="' + t.id + '"><option value="">（未設定）</option>' + KVK_ALLIANCES.map(function(a) {
+            return '<option value="' + escapeHtml(a.label) + '"' + (t.ally === a.label ? " selected" : "") + ">" + escapeHtml(a.label) + "</option>";
           }).join("") + "</select></div>";
       }
       var line = [];
@@ -1642,6 +1664,15 @@
     });
     Array.prototype.forEach.call(area.querySelectorAll("[data-act]"), function(b) {
       b.addEventListener("click", function() { teamAction(b.dataset.act, b.dataset.id); });
+    });
+    Array.prototype.forEach.call(area.querySelectorAll("[data-ally]"), function(sel) {
+      sel.addEventListener("change", function() {
+        if (readOnly) return;
+        var t = teamById(sel.dataset.ally);
+        if (!t) return;
+        t.ally = sel.value;     // 隊に付ける同盟ラベル（自動振り分けでは使わない。表示・集計のためのラベル）
+        changed();
+      });
     });
     Array.prototype.forEach.call(area.querySelectorAll("[data-leader]"), function(sel) {
       sel.addEventListener("change", function() { setLeader(sel.dataset.leader, sel.value); });
@@ -1815,10 +1846,12 @@
       teams: draft.teams.map(function(t) {
         var l = leaderOf(t);
         return {
-          name: teamName(t), kind: t.kind, leader: l ? l.name : "",
+          name: teamName(t), kind: t.kind, leader: l ? l.name : "", ally: t.ally || "",
           members: sortForTeam(membersOf(t.id), t).map(function(p) { return person(p, p === l); })
         };
       }),
+      // 同盟ごとのマンスリー持ちの人数と合計分数だけ（誰が◯かは出さない）
+      monthly: draft.mode === "kvk" ? kvkMonthly().map(function(m) { return { label: m.label, count: m.count, minutes: m.minutes, per: MONTHLY_MIN }; }) : [],
       standby: membersOf("standby").sort(strongerFirst).map(function(p) { return person(p); }),
       pending: membersOf("pending").sort(strongerFirst).map(function(p) { return person(p); }),
       text: buildText()
@@ -1840,7 +1873,7 @@
       var l = leaderOf(t);
       var ms = sortForTeam(membersOf(t.id), t).filter(function(p) { return p !== l; });
       var head = draft.mode === "kvk" && t.kind === "rally"
-        ? teamName(t) + " リーダー:" + (l ? memberLabel(l) : "未定") + "（" + (ms.length + (l ? 1 : 0)) + "人）"
+        ? teamName(t) + (t.ally ? "（" + t.ally + "）" : "") + " リーダー:" + (l ? memberLabel(l) : "未定") + "（" + (ms.length + (l ? 1 : 0)) + "人）"
         : "【" + teamName(t) + "】（" + ms.length + "人）";
       push([head, ms.length ? ms.map(memberLabel).join("、") : "（なし）"]);
     });

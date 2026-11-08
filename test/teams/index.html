@@ -49,7 +49,7 @@
 
 <div style="display:flex; justify-content:space-between; align-items:center;">
   <h1>🧩 チーム分け</h1>
-  <a href="../index.html?v=20261108105132" class="top-link">← TOP</a>
+  <a href="../index.html?v=20261108110311" class="top-link">← TOP</a>
 </div>
 <div class="sub" id="subText">管理者が公開したイベントのチーム分けです。イベントを選ぶと見られます。</div>
 
@@ -70,7 +70,7 @@
 
 <div id="area" class="empty">読み込み中…</div>
 
-<script src="../config.js?v=20261108105132"></script>
+<script src="../config.js?v=20261108110311"></script>
 <script>
 (function() {
   "use strict";
@@ -130,9 +130,9 @@
         ' <span class="a">' + escapeHtml(p.alliance) + "・" + escapeHtml(p.grade) + "</span>" +
         (p.time ? ' <span class="t">' + escapeHtml(p.time) + "</span>" : "") + "</li>";
     }
-    function box(name, lead, members, extra, hitLabel) {
+    function box(name, lead, members, extra, hitLabel, ally) {
       members.forEach(function(p) { if (me && norm(p.name) === me) hit.push(hitLabel || name); });
-      return '<div class="team' + (extra ? " extra" : "") + '"><h3>' + escapeHtml(name) + ' <span class="note">' + members.length + "人</span></h3>" +
+      return '<div class="team' + (extra ? " extra" : "") + '"><h3>' + escapeHtml(name) + (ally ? ' <span class="note" style="background:#e3ede6;color:#2e6b45;border-radius:999px;padding:1px 8px;">' + escapeHtml(ally) + "</span>" : "") + ' <span class="note">' + members.length + "人</span></h3>" +
         (lead ? '<div class="lead">' + (ruins ? "集結主" : "リーダー") + ": " + escapeHtml(lead) + "</div>" : "") +
         "<ul>" + (members.length ? members.map(li).join("") : '<li class="note">（なし）</li>') + "</ul></div>";
     }
@@ -160,10 +160,15 @@
       if (!(v.slots || []).length) html += '<div class="card empty">時間帯の情報がありません。</div>';
     } else {
       html += '<div class="teams">';
-      v.teams.forEach(function(t) { html += box(t.name, t.leader, t.members, false); });
+      v.teams.forEach(function(t) { html += box(t.name, t.leader, t.members, false, "", t.ally); });
       if (v.standby && v.standby.length) html += box("待機", "", v.standby, true);
       if (v.pending && v.pending.length) html += box("時間未定", "", v.pending, true);
       html += "</div>";
+      // KVK：同盟（ひよこ・666）ごとのマンスリー持ちの人数と合計分数だけ（誰が◯かは出さない）
+      if (v.monthly && v.monthly.length) {
+        html += '<div class="card" style="margin-top:14px;"><div style="font-weight:bold; margin-bottom:6px;">👥 マンスリー持ちの人数（参加できる人）</div><ul style="margin:0; padding-left:18px;">' +
+          v.monthly.map(function(m) { return "<li>" + escapeHtml(m.label) + "：" + escapeHtml(m.count) + "人（1人×" + escapeHtml(m.per || 3) + "分＝" + escapeHtml(m.minutes) + "分）</li>"; }).join("") + "</ul></div>";
+      }
     }
     html += '<div class="card" style="margin-top:14px;"><div class="note" style="margin-bottom:6px;">Discordに貼られたものと同じテキスト ／ ' + (seiken ? "〇軍＝集結主の軍の番号" : ruins ? "△=行けるかも" : "◇=VC参加OK ◆=ビビアン星4以上、色付きの時刻は参加時間") + '</div><pre>' + escapeHtml(v.text || "") + "</pre></div>";
     $("area").className = "";
