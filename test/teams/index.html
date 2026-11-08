@@ -49,7 +49,7 @@
 
 <div style="display:flex; justify-content:space-between; align-items:center;">
   <h1>🧩 チーム分け</h1>
-  <a href="../index.html?v=20261108103613" class="top-link">← TOP</a>
+  <a href="../index.html?v=20261108105132" class="top-link">← TOP</a>
 </div>
 <div class="sub" id="subText">管理者が公開したイベントのチーム分けです。イベントを選ぶと見られます。</div>
 
@@ -70,7 +70,7 @@
 
 <div id="area" class="empty">読み込み中…</div>
 
-<script src="../config.js?v=20261108103613"></script>
+<script src="../config.js?v=20261108105132"></script>
 <script>
 (function() {
   "use strict";
@@ -111,10 +111,16 @@
     $("info").textContent = "公開: " + formatTime(rec.publishedAt) + (v.battle ? "　戦闘時間: " + v.battle : "") + (rec.done ? "　（このイベントは終わっています）" : "");
     var hit = [];
     var ruins = v.mode === "ruins";
+    var seiken = v.mode === "seiken";
     // ◯（マンスリー）は公開しない（以前に公開したデータに入っていても表示しない）
     function pubMarks(s) { return String(s || "").replace(/◯/g, ""); }
     function li(p) {
       var isMe = me && norm(p.name) === me;
+      if (seiken) {
+        // 聖剣：集結主は「名前（〇軍）」。〇軍は名前の表示だけ（◯・部隊数・容量・ペット・ひとことは出さない）
+        return "<li" + (isMe ? ' class="me"' : "") + ">" + (p.army ? "👑 " : "") + escapeHtml(p.name) + (p.army ? "（" + escapeHtml(p.army) + "軍）" : "") +
+          ' <span class="a">' + escapeHtml(p.alliance) + "</span></li>";
+      }
       if (ruins) {
         return "<li" + (isMe ? ' class="me"' : "") + ">" + (p.leader ? "👑 " : "") + escapeHtml(p.name) + (p.maybe ? ' <span class="t">△</span>' : "") +
           ' <span class="a">' + escapeHtml(p.alliance) + "</span></li>";
@@ -131,7 +137,19 @@
         "<ul>" + (members.length ? members.map(li).join("") : '<li class="note">（なし）</li>') + "</ul></div>";
     }
     var html = "";
-    if (ruins) {
+    if (seiken) {
+      (v.phases || []).forEach(function(ph) {
+        html += '<h2 class="slot-h">' + escapeHtml(ph.label) + '</h2><div class="note" style="margin:0 0 4px;">拠点と集結主（人＋〇軍）</div><div class="teams">';
+        (ph.facilities || []).forEach(function(f) {
+          html += box(f.name, "", (f.leaders || []), false, ph.label + "：" + f.name);
+        });
+        html += '</div><div class="note" style="margin:10px 0 4px;">チーム（メンバー）</div><div class="teams">';
+        (ph.teams || []).forEach(function(t) { html += box(t.name, "", t.members || [], false, ph.label + "：" + t.name); });
+        if (ph.raiders && ph.raiders.length) html += box("遊撃手", "", ph.raiders, true, ph.label + "：遊撃手");
+        html += "</div>";
+      });
+      if (!(v.phases || []).length) html += '<div class="card empty">情報がありません。</div>';
+    } else if (ruins) {
       // 遺跡争奪：時間帯ごとに、要塞・遺跡ごとの一覧
       (v.slots || []).forEach(function(s) {
         html += '<h2 class="slot-h">' + escapeHtml(s.label) + '</h2><div class="teams">';
@@ -147,7 +165,7 @@
       if (v.pending && v.pending.length) html += box("時間未定", "", v.pending, true);
       html += "</div>";
     }
-    html += '<div class="card" style="margin-top:14px;"><div class="note" style="margin-bottom:6px;">Discordに貼られたものと同じテキスト ／ ' + (ruins ? "△=行けるかも" : "◇=VC参加OK ◆=ビビアン星4以上、色付きの時刻は参加時間") + '</div><pre>' + escapeHtml(v.text || "") + "</pre></div>";
+    html += '<div class="card" style="margin-top:14px;"><div class="note" style="margin-bottom:6px;">Discordに貼られたものと同じテキスト ／ ' + (seiken ? "〇軍＝集結主の軍の番号" : ruins ? "△=行けるかも" : "◇=VC参加OK ◆=ビビアン星4以上、色付きの時刻は参加時間") + '</div><pre>' + escapeHtml(v.text || "") + "</pre></div>";
     $("area").className = "";
     $("area").innerHTML = html;
     var found = $("found");

@@ -128,7 +128,7 @@
 
 <div class="row" style="justify-content: space-between;">
   <h1>📝 イベント参加登録</h1>
-  <a href="../index.html?v=20261108103613" class="top-link">← TOP</a>
+  <a href="../index.html?v=20261108105132" class="top-link">← TOP</a>
 </div>
 <div class="howto">
   ① 名前を入れて「次へ」<br>
@@ -389,7 +389,7 @@
   <button type="button" class="sub-btn" id="retryBtn" style="margin-top: 10px;">もう一度読み込む</button>
 </div>
 
-<script src="../config.js?v=20261108103613"></script>
+<script src="../config.js?v=20261108105132"></script>
 <script>
 (function() {
   // 保存は中継役（Google Apps Script: work/gas_members_proxy.gs）の pubGet / selfSave を使う（パスワード不要）。
@@ -1148,6 +1148,16 @@
       var v = t.view || {};
       (v.teams || []).forEach(function(team) {
         (team.members || []).forEach(function(p) { if (me && norm(p.name) === me) where.push(team.name); });
+      });
+      // 聖剣：解放前／解放後ごとの、拠点（集結主）・チーム・遊撃手
+      (v.phases || []).forEach(function(ph) {
+        (ph.facilities || []).forEach(function(f) {
+          (f.leaders || []).forEach(function(p) { if (me && norm(p.name) === me) where.push(ph.label + "：" + f.name + "（" + p.army + "軍）"); });
+        });
+        (ph.teams || []).forEach(function(tm) {
+          (tm.members || []).forEach(function(p) { if (me && norm(p.name) === me) where.push(ph.label + "：" + tm.name); });
+        });
+        (ph.raiders || []).forEach(function(p) { if (me && norm(p.name) === me) where.push(ph.label + "：遊撃手"); });
       });
       // 遺跡争奪は時間帯ごと（「12時：要塞1」のように、時間帯ごとの場所を並べる）
       (v.slots || []).forEach(function(s) {
