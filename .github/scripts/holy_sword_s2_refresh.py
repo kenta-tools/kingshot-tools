@@ -550,11 +550,29 @@ def do_scores_only(block_id, kid_list, roster):
     raw, truncated = fetch_all(kid_list)
 
     current = {}
+    latest_name = {}
     for kid, boards in raw.items():
         for board_key, short in BOARD_KEYS.items():
             for row in boards.get(board_key, []):
                 gid = row["governor_id"]
                 current.setdefault(gid, {})[short] = {"score": row["score"]}
+                if row.get("nick_name"):
+                    latest_name[gid] = row["nick_name"]
+
+    # 名前だけは毎回、IDで今の名前に直す（同盟タグ・鯖番号は名簿のまま）。変わったら名簿ファイルにも書き戻す
+    renamed = 0
+    for r in roster:
+        new_name = latest_name.get(r["gid"])
+        if new_name and new_name != r["name"]:
+            print(f"  改名: {r['name']} → {new_name}（ID {r['gid']}）")
+            r["name"] = new_name
+            renamed += 1
+    if renamed:
+        path = ROSTER_DIR / f"block{block_id}.json"
+        snap = json.loads(path.read_text(encoding="utf-8"))
+        snap["roster"] = roster
+        path.write_text(json.dumps(snap, ensure_ascii=False, indent=1), encoding="utf-8")
+        print(f"名簿の名前を {renamed} 件更新しました")
 
     frozen = {}
     for r in roster:
