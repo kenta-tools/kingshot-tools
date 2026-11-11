@@ -1,575 +1,575 @@
 {
-  "frozenAt": "2026-11-06",
-  "roster": [
-    {
-      "gid": 114976653,
-      "name": "GBG",
-      "tag": "BAR",
-      "kid": 780
-    },
-    {
-      "gid": 134532260,
-      "name": "Poyraz",
-      "tag": "OBV",
-      "kid": 919
-    },
-    {
-      "gid": 117148488,
-      "name": "Wickedflame",
-      "tag": "BAM",
-      "kid": 766
-    },
-    {
-      "gid": 119108068,
-      "name": "Les Gaulois",
-      "tag": "NOT",
-      "kid": 799
-    },
-    {
-      "gid": 123705153,
-      "name": "Gee֍",
-      "tag": "DRG",
-      "kid": 766
-    },
-    {
-      "gid": 113249700,
-      "name": "LLB",
-      "tag": "NOT",
-      "kid": 799
-    },
-    {
-      "gid": 95649668,
-      "name": "3zii",
-      "tag": "REV",
-      "kid": 908
-    },
-    {
-      "gid": 116931491,
-      "name": "༒ÊÐŴÄŘÐ ༒",
-      "tag": "MAD",
-      "kid": 789
-    },
-    {
-      "gid": 128600005,
-      "name": "IMP the Elder",
-      "tag": "PAX",
-      "kid": 856
-    },
-    {
-      "gid": 126437359,
-      "name": "SexyCougar LEGO",
-      "tag": "PAX",
-      "kid": 856
-    },
-    {
-      "gid": 115702599,
-      "name": "TGFoot",
-      "tag": "HoV",
-      "kid": 766
-    },
-    {
-      "gid": 114368196,
-      "name": "KaRoSSo",
-      "tag": "795",
-      "kid": 795
-    },
-    {
-      "gid": 118561554,
-      "name": "K8R",
-      "tag": "BAM",
-      "kid": 766
-    },
-    {
-      "gid": 127279193,
-      "name": "B Rads Army",
-      "tag": "DOM",
-      "kid": 867
-    },
-    {
-      "gid": 111569404,
-      "name": "Smokestack",
-      "tag": "LOC",
-      "kid": 801
-    },
-    {
-      "gid": 121305953,
-      "name": "Pew Pew zu",
-      "tag": "168",
-      "kid": 843
-    },
-    {
-      "gid": 125899817,
-      "name": "Bronanaaaa!",
-      "tag": "RAC",
-      "kid": 914
-    },
-    {
-      "gid": 137497720,
-      "name": "Thogek",
-      "tag": "OBV",
-      "kid": 919
-    },
-    {
-      "gid": 114436278,
-      "name": "Timon",
-      "tag": "ERA",
-      "kid": 780
-    },
-    {
-      "gid": 118199999,
-      "name": "༒Ｒａｇｎｏｒ༒",
-      "tag": "EOA",
-      "kid": 801
-    },
-    {
-      "gid": 119089776,
-      "name": "DanielYeo",
-      "tag": "END",
-      "kid": 843
-    },
-    {
-      "gid": 121336892,
-      "name": "Auroring星辰",
-      "tag": "ATM",
-      "kid": 815
-    },
-    {
-      "gid": 115386296,
-      "name": "Persil",
-      "tag": "KOR",
-      "kid": 836
-    },
-    {
-      "gid": 114486717,
-      "name": "Zero's Master",
-      "tag": "KIN",
-      "kid": 782
-    },
-    {
-      "gid": 112997460,
-      "name": "Asra",
-      "tag": "LUV",
-      "kid": 792
-    },
-    {
-      "gid": 128114636,
-      "name": "PandaKayZz",
-      "tag": "FIL",
-      "kid": 867
-    },
-    {
-      "gid": 120620826,
-      "name": "BlackbearYOdy",
-      "tag": "TAO",
-      "kid": 867
-    },
-    {
-      "gid": 109291622,
-      "name": "ASPEN",
-      "tag": "EOA",
-      "kid": 801
-    },
-    {
-      "gid": 123052913,
-      "name": "DerangedMadman",
-      "tag": "DRG",
-      "kid": 766
-    },
-    {
-      "gid": 131216943,
-      "name": "Shrs",
-      "tag": "SKY",
-      "kid": 927
-    },
-    {
-      "gid": 117872565,
-      "name": "Deux",
-      "tag": "LOC",
-      "kid": 801
-    },
-    {
-      "gid": 121840502,
-      "name": "Stylz",
-      "tag": "DRG",
-      "kid": 766
-    },
-    {
-      "gid": 112719663,
-      "name": "SparkyRage914",
-      "tag": "HwK",
-      "kid": 914
-    },
-    {
-      "gid": 115713974,
-      "name": "디디씨",
-      "tag": "KOR",
-      "kid": 836
-    },
-    {
-      "gid": 130667662,
-      "name": "Lord Szrek",
-      "tag": "DOM",
-      "kid": 867
-    },
-    {
-      "gid": 116893087,
-      "name": "シャンティン",
-      "tag": "POM",
-      "kid": 778
-    },
-    {
-      "gid": 115385553,
-      "name": "狡猾容易腳滑 Slip²",
-      "tag": "ATM",
-      "kid": 815
-    },
-    {
-      "gid": 137354210,
-      "name": "ᵀᴴᴱᴳᴼᴬᵀMESSI",
-      "tag": "POW",
-      "kid": 908
-    },
-    {
-      "gid": 304354505,
-      "name": "我消灭坏狗",
-      "tag": "PNX",
-      "kid": 764
-    },
-    {
-      "gid": 123208163,
-      "name": "STORMᵏˢᵃ",
-      "tag": "REV",
-      "kid": 908
-    },
-    {
-      "gid": 119766306,
-      "name": "Ztwo FTC",
-      "tag": "RvN",
-      "kid": 838
-    },
-    {
-      "gid": 126249190,
-      "name": "ชูก้า แด๊ดดี้ᴷᵀᴴ",
-      "tag": "KTH",
-      "kid": 888
-    },
-    {
-      "gid": 123265391,
-      "name": "Æthelwulf",
-      "tag": "RvN",
-      "kid": 838
-    },
-    {
-      "gid": 122441472,
-      "name": "Zaid",
-      "tag": "UTD",
-      "kid": 865
-    },
-    {
-      "gid": 114396269,
-      "name": "Yeti§nacks ༻ʰᵒᵛ༺",
-      "tag": "HoV",
-      "kid": 766
-    },
-    {
-      "gid": 130900045,
-      "name": "MrGoodShoes",
-      "tag": "ONE",
-      "kid": 899
-    },
-    {
-      "gid": 123366723,
-      "name": "DPR",
-      "tag": "ROY",
-      "kid": 821
-    },
-    {
-      "gid": 136469688,
-      "name": "YoruKuma",
-      "tag": "POW",
-      "kid": 908
-    },
-    {
-      "gid": 101999731,
-      "name": "Salamah",
-      "tag": "REV",
-      "kid": 908
-    },
-    {
-      "gid": 132598490,
-      "name": "로패즈",
-      "tag": "ROK",
-      "kid": 888
-    },
-    {
-      "gid": 123759714,
-      "name": "RAGE",
-      "tag": "ONE",
-      "kid": 843
-    },
-    {
-      "gid": 115293415,
-      "name": "개똥은으녜",
-      "tag": "KOR",
-      "kid": 836
-    },
-    {
-      "gid": 133386083,
-      "name": "DeepSleepᵀᴿ",
-      "tag": "OBV",
-      "kid": 919
-    },
-    {
-      "gid": 127599797,
-      "name": "Alpha Chuck",
-      "tag": "OBV",
-      "kid": 919
-    },
-    {
-      "gid": 122064032,
-      "name": "Piracy",
-      "tag": "OBV",
-      "kid": 919
-    },
-    {
-      "gid": 113614634,
-      "name": "Khaleesi",
-      "tag": "795",
-      "kid": 795
-    },
-    {
-      "gid": 129114993,
-      "name": "RHINO RAIDEN",
-      "tag": "MFN",
-      "kid": 867
-    },
-    {
-      "gid": 116203068,
-      "name": "YorkZoo",
-      "tag": "TTN",
-      "kid": 774
-    },
-    {
-      "gid": 114134197,
-      "name": "Gorun",
-      "tag": "BAM",
-      "kid": 766
-    },
-    {
-      "gid": 118202688,
-      "name": "TheDutchRutter",
-      "tag": "APX",
-      "kid": 838
-    },
-    {
-      "gid": 121676338,
-      "name": "Moose",
-      "tag": "CHP",
-      "kid": 923
-    },
-    {
-      "gid": 126017406,
-      "name": "NiZHooK",
-      "tag": "ERA",
-      "kid": 867
-    },
-    {
-      "gid": 115244002,
-      "name": "shark",
-      "tag": "KFC",
-      "kid": 789
-    },
-    {
-      "gid": 119540152,
-      "name": "Nymeria",
-      "tag": "PHX",
-      "kid": 794
-    },
-    {
-      "gid": 135535770,
-      "name": "infaa",
-      "tag": "BAD",
-      "kid": 908
-    },
-    {
-      "gid": 134059100,
-      "name": "Dongus",
-      "tag": "LAx",
-      "kid": 892
-    },
-    {
-      "gid": 129067143,
-      "name": "대디Bear",
-      "tag": "KOR",
-      "kid": 795
-    },
-    {
-      "gid": 122123441,
-      "name": "Null",
-      "tag": "PAX",
-      "kid": 856
-    },
-    {
-      "gid": 126035855,
-      "name": "Grace亗",
-      "tag": "OBV",
-      "kid": 919
-    },
-    {
-      "gid": 134287655,
-      "name": "1996",
-      "tag": "COS",
-      "kid": 921
-    },
-    {
-      "gid": 187836899,
-      "name": "BeCareful I Bite",
-      "tag": "LGD",
-      "kid": 827
-    },
-    {
-      "gid": 117691826,
-      "name": "Makima",
-      "tag": "EOA",
-      "kid": 801
-    },
-    {
-      "gid": 118578536,
-      "name": "North Ramsey",
-      "tag": "ALC",
-      "kid": 843
-    },
-    {
-      "gid": 125043417,
-      "name": "QueenBee ʚïɞ",
-      "tag": "923",
-      "kid": 923
-    },
-    {
-      "gid": 133752386,
-      "name": "Louis XVI¤",
-      "tag": "KOR",
-      "kid": 921
-    },
-    {
-      "gid": 128366633,
-      "name": "Syrio Forel",
-      "tag": "TNH",
-      "kid": 861
-    },
-    {
-      "gid": 132817470,
-      "name": "BigChefツ",
-      "tag": "ONE",
-      "kid": 899
-    },
-    {
-      "gid": 132402288,
-      "name": "초보영주",
-      "tag": "ROK",
-      "kid": 888
-    },
-    {
-      "gid": 131215456,
-      "name": "リョ〜〜〜朕",
-      "tag": "SGR",
-      "kid": 898
-    },
-    {
-      "gid": 132959537,
-      "name": "DarkNF",
-      "tag": "REV",
-      "kid": 908
-    },
-    {
-      "gid": 114681578,
-      "name": "Sir Limps",
-      "tag": "BAM",
-      "kid": 766
-    },
-    {
-      "gid": 115552280,
-      "name": "饕餮王",
-      "tag": "POM",
-      "kid": 778
-    },
-    {
-      "gid": 119111461,
-      "name": "TickNock",
-      "tag": "NXG",
-      "kid": 821
-    },
-    {
-      "gid": 124297522,
-      "name": "KnockOut",
-      "tag": "RvN",
-      "kid": 838
-    },
-    {
-      "gid": 122642919,
-      "name": "Nospurratu",
-      "tag": "CHP",
-      "kid": 923
-    },
-    {
-      "gid": 125524398,
-      "name": "ProNoob",
-      "tag": "168",
-      "kid": 843
-    },
-    {
-      "gid": 115559129,
-      "name": "༒Ｒｅａｐｅｒ༒",
-      "tag": "EOA",
-      "kid": 801
-    },
-    {
-      "gid": 129605838,
-      "name": "Captain FINZ",
-      "tag": "ERA",
-      "kid": 867
-    },
-    {
-      "gid": 110225426,
-      "name": "Jaggedstone",
-      "tag": "EOA",
-      "kid": 801
-    },
-    {
-      "gid": 134002306,
-      "name": "CeReLoN",
-      "tag": "POW",
-      "kid": 908
-    },
-    {
-      "gid": 133019574,
-      "name": "Nikki~Ignis",
-      "tag": "POW",
-      "kid": 908
-    },
-    {
-      "gid": 119388012,
-      "name": "Chocolate mama",
-      "tag": "END",
-      "kid": 818
-    },
-    {
-      "gid": 122514352,
-      "name": "Milaneés",
-      "tag": "ONE",
-      "kid": 843
-    },
-    {
-      "gid": 126412386,
-      "name": "SIR SERIOUS",
-      "tag": "OBV",
-      "kid": 919
-    },
-    {
-      "gid": 125638095,
-      "name": "Thickdolphin",
-      "tag": "DRG",
-      "kid": 766
-    }
-  ]
+ "frozenAt": "2026-11-06",
+ "roster": [
+  {
+   "gid": 114976653,
+   "name": "GBG",
+   "tag": "BAR",
+   "kid": 780
+  },
+  {
+   "gid": 134532260,
+   "name": "Poyraz",
+   "tag": "OBV",
+   "kid": 919
+  },
+  {
+   "gid": 117148488,
+   "name": "Wickedflame",
+   "tag": "BAM",
+   "kid": 766
+  },
+  {
+   "gid": 119108068,
+   "name": "Les Gaulois",
+   "tag": "NOT",
+   "kid": 799
+  },
+  {
+   "gid": 123705153,
+   "name": "Gee֍",
+   "tag": "DRG",
+   "kid": 766
+  },
+  {
+   "gid": 113249700,
+   "name": "LLB",
+   "tag": "NOT",
+   "kid": 799
+  },
+  {
+   "gid": 95649668,
+   "name": "3zii",
+   "tag": "REV",
+   "kid": 908
+  },
+  {
+   "gid": 116931491,
+   "name": "༒ÊÐŴÄŘÐ ༒",
+   "tag": "MAD",
+   "kid": 789
+  },
+  {
+   "gid": 128600005,
+   "name": "IMP the Elder",
+   "tag": "PAX",
+   "kid": 856
+  },
+  {
+   "gid": 126437359,
+   "name": "HappyLEGO",
+   "tag": "PAX",
+   "kid": 856
+  },
+  {
+   "gid": 115702599,
+   "name": "TGFoot",
+   "tag": "HoV",
+   "kid": 766
+  },
+  {
+   "gid": 114368196,
+   "name": "KaRoSSo",
+   "tag": "795",
+   "kid": 795
+  },
+  {
+   "gid": 118561554,
+   "name": "K8R",
+   "tag": "BAM",
+   "kid": 766
+  },
+  {
+   "gid": 127279193,
+   "name": "B Rads Army",
+   "tag": "DOM",
+   "kid": 867
+  },
+  {
+   "gid": 111569404,
+   "name": "Smokestack",
+   "tag": "LOC",
+   "kid": 801
+  },
+  {
+   "gid": 121305953,
+   "name": "Pazuria",
+   "tag": "168",
+   "kid": 843
+  },
+  {
+   "gid": 125899817,
+   "name": "Broninja",
+   "tag": "RAC",
+   "kid": 914
+  },
+  {
+   "gid": 137497720,
+   "name": "Thogek",
+   "tag": "OBV",
+   "kid": 919
+  },
+  {
+   "gid": 114436278,
+   "name": "Timon",
+   "tag": "ERA",
+   "kid": 780
+  },
+  {
+   "gid": 118199999,
+   "name": "༒Ｒａｇｎｏｒ༒",
+   "tag": "EOA",
+   "kid": 801
+  },
+  {
+   "gid": 119089776,
+   "name": "DanielYeo",
+   "tag": "END",
+   "kid": 843
+  },
+  {
+   "gid": 121336892,
+   "name": "Auroring星辰",
+   "tag": "ATM",
+   "kid": 815
+  },
+  {
+   "gid": 115386296,
+   "name": "Persil",
+   "tag": "KOR",
+   "kid": 836
+  },
+  {
+   "gid": 114486717,
+   "name": "Sero",
+   "tag": "KIN",
+   "kid": 782
+  },
+  {
+   "gid": 112997460,
+   "name": "Asra",
+   "tag": "LUV",
+   "kid": 792
+  },
+  {
+   "gid": 128114636,
+   "name": "PandaKayZz",
+   "tag": "FIL",
+   "kid": 867
+  },
+  {
+   "gid": 120620826,
+   "name": "YOdysseus",
+   "tag": "TAO",
+   "kid": 867
+  },
+  {
+   "gid": 109291622,
+   "name": "ASPEN",
+   "tag": "EOA",
+   "kid": 801
+  },
+  {
+   "gid": 123052913,
+   "name": "DerangedMadman",
+   "tag": "DRG",
+   "kid": 766
+  },
+  {
+   "gid": 131216943,
+   "name": "Shrs",
+   "tag": "SKY",
+   "kid": 927
+  },
+  {
+   "gid": 117872565,
+   "name": "Deux",
+   "tag": "LOC",
+   "kid": 801
+  },
+  {
+   "gid": 121840502,
+   "name": "Stylz",
+   "tag": "DRG",
+   "kid": 766
+  },
+  {
+   "gid": 112719663,
+   "name": "SparkygoneWild",
+   "tag": "HwK",
+   "kid": 914
+  },
+  {
+   "gid": 115713974,
+   "name": "디디씨",
+   "tag": "KOR",
+   "kid": 836
+  },
+  {
+   "gid": 130667662,
+   "name": "Lord Szrek",
+   "tag": "DOM",
+   "kid": 867
+  },
+  {
+   "gid": 116893087,
+   "name": "シャンティン",
+   "tag": "POM",
+   "kid": 778
+  },
+  {
+   "gid": 115385553,
+   "name": "狡猾容易腳滑 Slip²",
+   "tag": "ATM",
+   "kid": 815
+  },
+  {
+   "gid": 137354210,
+   "name": "ᴰᴬᴿᴷʏʙɪɴs",
+   "tag": "POW",
+   "kid": 908
+  },
+  {
+   "gid": 304354505,
+   "name": "我消灭坏狗",
+   "tag": "PNX",
+   "kid": 764
+  },
+  {
+   "gid": 123208163,
+   "name": "STORMᵏˢᵃ",
+   "tag": "REV",
+   "kid": 908
+  },
+  {
+   "gid": 119766306,
+   "name": "Ztwo FTC",
+   "tag": "RvN",
+   "kid": 838
+  },
+  {
+   "gid": 126249190,
+   "name": "ชูก้า แด๊ดดี้ᴷᵀᴴ",
+   "tag": "KTH",
+   "kid": 888
+  },
+  {
+   "gid": 123265391,
+   "name": "Æthelwulf",
+   "tag": "RvN",
+   "kid": 838
+  },
+  {
+   "gid": 122441472,
+   "name": "Zaid",
+   "tag": "UTD",
+   "kid": 865
+  },
+  {
+   "gid": 114396269,
+   "name": "Yeti§nacks ༻ʰᵒᵛ༺",
+   "tag": "HoV",
+   "kid": 766
+  },
+  {
+   "gid": 130900045,
+   "name": "MrGoodShoes",
+   "tag": "ONE",
+   "kid": 899
+  },
+  {
+   "gid": 123366723,
+   "name": "DPR",
+   "tag": "ROY",
+   "kid": 821
+  },
+  {
+   "gid": 136469688,
+   "name": "Demirius",
+   "tag": "POW",
+   "kid": 908
+  },
+  {
+   "gid": 101999731,
+   "name": "Salamah",
+   "tag": "REV",
+   "kid": 908
+  },
+  {
+   "gid": 132598490,
+   "name": "로패즈",
+   "tag": "ROK",
+   "kid": 888
+  },
+  {
+   "gid": 123759714,
+   "name": "RAGE",
+   "tag": "ONE",
+   "kid": 843
+  },
+  {
+   "gid": 115293415,
+   "name": "개똥은으녜",
+   "tag": "KOR",
+   "kid": 836
+  },
+  {
+   "gid": 133386083,
+   "name": "DeepSleepᵀᴿ",
+   "tag": "OBV",
+   "kid": 919
+  },
+  {
+   "gid": 127599797,
+   "name": "Alpha Chuck",
+   "tag": "OBV",
+   "kid": 919
+  },
+  {
+   "gid": 122064032,
+   "name": "Piracy",
+   "tag": "OBV",
+   "kid": 919
+  },
+  {
+   "gid": 113614634,
+   "name": "Khaleesi",
+   "tag": "795",
+   "kid": 795
+  },
+  {
+   "gid": 129114993,
+   "name": "RHİNO",
+   "tag": "MFN",
+   "kid": 867
+  },
+  {
+   "gid": 116203068,
+   "name": "YorkZoo",
+   "tag": "TTN",
+   "kid": 774
+  },
+  {
+   "gid": 114134197,
+   "name": "Gorun",
+   "tag": "BAM",
+   "kid": 766
+  },
+  {
+   "gid": 118202688,
+   "name": "I'mNotCap",
+   "tag": "APX",
+   "kid": 838
+  },
+  {
+   "gid": 121676338,
+   "name": "Moose",
+   "tag": "CHP",
+   "kid": 923
+  },
+  {
+   "gid": 126017406,
+   "name": "NiZHooK",
+   "tag": "ERA",
+   "kid": 867
+  },
+  {
+   "gid": 115244002,
+   "name": "shark",
+   "tag": "KFC",
+   "kid": 789
+  },
+  {
+   "gid": 119540152,
+   "name": "Nymeria",
+   "tag": "PHX",
+   "kid": 794
+  },
+  {
+   "gid": 135535770,
+   "name": "infaᵃᵘˢ",
+   "tag": "BAD",
+   "kid": 908
+  },
+  {
+   "gid": 134059100,
+   "name": "Dongus",
+   "tag": "LAx",
+   "kid": 892
+  },
+  {
+   "gid": 129067143,
+   "name": "대디Bear",
+   "tag": "KOR",
+   "kid": 795
+  },
+  {
+   "gid": 122123441,
+   "name": "Null",
+   "tag": "PAX",
+   "kid": 856
+  },
+  {
+   "gid": 126035855,
+   "name": "Grace亗",
+   "tag": "OBV",
+   "kid": 919
+  },
+  {
+   "gid": 134287655,
+   "name": "1996",
+   "tag": "COS",
+   "kid": 921
+  },
+  {
+   "gid": 187836899,
+   "name": "BeCareful I Bite",
+   "tag": "LGD",
+   "kid": 827
+  },
+  {
+   "gid": 117691826,
+   "name": "Mahoraga",
+   "tag": "EOA",
+   "kid": 801
+  },
+  {
+   "gid": 118578536,
+   "name": "Northern Lights",
+   "tag": "ALC",
+   "kid": 843
+  },
+  {
+   "gid": 125043417,
+   "name": "QueenBee ʚïɞ",
+   "tag": "923",
+   "kid": 923
+  },
+  {
+   "gid": 133752386,
+   "name": "Louis XVI¤",
+   "tag": "KOR",
+   "kid": 921
+  },
+  {
+   "gid": 128366633,
+   "name": "Larry",
+   "tag": "TNH",
+   "kid": 861
+  },
+  {
+   "gid": 132817470,
+   "name": "BigChefツ",
+   "tag": "ONE",
+   "kid": 899
+  },
+  {
+   "gid": 132402288,
+   "name": "초보영주",
+   "tag": "ROK",
+   "kid": 888
+  },
+  {
+   "gid": 131215456,
+   "name": "リョ〜〜〜朕",
+   "tag": "SGR",
+   "kid": 898
+  },
+  {
+   "gid": 132959537,
+   "name": "DarkNF",
+   "tag": "REV",
+   "kid": 908
+  },
+  {
+   "gid": 114681578,
+   "name": "Sir Limps",
+   "tag": "BAM",
+   "kid": 766
+  },
+  {
+   "gid": 115552280,
+   "name": "饕餮王",
+   "tag": "POM",
+   "kid": 778
+  },
+  {
+   "gid": 119111461,
+   "name": "TickNock",
+   "tag": "NXG",
+   "kid": 821
+  },
+  {
+   "gid": 124297522,
+   "name": "KnockOut",
+   "tag": "RvN",
+   "kid": 838
+  },
+  {
+   "gid": 122642919,
+   "name": "KittenCommander",
+   "tag": "CHP",
+   "kid": 923
+  },
+  {
+   "gid": 125524398,
+   "name": "ProNoob",
+   "tag": "168",
+   "kid": 843
+  },
+  {
+   "gid": 115559129,
+   "name": "༒Ｒｅａｐｅｒ༒",
+   "tag": "EOA",
+   "kid": 801
+  },
+  {
+   "gid": 129605838,
+   "name": "FINZ",
+   "tag": "ERA",
+   "kid": 867
+  },
+  {
+   "gid": 110225426,
+   "name": "Jaggedstone",
+   "tag": "EOA",
+   "kid": 801
+  },
+  {
+   "gid": 134002306,
+   "name": "CeReLeX",
+   "tag": "POW",
+   "kid": 908
+  },
+  {
+   "gid": 133019574,
+   "name": "Nikki~Ignis",
+   "tag": "POW",
+   "kid": 908
+  },
+  {
+   "gid": 119388012,
+   "name": "Chocolate mama",
+   "tag": "END",
+   "kid": 818
+  },
+  {
+   "gid": 122514352,
+   "name": "Milaneés",
+   "tag": "ONE",
+   "kid": 843
+  },
+  {
+   "gid": 126412386,
+   "name": "Sir Serious",
+   "tag": "OBV",
+   "kid": 919
+  },
+  {
+   "gid": 125638095,
+   "name": "Thickdolphin",
+   "tag": "DRG",
+   "kid": 766
+  }
+ ]
 }
