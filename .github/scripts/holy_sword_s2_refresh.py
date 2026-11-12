@@ -90,7 +90,7 @@ def fetch_all(kid_list):
             if len(rows) == 100:
                 truncated.append((kid, board))
             raw[kid][board] = rows
-            time.sleep(0.3)
+            time.sleep(1.15)  # 1キー60回/分の制限（429）に収まる間隔
         print(f"kid={kid} done: " + ", ".join(f"{b}={len(raw[kid][b])}" for b in BOARD_KEYS))
     return raw, truncated
 
