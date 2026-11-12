@@ -85,6 +85,10 @@ function handle_(p) {
     if (p.action === "userImportPreview") return json_(userImportPreview_(token, p));
     if (p.action === "userImportCommit") return json_(userImportCommit_(token, p));
     if (p.action === "userImportUndo") return json_(userImportUndo_(token, p));
+    // データの全リセット・バックアップ一覧・復元（管理者のみ）
+    if (p.action === "dataResetAll") return json_(dataResetAll_(token, p));
+    if (p.action === "dataBackupList") return json_(dataBackupList_());
+    if (p.action === "dataRestore") return json_(dataRestore_(token, p));
     if (p.action === "setBlocklist") return json_(writeBlocklist_(p.list));
     // Discord の招待リンク（GitHub Actions が毎朝作って送ってくる）
     if (p.action === "setDiscordInvite") return json_(setDiscordInvite_(p.invite, p.key));
@@ -1541,6 +1545,94 @@ function userImportUndo_(token, p) {
     var w = writeFile_(token, d, null, "user import undo");
     if (!w.ok) return w;
     return { ok: true, removed: removed, kept: kept, restored: restored };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ---------- データの全リセット・復元（管理者のみ。2026-11-13） ----------
+// ユーザー・イベントにひもづくデータを全部空にする。必ず先にドライブへバックアップ（members_backup_pre-reset_日時.json）を作り、
+// 作れたときだけ消す。確認用の文字列（confirm）が一致しないと動かない。問い合わせ・招待リンク・ブロックリスト・ログ・パスワード等は消さない。
+// 消すキー: users / events / entries / notSame / teams / kvkRosters / flameRosters / matchupPairs / kvkChatHistory / selfUndo / userImports / userImportPending
+// 残すキー: inquiries（問い合わせ）ほか上のキー以外すべて（スクリプトプロパティ・ログ・ブロックリストはデータファイルの外にあり、触らない）
+var RESET_CONFIRM = "全部消す";
+var RESTORE_CONFIRM = "復元する";
+var RESET_KEYS = ["users", "events", "entries", "notSame", "teams", "kvkRosters", "flameRosters", "matchupPairs", "kvkChatHistory", "selfUndo", "userImports", "userImportPending"];
+
+function dataCounts_(d) {
+  var c = {};
+  RESET_KEYS.forEach(function(k) {
+    var v = d[k];
+    c[k] = Array.isArray(v) ? v.length : (v && typeof v === "object" ? (k === "userImportPending" ? ((v.rows || []).length) : Object.keys(v).length) : 0);
+  });
+  c.inquiries = Array.isArray(d.inquiries) ? d.inquiries.length : 0;
+  return c;
+}
+
+function backupDataFile_(label) {
+  var name = "members_backup_" + label + "_" + Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyyMMdd_HHmmss") + ".json";
+  var copy = DriveApp.getFileById(PropertiesService.getScriptProperties().getProperty("DATA_FILE_ID")).makeCopy(name);
+  return copy && copy.getName() === name ? name : "";
+}
+
+function dataResetAll_(token, p) {
+  if (String(p.confirm || "") !== RESET_CONFIRM) return { ok: false, status: 400, error: "確認用の文字列が違うため、何もしませんでした" };
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) return { ok: false, status: 503, error: "混み合っています。少し待ってからもう一度実行してください" };
+  try {
+    var f = readFile_(token);
+    if (!f.ok) return f;
+    var d = f.data;
+    var before = dataCounts_(d);
+    var backup = backupDataFile_("pre-reset");
+    if (!backup) return { ok: false, status: 500, error: "バックアップを作れなかったため、何もしませんでした" };
+    RESET_KEYS.forEach(function(k) { d[k] = (k === "userImportPending") ? undefined : []; });
+    delete d.userImportPending;
+    d.updated = new Date().toISOString();
+    var w = writeFile_(token, d, null, "data reset");
+    if (!w.ok) return w;
+    return { ok: true, backup: backup, removed: before, kept: { inquiries: before.inquiries } };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// バックアップ一覧（名前と日時だけ）
+function dataBackupList_() {
+  var out = [];
+  var it = DriveApp.getFilesByType(MimeType.PLAIN_TEXT);
+  while (it.hasNext()) {
+    var fl = it.next(), n = fl.getName();
+    if (/^members_backup_(pre-import|pre-reset|pre-restore)_\d{8}_\d{6}\.json$/.test(n)) out.push({ name: n, size: fl.getSize() });
+  }
+  out.sort(function(a, b) { return a.name < b.name ? 1 : -1; });
+  return { ok: true, backups: out.slice(0, 50) };
+}
+
+// バックアップから戻す。p: { backup: "members_backup_….json", confirm: "復元する" }。戻す前の状態も別にバックアップ（pre-restore）する
+function dataRestore_(token, p) {
+  if (String(p.confirm || "") !== RESTORE_CONFIRM) return { ok: false, status: 400, error: "確認用の文字列が違うため、何もしませんでした" };
+  var name = String(p.backup || "");
+  if (!/^members_backup_(pre-import|pre-reset|pre-restore)_\d{8}_\d{6}\.json$/.test(name)) return { ok: false, status: 400, error: "バックアップのファイル名が正しくありません" };
+  var it = DriveApp.getFilesByName(name);
+  if (!it.hasNext()) return { ok: false, status: 404, error: "そのバックアップが見つかりません" };
+  var data;
+  try { data = JSON.parse(it.next().getBlob().getDataAsString("UTF-8")); } catch (e) { return { ok: false, status: 500, error: "バックアップを読めませんでした" }; }
+  if (!data || !Array.isArray(data.users) || !Array.isArray(data.events) || !Array.isArray(data.entries)) return { ok: false, status: 400, error: "バックアップの形が正しくありません" };
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) return { ok: false, status: 503, error: "混み合っています。少し待ってからもう一度実行してください" };
+  try {
+    var f = readFile_(token);
+    if (!f.ok) return f;
+    var pre = backupDataFile_("pre-restore");
+    if (!pre) return { ok: false, status: 500, error: "戻す前のバックアップを作れなかったため、何もしませんでした" };
+    // 戻すのは「消す対象のキー」だけ（問い合わせなど、あとから増えたものは今のまま残す）
+    var cur = f.data;
+    RESET_KEYS.forEach(function(k) { if (data[k] === undefined) delete cur[k]; else cur[k] = data[k]; });
+    cur.updated = new Date().toISOString();
+    var w = writeFile_(token, cur, null, "data restore");
+    if (!w.ok) return w;
+    return { ok: true, restoredFrom: name, backupOfCurrent: pre, counts: dataCounts_(cur) };
   } finally {
     lock.releaseLock();
   }
