@@ -82,6 +82,9 @@
   .steps > li { counter-increment: s; margin: 14px 0; padding-left: 2.2em; position: relative; }
   .steps > li::before { content: counter(s); position: absolute; left: 0; top: 0; width: 1.6em; height: 1.6em; line-height: 1.6em;
     text-align: center; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-weight: bold; font-size: 0.9rem; }
+  .pri { display: inline-block; font-size: 0.72rem; font-weight: bold; padding: 1px 9px; border-radius: 999px; margin-right: 6px; color: #fff; }
+  .pri.p1 { background: var(--imp); }
+  .pri.p2 { background: var(--accent); color: var(--accent-ink); }
   .soon { color: var(--sub); text-align: center; padding: 18px 8px; }
 
   table { width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 0.93rem; }
@@ -113,25 +116,31 @@
 
 <nav class="toc" aria-label="目次">
   <h2>目次</h2>
-  <a href="#discord-account">Discordを登録してない人用</a>
+  <div class="grp">🔰 最初に：Discordに参加しよう</div>
+  <a href="#discord-account">Discordを登録していない人用</a>
   <a href="#discord-all">Discord 全体鯖参加用</a>
   <a href="#discord-816">Discord 816参加用</a>
-  <a href="#kvk-policy">【重要】KvK準備フェーズ以外のイベント</a>
+  <div class="grp">🔥 最優先（必ず見てね）</div>
+  <a href="#kvk-policy">重要KvK準備フェーズ以外のイベントについて</a>
+  <a href="#bear">巨熊狩猟（クマ）</a>
+  <a href="#bear-troops">熊用の部隊の作り方（部隊編成のやり方）</a>
+  <a href="#rally-order">集結主：スキルの順番を変える</a>
+  <div class="grp">⭐ 優先</div>
   <a href="#soudouin">同盟総動員</a>
+  <a href="#viking">バイキング（22時〜）</a>
+  <a href="#alliance-war">同盟対決を勝つために</a>
+  <a href="#zengun">全軍出撃ルール</a>
+  <a href="#cesare-boss">チェーザレ（ボス）</a>
+  <div class="grp">📌 そのほか</div>
   <a href="#flag">同盟旗建設</a>
   <a href="#reset">拠点リセット</a>
-  <a href="#zengun">全軍出撃ルール</a>
-  <a href="#bear">巨熊狩猟（クマ）</a>
-  <a href="#bear-troops">熊用の部隊の作り方</a>
-  <a href="#rally-order">集結主：スキルの順番</a>
-  <a href="#beast">巨獣／野獣狩り</a>
+  <a href="#beast">巨獣／野獣狩り（イベント中）</a>
   <a href="#arena">競技場</a>
   <a href="#trial">日・月・火の試練</a>
-  <a href="#cesare-boss">チェーザレ（ボス）</a>
   <a href="#cesare-solo">チェーザレ（個人）</a>
-  <a href="#viking">バイキング</a>
-  <a href="#alliance-war">同盟対決</a>
 </nav>
+
+<h2 class="group">🔰 最初に：Discordに参加しよう</h2>
 
 <details id="discord-account">
   <summary>Discordを登録していない人用</summary>
@@ -200,8 +209,10 @@
   </div>
 </details>
 
+<h2 class="group">🔥 最優先（必ず見てね）</h2>
+
 <details id="kvk-policy">
-  <summary><span class="badge">重要</span>KvK準備フェーズ以外のイベントについて</summary>
+  <summary><span class="pri p1">最優先</span>KvK準備フェーズ以外のイベントについて</summary>
   <div class="body">
     <p>816サーバー全体でアイテムを使う時期を決め、<b>KvKの両フェーズを最重要視する</b>方針となりました。</p>
     <h3>アイテムの使い方</h3>
@@ -214,79 +225,8 @@
   </div>
 </details>
 
-<details id="soudouin">
-  <summary>同盟総動員</summary>
-  <div class="body">
-    <h3>受注回数</h3>
-    <ul>
-      <li>毎日無料の受注回数の増加を取る（＋マークから）</li>
-      <li>50ダイヤで買える3回 → できればやってほしい</li>
-      <li>200ダイヤ以降 → 無理のない範囲で</li>
-    </ul>
-    <h3>課金する人へ</h3>
-    <ul>
-      <li>課金クエスト（プレゼントボックス）を取るのが効率が良い</li>
-      <li>マンスリー・ウィークリーの<b>買いだめ</b>がおすすめ</li>
-    </ul>
-    <h3>タスク</h3>
-    <ul>
-      <li>いちばん上の自分専用のタスクは<b>1日5回</b>（200％を1回、120％を4回）。更新かチケットを使ってやりきろう</li>
-      <li>2列目以降のタスクはどんどん更新します。残してほしいものがあれば伝えてください</li>
-    </ul>
-    <h3>ダイヤ消費クエスト</h3>
-    <div class="callout"><span class="badge">最優先</span><b>ペット精錬アイテム・お肉を手に入れる</b></div>
-    <p>受注したあとは、まず上の「ペット精錬アイテム・お肉」を優先してください。そのほかでは、次がおすすめです。</p>
-    <ul>
-      <li>総動員の回数を買う</li>
-      <li>VIPショップ</li>
-      <li>VIPポイント</li>
-    </ul>
-  </div>
-</details>
-
-<details id="flag">
-  <summary>同盟旗建設</summary>
-  <div class="body">
-    <p>同盟旗を建設すると、<b>同盟コイン</b>が稼げます。</p>
-    <ul>
-      <li>建設中の旗があっても、領地を広げるためではないので、<b>コインがほしい人だけ</b>駐屯してください</li>
-      <li>稼げるのは<b>1日最大2000コイン</b>。超えたらその日はそれ以上駐屯しても意味がありません（駐屯中、左上に出る「○○/2000」の○○が2000になるまでは稼げます）</li>
-      <li>理想は<b>ひとり1旗</b>。すでに人が入っている旗には入らないほうが良いです</li>
-      <li>建設を完了させずに、部隊を抜いてもOK</li>
-      <li>ほしいタイミングで建設できる旗がないときは、R4以上の誰かに声をかけてください。いつでも作ります</li>
-    </ul>
-  </div>
-</details>
-
-<details id="reset">
-  <summary>拠点リセット</summary>
-  <div class="body">
-    <p>できるだけバフを維持するために、<b>3日に1回</b>リセットします。実施するときは協力者を同盟チャットで募ることがあります。協力をお願いします。</p>
-    <h3>リセットの方法</h3>
-    <ol>
-      <li>同盟チャットに「IKA」同盟が占拠した旨のシステムメッセージが表示される</li>
-      <li>その拠点に向かって<b>1部隊</b>を出す</li>
-      <li>拠点に部隊が到着して、争奪可能状態が終わるまで、部隊を駐屯させる</li>
-      <li>駐屯した拠点にシールドが貼られたら、部隊を戻す</li>
-    </ol>
-  </div>
-</details>
-
-<details id="zengun">
-  <summary>全軍出撃ルール</summary>
-  <div class="body">
-    <ul>
-      <li>都市攻撃は禁止</li>
-      <li>採集地への攻撃は禁止</li>
-      <li>同盟に所属していない都市への攻撃のみOK（レベル制限なし）</li>
-      <li>ルールを無視した攻撃をされた場合は反撃OK（連絡を取るなどの対処をしたうえで）</li>
-    </ul>
-    <div class="callout"><span class="imp">⚠ 注意：</span>すべての採集地が攻撃禁止になりました。気をつけてください。</div>
-  </div>
-</details>
-
 <details id="bear">
-  <summary>巨熊狩猟（クマ）</summary>
+  <summary><span class="pri p1">最優先</span>巨熊狩猟（クマ）</summary>
   <div class="body">
     <div class="callout"><span class="badge">最重要</span><b>乗るときは集結を選ばず、上から（残り時間の短い順）に参加する。</b><br>お気に入り登録をしている人は、はずしてください。</div>
 
@@ -333,7 +273,7 @@
 </details>
 
 <details id="bear-troops">
-  <summary>熊用の部隊の作り方（部隊編成のやり方）</summary>
+  <summary><span class="pri p1">最優先</span>熊用の部隊の作り方（部隊編成のやり方）</summary>
   <div class="body">
     <p>熊で使う部隊は、次の手順で作ります。<b>一度すべてを撤回してから</b>、兵の数を入れ直します。</p>
 
@@ -393,7 +333,7 @@
 </details>
 
 <details id="rally-order">
-  <summary>集結主：スキルの順番を変える</summary>
+  <summary><span class="pri p1">最優先</span>集結主：スキルの順番を変える</summary>
   <div class="body">
     <p>集結主は、小隊の<b>順番</b>を変えて、<b>発動するスキル</b>を変えられます。</p>
     <div class="callout"><span class="badge">ポイント</span>スキルは、<b>上から4つ</b>（自分を除く）の小隊のものが発動します。発動させたい小隊を、上に移動させましょう。</div>
@@ -417,6 +357,143 @@
         <b>赤枠の「上に移動」ボタンを押す</b>
         <p>押すたびに、その小隊が<b>上に移動</b>します。発動させたいスキルの小隊が、上から4つ（自分を除く）に入るまで押してください。</p>
       </li>
+    </ol>
+  </div>
+</details>
+
+<h2 class="group">⭐ 優先</h2>
+
+<details id="soudouin">
+  <summary><span class="pri p2">優先</span>同盟総動員</summary>
+  <div class="body">
+    <h3>受注回数</h3>
+    <ul>
+      <li>毎日無料の受注回数の増加を取る（＋マークから）</li>
+      <li>50ダイヤで買える3回 → できればやってほしい</li>
+      <li>200ダイヤ以降 → 無理のない範囲で</li>
+    </ul>
+    <h3>課金する人へ</h3>
+    <ul>
+      <li>課金クエスト（プレゼントボックス）を取るのが効率が良い</li>
+      <li>マンスリー・ウィークリーの<b>買いだめ</b>がおすすめ</li>
+    </ul>
+    <h3>タスク</h3>
+    <ul>
+      <li>いちばん上の自分専用のタスクは<b>1日5回</b>（200％を1回、120％を4回）。更新かチケットを使ってやりきろう</li>
+      <li>2列目以降のタスクはどんどん更新します。残してほしいものがあれば伝えてください</li>
+    </ul>
+    <h3>ダイヤ消費クエスト</h3>
+    <div class="callout"><span class="badge">最優先</span><b>ペット精錬アイテム・お肉を手に入れる</b></div>
+    <p>受注したあとは、まず上の「ペット精錬アイテム・お肉」を優先してください。そのほかでは、次がおすすめです。</p>
+    <ul>
+      <li>総動員の回数を買う</li>
+      <li>VIPショップ</li>
+      <li>VIPポイント</li>
+    </ul>
+  </div>
+</details>
+
+<details id="viking">
+  <summary><span class="pri p2">優先</span>バイキング（22時〜）</summary>
+  <div class="body">
+    <h3>部隊の準備</h3>
+    <ul>
+      <li>手持ちで<b>いちばん強い英雄3人だけ</b>を残して、ほかは<b>全部隊を援軍に出す</b>（歩兵 → 騎兵の順で空にする）</li>
+      <li>弓兵は出さなくてOK</li>
+      <li>ほかの人のサブ垢に援軍を入れるときは、一言入れたほうが良いです</li>
+      <li><b>兵士の回復はしません</b></li>
+    </ul>
+    <h3>10ターン目と20ターン目</h3>
+    <ul>
+      <li>10ターン目と20ターン目は、<b>本部に部隊を出す</b></li>
+      <li>部隊数は<b>1人8万まで</b></li>
+      <li>点呼は同盟チャットで行います</li>
+      <li>初日に20ターン目に参加した人は、2回目は<b>10ターン目</b>に参加してください</li>
+    </ul>
+    <h3>参加できない人</h3>
+    <ul>
+      <li>22時より早めに部隊を出して、「イベント連絡版」に自分の都市の座標を貼ってください</li>
+    </ul>
+  </div>
+</details>
+
+<details id="alliance-war">
+  <summary><span class="pri p2">優先</span>同盟対決を勝つために</summary>
+  <div class="body">
+    <p><b>1日目じゃなくて、2日目をまず勝とう！</b></p>
+    <ul>
+      <li>「パーン」を使うのは<b>20時以降</b></li>
+      <li>「ハヤブサ」は17時にチェックを入れて、残す</li>
+    </ul>
+    <h3>2日目に回してもらえると助かるもの</h3>
+    <ul>
+      <li>ダイヤ消費（英雄殿堂・VIPショップでのお買い物）</li>
+      <li>デイリー割引など、その日にしか買えないもの以外の課金</li>
+    </ul>
+    <p class="note">※ もし課金するなら、という話です。</p>
+    <h3>そのあと</h3>
+    <ul>
+      <li>5日目・6日目に<b>肉で勝負</b>すれば、いけると思います</li>
+      <li>行商は、燃やされてもいいので、<b>レジェンド（黄色）</b>を選んで投げるようにしよう</li>
+    </ul>
+  </div>
+</details>
+
+<details id="zengun">
+  <summary><span class="pri p2">優先</span>全軍出撃ルール</summary>
+  <div class="body">
+    <ul>
+      <li>都市攻撃は禁止</li>
+      <li>採集地への攻撃は禁止</li>
+      <li>同盟に所属していない都市への攻撃のみOK（レベル制限なし）</li>
+      <li>ルールを無視した攻撃をされた場合は反撃OK（連絡を取るなどの対処をしたうえで）</li>
+    </ul>
+    <div class="callout"><span class="imp">⚠ 注意：</span>すべての採集地が攻撃禁止になりました。気をつけてください。</div>
+  </div>
+</details>
+
+<details id="cesare-boss">
+  <summary><span class="pri p2">優先</span>チェーザレ（ボス）</summary>
+  <div class="body">
+    <p>開催：<b>22時</b>。同盟みんなでボスを倒します。次の<b>2つ</b>を守ってください。</p>
+    <ul>
+      <li>兵士を<b>1</b>にして出兵する</li>
+      <li>ひとり<b>1回のみ</b>攻撃</li>
+    </ul>
+    <div class="note">ダメージ数や攻撃回数で報酬は変わりません。参加できる人数がなるべく増えるように、協力をお願いします。</div>
+    <ul>
+      <li>開始<b>6分後</b>を目安に「何回でも攻撃OK」の指示が出ます。<b>同盟チャットをこまめに確認</b>してください</li>
+      <li>ミスをしても、同盟チャットを確認していれば誰かが指摘してくれるので、心配しなくて大丈夫です</li>
+    </ul>
+  </div>
+</details>
+
+<h2 class="group">📌 そのほか</h2>
+
+<details id="flag">
+  <summary>同盟旗建設</summary>
+  <div class="body">
+    <p>同盟旗を建設すると、<b>同盟コイン</b>が稼げます。</p>
+    <ul>
+      <li>建設中の旗があっても、領地を広げるためではないので、<b>コインがほしい人だけ</b>駐屯してください</li>
+      <li>稼げるのは<b>1日最大2000コイン</b>。超えたらその日はそれ以上駐屯しても意味がありません（駐屯中、左上に出る「○○/2000」の○○が2000になるまでは稼げます）</li>
+      <li>理想は<b>ひとり1旗</b>。すでに人が入っている旗には入らないほうが良いです</li>
+      <li>建設を完了させずに、部隊を抜いてもOK</li>
+      <li>ほしいタイミングで建設できる旗がないときは、R4以上の誰かに声をかけてください。いつでも作ります</li>
+    </ul>
+  </div>
+</details>
+
+<details id="reset">
+  <summary>拠点リセット</summary>
+  <div class="body">
+    <p>できるだけバフを維持するために、<b>3日に1回</b>リセットします。実施するときは協力者を同盟チャットで募ることがあります。協力をお願いします。</p>
+    <h3>リセットの方法</h3>
+    <ol>
+      <li>同盟チャットに「IKA」同盟が占拠した旨のシステムメッセージが表示される</li>
+      <li>その拠点に向かって<b>1部隊</b>を出す</li>
+      <li>拠点に部隊が到着して、争奪可能状態が終わるまで、部隊を駐屯させる</li>
+      <li>駐屯した拠点にシールドが貼られたら、部隊を戻す</li>
     </ol>
   </div>
 </details>
@@ -480,22 +557,6 @@
   </div>
 </details>
 
-<details id="cesare-boss">
-  <summary>チェーザレ（ボス）</summary>
-  <div class="body">
-    <p>開催：<b>22時</b>。同盟みんなでボスを倒します。次の<b>2つ</b>を守ってください。</p>
-    <ul>
-      <li>兵士を<b>1</b>にして出兵する</li>
-      <li>ひとり<b>1回のみ</b>攻撃</li>
-    </ul>
-    <div class="note">ダメージ数や攻撃回数で報酬は変わりません。参加できる人数がなるべく増えるように、協力をお願いします。</div>
-    <ul>
-      <li>開始<b>6分後</b>を目安に「何回でも攻撃OK」の指示が出ます。<b>同盟チャットをこまめに確認</b>してください</li>
-      <li>ミスをしても、同盟チャットを確認していれば誰かが指摘してくれるので、心配しなくて大丈夫です</li>
-    </ul>
-  </div>
-</details>
-
 <details id="cesare-solo">
   <summary>チェーザレ（個人）</summary>
   <div class="body">
@@ -511,52 +572,6 @@
       <li>支援要請できる回数：初回5回 ＋ 支援要請で取得した5回 ＝ 合計10回</li>
     </ul>
     <div class="callout"><span class="badge">重要</span><b>支援要請が出たら、誰でも遠慮なく集結してください！</b>1人1日7回まで報酬がもらえます。<br>自動加入の「チェーザレ」のチェックも忘れずに。</div>
-  </div>
-</details>
-
-<details id="viking">
-  <summary>バイキング（22時〜）</summary>
-  <div class="body">
-    <h3>部隊の準備</h3>
-    <ul>
-      <li>手持ちで<b>いちばん強い英雄3人だけ</b>を残して、ほかは<b>全部隊を援軍に出す</b>（歩兵 → 騎兵の順で空にする）</li>
-      <li>弓兵は出さなくてOK</li>
-      <li>ほかの人のサブ垢に援軍を入れるときは、一言入れたほうが良いです</li>
-      <li><b>兵士の回復はしません</b></li>
-    </ul>
-    <h3>10ターン目と20ターン目</h3>
-    <ul>
-      <li>10ターン目と20ターン目は、<b>本部に部隊を出す</b></li>
-      <li>部隊数は<b>1人8万まで</b></li>
-      <li>点呼は同盟チャットで行います</li>
-      <li>初日に20ターン目に参加した人は、2回目は<b>10ターン目</b>に参加してください</li>
-    </ul>
-    <h3>参加できない人</h3>
-    <ul>
-      <li>22時より早めに部隊を出して、「イベント連絡版」に自分の都市の座標を貼ってください</li>
-    </ul>
-  </div>
-</details>
-
-<details id="alliance-war">
-  <summary>同盟対決を勝つために</summary>
-  <div class="body">
-    <p><b>1日目じゃなくて、2日目をまず勝とう！</b></p>
-    <ul>
-      <li>「パーン」を使うのは<b>20時以降</b></li>
-      <li>「ハヤブサ」は17時にチェックを入れて、残す</li>
-    </ul>
-    <h3>2日目に回してもらえると助かるもの</h3>
-    <ul>
-      <li>ダイヤ消費（英雄殿堂・VIPショップでのお買い物）</li>
-      <li>デイリー割引など、その日にしか買えないもの以外の課金</li>
-    </ul>
-    <p class="note">※ もし課金するなら、という話です。</p>
-    <h3>そのあと</h3>
-    <ul>
-      <li>5日目・6日目に<b>肉で勝負</b>すれば、いけると思います</li>
-      <li>行商は、燃やされてもいいので、<b>レジェンド（黄色）</b>を選んで投げるようにしよう</li>
-    </ul>
   </div>
 </details>
 
