@@ -190,3 +190,5 @@ Kingshot関連の単体HTMLツールのうち、ゲームプレイの実務で�
 - GAS: setDiscordInvite に key（""＝全体鯖／"816"）を追加、保存先 DISCORD_INVITE_816、pubGet に discordInvite816。test GAS @19 に反映・確認済み（変更前: gas_clasp\members_proxy_test\backup\コード.js_20261112_pre-discord816）。本番GASは未反映。
 - Actions: discord_invite.py を2チャンネル（DISCORD_CHANNEL_ID／DISCORD_CHANNEL_ID_816）対応に。816用Secretが無ければ飛ばす。片方失敗でももう片方は続け、最後にどれか失敗なら赤にする。workflowのenvにSecret追加。
 - 残り（ユーザー承認後）: 本番GAS再デプロイ → mainへpush → ユーザーが816用サーバーにbot追加・Secret DISCORD_CHANNEL_ID_816登録 → Actions手動実行で確認。
+
+- 2026-11-12: キャッシュ対策のバージョンスタンプ（?v=時刻）を廃止（ユーザー判断）。全HTML/JSから ?v= を除去済み。work/stamp_version.py は、?v=の除去と noindex の確認だけを行うスクリプトに変更（実行しても害はなく、必須でもない）。ページの内容は、最大約10分（Pagesのキャッシュ）で最新になる。

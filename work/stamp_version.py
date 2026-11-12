@@ -1,85 +1,71 @@
 # -*- coding: utf-8 -*-
 """
-サイト内の全HTMLファイルの内部リンク（href="xxx.html"）に、実行時刻ベースの
-キャッシュバスター（?v=YYYYMMDDHHMMSS）を自動付与・更新する。
+【2026-11-12 方針変更】キャッシュ対策のバージョンスタンプ（?v=YYYYMMDDHHMMSS）は廃止しました。
 
-GitHub PagesのCache-Control: max-age=600（10分）により、同じURLは最大10分間
-古い内容がブラウザ/CDNにキャッシュされ得る。pushするたびに全リンクのバージョン値を
-書き換えることで、URL自体が変わり、常に最新ページが即座に取得されるようにする。
+以前は、pushのたびに全リンクへ ?v=時刻 を付け直して、GitHub Pagesのキャッシュ（max-age=600＝10分）を避けていましたが、
+ユーザー判断で「キャッシュクリアの対応は不要」になりました（ブックマークや共有URLに古い ?v= が残るのを避けるため）。
+ページの内容は、サーバーが ?v= を見ずに最新のファイルを返すので、最大でも約10分で最新になります。
 
-使い方（commit・pushする直前に毎回実行する）:
+このスクリプトは、名前を変えずに、次の2つだけを行うようにしました（pushの前に実行しても害はありません）:
+ 1) 残っている ?v=14桁の数字 を、HTML/JSから取り除く
+ 2) 全HTMLの<head>に <meta name="robots" content="noindex, nofollow"> があるか確認し、無ければ入れる
+   （検索エンジンに載せない運用。GitHub Pagesのプロジェクトサイトでは robots.txt が効かないため）
+
+使い方（必要なときだけ）:
   cd キングショットHTML
   python work/stamp_version.py
-
-対象: FOLDER配下の全*.htmlファイル（admin/ を含む）
 """
 import re
 from pathlib import Path
-from datetime import datetime
 
 FOLDER = Path(__file__).resolve().parent.parent
-EXCLUDE_DIRS = set()  # 管理者ページ（admin/）も含め、サイト内の全HTMLが対象
 
-VERSION = datetime.now().strftime("%Y%m%d%H%M%S")
-
-# href="xxx.html" / href="xxx.html?v=12345" のうち、外部URL・アンカー・mailtoを除いたものにマッチ
-HREF_RE = re.compile(r'href="((?!https?:|mailto:|#)[^"]+?\.html)(\?v=\d+)?"')
-# src="xxx.js" / src="xxx.js?v=12345" のうち、外部URLを除いたものにマッチ（admin-common.js・kvk-auth-gate.jsなど）
-SRC_JS_RE = re.compile(r'src="((?!https?:)[^"]+?\.js)(\?v=\d+)?"')
-# 検索エンジンに載せない（2026-11-07、URLを直接共有して使う運用のため）。GitHub Pagesのプロジェクトサイトでは
-# robots.txt をドメイン直下に置けず効かないので、全HTMLの<head>に meta robots を入れる。既にあるページはそのまま
+STAMP_RE = re.compile(r"\?v=\d{14}")
 ROBOTS_TAG = '<meta name="robots" content="noindex, nofollow">'
 ROBOTS_RE = re.compile(r"""<meta\s+name=["']robots["']""", re.I)
 HEAD_RE = re.compile(r"<head[^>]*>", re.I)
+SKIP_DIRS = {".git", ".github", "backup", "worktrees"}
 
 
 def should_skip(path: Path) -> bool:
     try:
-        rel_parts = path.relative_to(FOLDER).parts
+        parts = path.relative_to(FOLDER).parts
     except ValueError:
         return True
-    return rel_parts and rel_parts[0] in EXCLUDE_DIRS
+    return bool(parts) and parts[0] in SKIP_DIRS
 
 
-def stamp_file(path: Path) -> int:
-    text = path.read_text(encoding="utf-8")
+def clean_file(path: Path) -> int:
+    try:
+        raw = path.read_bytes().decode("utf-8")
+    except UnicodeDecodeError:
+        return 0
     count = 0
-
-    def repl(m):
-        nonlocal count
-        count += 1
-        return f'href="{m.group(1)}?v={VERSION}"'
-
-    def repl_js(m):
-        nonlocal count
-        count += 1
-        return f'src="{m.group(1)}?v={VERSION}"'
-
-    new_text = HREF_RE.sub(repl, text)
-    new_text = SRC_JS_RE.sub(repl_js, new_text)
-    if not ROBOTS_RE.search(new_text):
+    new_text, n = STAMP_RE.subn("", raw)
+    count += n
+    if path.suffix.lower() == ".html" and not ROBOTS_RE.search(new_text):
         m = HEAD_RE.search(new_text)
         if m:
             new_text = new_text[:m.end()] + "\n" + ROBOTS_TAG + new_text[m.end():]
             count += 1
-    if new_text != text:
-        path.write_text(new_text, encoding="utf-8")
+    if new_text != raw:
+        path.write_bytes(new_text.encode("utf-8"))
     return count
 
 
 def main():
-    total_files = 0
-    total_links = 0
-    for path in FOLDER.rglob("*.html"):
-        if should_skip(path):
-            continue
-        n = stamp_file(path)
-        if n:
-            total_files += 1
-            total_links += n
-            print(f"  {path.relative_to(FOLDER)} : {n}件")
-    print(f"\nバージョン: {VERSION}")
-    print(f"更新ファイル数: {total_files} / リンク書き換え数: {total_links}")
+    files = 0
+    changes = 0
+    for pattern in ("*.html", "*.js"):
+        for path in FOLDER.rglob(pattern):
+            if should_skip(path):
+                continue
+            n = clean_file(path)
+            if n:
+                files += 1
+                changes += n
+                print(f"  {path.relative_to(FOLDER)} : {n}件")
+    print(f"\n更新ファイル数: {files} / 変更数: {changes}")
 
 
 if __name__ == "__main__":
