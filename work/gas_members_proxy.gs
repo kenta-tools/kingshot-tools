@@ -79,6 +79,12 @@ function handle_(p) {
     // 個人登録の記録（管理画面用。公開データには入れない）
     if (p.action === "getLog") return json_({ ok: true, log: readLog_(), blocklist: readBlocklist_() });
     // ブロックするIPの一覧（管理画面で編集。まるごと置き換え）
+    // 816ユーザーの取り込み（管理者のみ）
+    if (p.action === "userImportPendingSet") return json_(userImportPendingSet_(token, p));
+    if (p.action === "userImportInfo") return json_(userImportInfo_(token));
+    if (p.action === "userImportPreview") return json_(userImportPreview_(token, p));
+    if (p.action === "userImportCommit") return json_(userImportCommit_(token, p));
+    if (p.action === "userImportUndo") return json_(userImportUndo_(token, p));
     if (p.action === "setBlocklist") return json_(writeBlocklist_(p.list));
     // Discord の招待リンク（GitHub Actions が毎朝作って送ってくる）
     if (p.action === "setDiscordInvite") return json_(setDiscordInvite_(p.invite, p.key));
@@ -120,6 +126,18 @@ function handle_(p) {
       var lock = LockService.getScriptLock();
       if (!lock.tryLock(30000)) return json_({ ok: false, status: 503, error: "混み合っています。少し待ってからもう一度押してください" });
       try {
+        // 古い管理画面（gidを知らない）で保存されても、すでに付いている gid・source を消さない
+        var cur = readFile_(token);
+        if (cur.ok) {
+          var curBy = {};
+          (cur.data.users || []).forEach(function(u) { curBy[u.id] = u; });
+          data.users.forEach(function(u) {
+            var c = curBy[u.id];
+            if (c && c.gid && !u.gid) { u.gid = c.gid; if (c.source) u.source = c.source; if (c.importedAt) u.importedAt = c.importedAt; }
+          });
+          if (cur.data.userImports && !data.userImports) data.userImports = cur.data.userImports;
+          if (cur.data.userImportPending && !data.userImportPending) data.userImportPending = cur.data.userImportPending;
+        }
         return json_(writeFile_(token, data, p.sha, "admin"));
       } finally {
         lock.releaseLock();
@@ -155,7 +173,7 @@ function pubGet_(token) {
   return {
     ok: true,
     events: events,
-    users: (d.users || []).map(function(u) { return { id: u.id, name: u.name, alliance: u.alliance, aliases: u.aliases || [] }; }),
+    users: (d.users || []).map(function(u) { var o = { id: u.id, name: u.name, alliance: u.alliance, aliases: u.aliases || [] }; if (u.gid) o.gid = u.gid; return o; }), // gid（ゲーム内ID）は公開（2026-11-12 ユーザー指示）
     entries: (d.entries || []).filter(function(x) { return ids[x.eventId]; }).map(noSurvey_),
     // kvkRosters/flameRostersは終了したイベント分も含めて全部返す（終了後も閲覧はできるようにするため。
     // 更新を締め切るかどうかはクライアント側で「そのイベントがopenか」を見て判断する）
@@ -1223,6 +1241,309 @@ function setDiscordInvite_(invite, key) {
   props.setProperty(name, url);
   props.setProperty(name + "_AT", new Date().toISOString());
   return { ok: true, invite: url, key: k };
+}
+
+// ---------- 816ユーザーの取り込み（管理者のみ。2026-11-12） ----------
+// 取得（GitHub Actions が MightPulse API から作る）→ userImportPendingSet で「取り込み待ち」（d.userImportPending。非公開）に保存
+// → 管理画面（admin/users.html の取り込み）が userImportPreview で照合結果を見て、userImportCommit で確定。userImportUndo で取り消せる。
+// ファイル（CSV/JSON）を読み込んだ行を、そのまま preview/commit に渡すこともできる（rows）。
+// 行: { gid, name, tag, allianceName, kid, noAlliance, power, ... }。users には gid（文字列）・source:"api816"・importedAt を持たせる。
+var USER_IMPORT_MAX_ROWS = 1500;
+var USER_IMPORT_KEEP_LOG = 20;
+
+// 名寄せ用の正規化：全角半角・大文字小文字をそろえ、空白・ゼロ幅文字・先頭の[TAG]【TAG】・前後の記号を除く
+function normName_(s) {
+  var t = String(s == null ? "" : s);
+  try { t = t.normalize("NFKC"); } catch (e) {}
+  t = t.toLowerCase().replace(/[\s​-‏⁠﻿]/g, "");
+  t = t.replace(/^(\[[^\]]*\]|【[^】]*】)/, "");
+  t = t.replace(/^[^\p{L}\p{N}]+/u, "").replace(/[^\p{L}\p{N}]+$/u, "");
+  return t;
+}
+
+function importRows_(rows) {
+  var seen = {};
+  var out = [];
+  (Array.isArray(rows) ? rows : []).slice(0, USER_IMPORT_MAX_ROWS * 2).forEach(function(r) {
+    var gid = clip_(r && r.gid, 24);
+    var name = clip_(r && r.name, 30);
+    if (!/^[0-9]{1,20}$/.test(gid) || !name || seen[gid]) return;
+    seen[gid] = true;
+    var power = numOrNull_(r.power);
+    out.push({
+      gid: gid, name: name, tag: clip_(r.tag, 10), allianceName: clip_(r.allianceName, 40), kid: clip_(r.kid, 10),
+      noAlliance: r.noAlliance === true || r.noAlliance === "true" || r.noAlliance === 1 || r.noAlliance === "1" || !clip_(r.tag, 10),
+      power: power === null ? 0 : power,
+      kills: numOrNull_(r.kills), townCenter: numOrNull_(r.townCenter), allianceRank: clip_(r.allianceRank, 20), source: clip_(r.source, 10)
+    });
+  });
+  return out.slice(0, USER_IMPORT_MAX_ROWS);
+}
+
+// 取得ツールが送る「取り込み待ち」。{ rows, meta:{ fetchedAt, source, kid, playerCount, alliances:[{abbr,name}], notes:[...] } }
+function userImportPendingSet_(token, p) {
+  var rows = importRows_(p.rows);
+  if (!rows.length) return { ok: false, status: 400, error: "取り込める行がありません（gid と name が必要です）" };
+  var meta = p.meta || {};
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) return { ok: false, status: 503, error: "混み合っています" };
+  try {
+    var f = readFile_(token);
+    if (!f.ok) return f;
+    var d = f.data;
+    d.userImportPending = {
+      fetchedAt: clip_(meta.fetchedAt, 40) || new Date().toISOString(),
+      savedAt: new Date().toISOString(),
+      source: clip_(meta.source, 40), kid: clip_(meta.kid, 10),
+      playerCount: numOrNull_(meta.playerCount),
+      alliances: (Array.isArray(meta.alliances) ? meta.alliances : []).slice(0, 200).map(function(a) { return { abbr: clip_(a.abbr, 10), name: clip_(a.name, 40) }; }),
+      notes: (Array.isArray(meta.notes) ? meta.notes : []).slice(0, 20).map(function(n) { return clip_(n, 200); }),
+      rows: rows
+    };
+    var w = writeFile_(token, d, null, "user import pending");
+    if (!w.ok) return w;
+    return { ok: true, count: rows.length };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// 取り込み待ちの概要（中身の行は返さない）と、取り込みの履歴
+function userImportInfo_(token) {
+  var f = readFile_(token);
+  if (!f.ok) return f;
+  var d = f.data, pd = d.userImportPending || null;
+  return {
+    ok: true,
+    pending: pd ? { fetchedAt: pd.fetchedAt, savedAt: pd.savedAt, source: pd.source, kid: pd.kid, playerCount: pd.playerCount, count: (pd.rows || []).length,
+      alliances: pd.alliances || [], notes: pd.notes || [] } : null,
+    imports: (d.userImports || []).map(function(x) { return { id: x.id, at: x.at, counts: x.counts, undone: !!x.undone }; }).reverse()
+  };
+}
+
+// 取り込みの照合（preview も commit も同じ計算を使う）。返す items は総力の大きい順。
+// opts: { topN, tagMap:{tag:サイトの同盟名}, decisions:{gid:{action,userId}} }
+function userImportPlan_(d, rows, opts) {
+  var users = d.users || [];
+  var topN = Math.max(1, Math.min(USER_IMPORT_MAX_ROWS, Math.round(Number(opts.topN) || 200)));
+  var tagMap = opts.tagMap || {};
+  var decisions = opts.decisions || {};
+  var sorted = rows.slice().sort(function(a, b) { return b.power - a.power; });
+  // 総力上位 topN 人。同盟なしの人は、既定では登録しない（決定で選んだ人だけ登録）
+  var target = sorted.slice(0, topN);
+
+  var byGid = {};
+  users.forEach(function(u) { if (u.gid) { (byGid[u.gid] = byGid[u.gid] || []).push(u); } });
+  var nameIdx = {}; // 正規化した名前 → ユーザー（name・aliases）
+  users.forEach(function(u) {
+    var ks = {};
+    [u.name].concat(u.aliases || []).forEach(function(n) { var k = normName_(n); if (k) ks[k] = true; });
+    Object.keys(ks).forEach(function(k) { (nameIdx[k] = nameIdx[k] || []).push(u); });
+  });
+  var claimed = {}; // ユーザーID → この取り込みで先に結びついた行の数（2行が同じ人に結びつくときは要確認にする）
+
+  var items = target.map(function(r, i) {
+    var siteAlliance = r.noAlliance ? "" : (clip_(tagMap[r.tag], 20) || r.tag);
+    var it = { gid: r.gid, name: r.name, tag: r.tag, allianceName: r.allianceName, siteAlliance: siteAlliance, power: r.power, rank: i + 1, noAlliance: r.noAlliance,
+      kind: "new", userId: "", candidates: [], diffs: {}, reason: "" };
+    var cand = [], reason = "";
+    var g = byGid[r.gid] || [];
+    if (g.length === 1) { it.kind = "match-id"; it.userId = g[0].id; cand = g; }
+    else if (g.length > 1) { it.kind = "review"; it.reason = "同じgidのユーザーが複数います"; cand = g; }
+    else {
+      var k = normName_(r.name);
+      var hits = (nameIdx[k] || []).filter(function(u, j, a) { return a.indexOf(u) === j; });
+      var free = hits.filter(function(u) { return !u.gid; });          // まだgidが付いていない人
+      var other = hits.filter(function(u) { return u.gid && u.gid !== r.gid; }); // 別のgidの同名の人（同名の別人）
+      if (free.length === 1) {
+        var u0 = free[0];
+        var a1 = normName_(u0.alliance), a2 = normName_(siteAlliance);
+        if (!a1 || !a2 || a1 === a2) { it.kind = "match-name"; it.userId = u0.id; cand = [u0]; }
+        else { it.kind = "review"; it.reason = "名前は一致、同盟が違います（移籍の可能性）"; cand = [u0]; }
+      } else if (free.length > 1) { it.kind = "review"; it.reason = "名前が一致する候補が複数います"; cand = free; }
+      else if (other.length) { it.kind = "review"; it.reason = "同じ名前の別のgidのユーザーがいます（同名の別人）"; cand = other; }
+      else if (r.noAlliance) { it.kind = "noalliance"; }
+    }
+    it.candidates = cand.map(function(u) { return { userId: u.id, name: u.name, alliance: u.alliance || "", gid: u.gid || "" }; });
+    if (it.userId) {
+      claimed[it.userId] = (claimed[it.userId] || 0) + 1;
+      var u1 = users.filter(function(x) { return x.id === it.userId; })[0];
+      if (u1.name !== r.name) it.diffs.name = [u1.name, r.name];
+      if (siteAlliance && (u1.alliance || "") !== siteAlliance) it.diffs.alliance = [u1.alliance || "", siteAlliance];
+    }
+    return it;
+  });
+  items.forEach(function(it) {
+    if (it.userId && claimed[it.userId] > 1 && it.kind !== "review") { it.kind = "review"; it.reason = "同じユーザーに結びつく行が複数あります"; it.userId = ""; it.diffs = {}; }
+  });
+
+  // 取り込み後の名前の重複（同名のユーザーが2人にならないように）を見るための名前表
+  var takenName = {};
+  users.forEach(function(u) { takenName[normName_(u.name)] = u.id; });
+
+  items.forEach(function(it) {
+    var dec = decisions[it.gid] || null;
+    var act = "";
+    if (dec && dec.action) act = String(dec.action);
+    else if (it.kind === "match-id" || it.kind === "match-name") act = "link";
+    else if (it.kind === "new") act = "create";
+    else if (it.kind === "noalliance" && (opts.includeNoAlliance === true || (Array.isArray(opts.noAllianceGids) && opts.noAllianceGids.indexOf(it.gid) >= 0))) act = "create"; // 同盟なし：選んだ人（または全員）だけ登録
+    else act = "skip"; // 要確認・同盟なしは、選ばれていなければ飛ばす（同名の別人は決定で createSuffixed を選べば作れる）
+    if (act === "link" && !(dec && dec.userId) && !it.userId) act = "skip";
+    var uid = (dec && dec.userId) || it.userId;
+    if (act === "link" && uid) {
+      var tu = users.filter(function(x) { return x.id === uid; })[0];
+      if (!tu) act = "skip";
+      else if (tu.gid && tu.gid !== it.gid) act = "skip"; // 別のgidがすでに付いている人には付けない
+      else {
+        it.userId = uid;
+        it.diffs = {};
+        if (tu.name !== it.name) it.diffs.name = [tu.name, it.name];
+        if (it.siteAlliance && (tu.alliance || "") !== it.siteAlliance) it.diffs.alliance = [tu.alliance || "", it.siteAlliance];
+        var nk = normName_(it.name), owner = takenName[nk];
+        if (it.diffs.name && owner && owner !== uid) { act = "skip"; it.reason = "新しい名前が別のユーザーと重複するため、飛ばしました"; }
+      }
+    }
+    if (act === "create" || act === "createSuffixed") {
+      it.newName = it.name;
+      if (act === "createSuffixed") { // 名前(gid末尾4桁)。それでも重なるときは gid 全部
+        it.newName = clip_(it.name, 22) + "(" + it.gid.slice(-4) + ")";
+        if (takenName[normName_(it.newName)]) it.newName = clip_(it.name, 8) + "(" + it.gid + ")";
+      }
+      var tk = normName_(it.newName);
+      if (takenName[tk]) { act = "skip"; it.reason = "同じ名前のユーザーがいるため、飛ばしました（「名前にgidを付けて新規」を選べます）"; }
+      else takenName[tk] = "new:" + it.gid;
+    }
+    it.action = act;
+  });
+  return { items: items, topN: topN, total: rows.length };
+}
+
+function userImportCounts_(items) {
+  var c = { create: 0, link: 0, skip: 0, review: 0, noalliance: 0, nochange: 0, rename: 0, realliance: 0 };
+  items.forEach(function(it) {
+    if (it.action === "create" || it.action === "createSuffixed") c.create++;
+    else if (it.action === "link") {
+      c.link++;
+      if (it.diffs && it.diffs.name) c.rename++;
+      if (it.diffs && it.diffs.alliance) c.realliance++;
+    } else c.skip++;
+    if (it.kind === "review") c.review++;
+    if (it.kind === "noalliance") c.noalliance++;
+  });
+  return c;
+}
+
+function userImportRowsOf_(d, p) {
+  if (p.fromPending) return (d.userImportPending && d.userImportPending.rows) || [];
+  return importRows_(p.rows);
+}
+
+function userImportPreview_(token, p) {
+  var f = readFile_(token);
+  if (!f.ok) return f;
+  var rows = userImportRowsOf_(f.data, p);
+  if (!rows.length) return { ok: false, status: 400, error: p.fromPending ? "取り込み待ちのデータがありません" : "取り込める行がありません（gid と name が必要です）" };
+  var plan = userImportPlan_(f.data, rows, p);
+  var pd = f.data.userImportPending || {};
+  var res = { ok: true, total: plan.total, topN: plan.topN, counts: userImportCounts_(plan.items), sha: f.sha,
+    coverage: { fetched: rows.length, playerCount: pd.playerCount == null ? null : pd.playerCount, fetchedAt: pd.fetchedAt || "", notes: pd.notes || [] } };
+  if (!p.countsOnly) res.items = plan.items; // 名前・gid の一覧（管理者の画面用。Actions のログには出さない）
+  return res;
+}
+
+// 確定：サーバーでもう一度照合してから、1回の保存でまとめて反映する。p: { fromPending|rows, topN, tagMap, decisions }
+function userImportCommit_(token, p) {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) return { ok: false, status: 503, error: "混み合っています。少し待ってからもう一度押してください" };
+  try {
+    var f = readFile_(token);
+    if (!f.ok) return f;
+    var d = f.data;
+    d.users = d.users || [];
+    var rows = userImportRowsOf_(d, p);
+    if (!rows.length) return { ok: false, status: 400, error: "取り込める行がありません" };
+    var plan = userImportPlan_(d, rows, p);
+    var now = new Date().toISOString();
+    // 取り込み前の状態に戻せるように、データファイルを丸ごとコピーして残す（非公開のGoogleドライブ）
+    var backupName = "members_backup_pre-import_" + Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyyMMdd_HHmmss") + ".json";
+    DriveApp.getFileById(PropertiesService.getScriptProperties().getProperty("DATA_FILE_ID")).makeCopy(backupName);
+    var rec = { id: newId_("i"), at: now, created: [], linked: [], counts: {}, undone: false };
+    var addCount = plan.items.filter(function(it) { return it.action === "create" || it.action === "createSuffixed"; }).length;
+    if (d.users.length + addCount > 5000) return { ok: false, status: 400, error: "登録できる人数の上限（5000人）を超えます" };
+    plan.items.forEach(function(it) {
+      if (it.action === "create" || it.action === "createSuffixed") {
+        var nu = { id: newId_("u"), name: it.newName || it.name, alliance: it.siteAlliance || "", aliases: [], gid: it.gid, source: "api816", importedAt: now };
+        if (it.action === "createSuffixed") nu.aliases = [it.name]; // 元の名前でも探せるように
+        d.users.push(nu);
+        rec.created.push(nu.id);
+      } else if (it.action === "link") {
+        var u = d.users.filter(function(x) { return x.id === it.userId; })[0];
+        if (!u) return;
+        rec.linked.push({ userId: u.id, before: { gid: u.gid || "", source: u.source || "", importedAt: u.importedAt || "", name: u.name, alliance: u.alliance || "",
+          aliases: (u.aliases || []).slice(), nameHistory: (u.nameHistory || []).slice() } });
+        u.gid = it.gid; u.source = "api816"; u.importedAt = now;
+        if (it.diffs && it.diffs.name) { // 改名：旧名を nameHistory・aliases に残す（新しい名前は aliases から外す）
+          var old = u.name;
+          u.aliases = (u.aliases || []).filter(function(a) { return normName_(a) !== normName_(it.name); });
+          if (!u.aliases.some(function(a) { return normName_(a) === normName_(old); })) u.aliases.push(old);
+          u.nameHistory = (u.nameHistory || []).concat([{ name: old, until: now }]);
+          u.name = it.name;
+        }
+        if (it.diffs && it.diffs.alliance) u.alliance = it.siteAlliance;
+      }
+    });
+    rec.counts = userImportCounts_(plan.items);
+    d.userImports = (d.userImports || []).concat([rec]).slice(-USER_IMPORT_KEEP_LOG);
+    d.updated = now;
+    var w = writeFile_(token, d, null, "user import");
+    if (!w.ok) return w;
+    return { ok: true, importId: rec.id, counts: rec.counts, created: rec.created.length, linked: rec.linked.length, backup: backupName };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// 取り消し：作ったユーザーは消す（参加記録がある人は残して gid だけ外す）。結びつけた人は取り込み前の値に戻す
+function userImportUndo_(token, p) {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) return { ok: false, status: 503, error: "混み合っています。少し待ってからもう一度押してください" };
+  try {
+    var f = readFile_(token);
+    if (!f.ok) return f;
+    var d = f.data;
+    var rec = (d.userImports || []).filter(function(x) { return x.id === p.importId; })[0];
+    if (!rec) return { ok: false, status: 404, error: "その取り込みが見つかりません" };
+    if (rec.undone) return { ok: false, status: 400, error: "この取り込みはすでに取り消し済みです" };
+    var hasEntry = {};
+    (d.entries || []).forEach(function(e) { hasEntry[e.userId] = true; });
+    var removed = 0, kept = 0, restored = 0;
+    var createdSet = {};
+    rec.created.forEach(function(id) { createdSet[id] = true; });
+    d.users = (d.users || []).filter(function(u) {
+      if (!createdSet[u.id]) return true;
+      if (hasEntry[u.id]) { delete u.gid; delete u.source; delete u.importedAt; kept++; return true; }
+      removed++;
+      return false;
+    });
+    rec.linked.forEach(function(l) {
+      var u = d.users.filter(function(x) { return x.id === l.userId; })[0];
+      if (!u) return;
+      var b = l.before;
+      if (b.gid) u.gid = b.gid; else delete u.gid;
+      if (b.source) u.source = b.source; else delete u.source;
+      if (b.importedAt) u.importedAt = b.importedAt; else delete u.importedAt;
+      u.name = b.name; u.alliance = b.alliance; u.aliases = b.aliases; u.nameHistory = b.nameHistory;
+      restored++;
+    });
+    rec.undone = true;
+    d.updated = new Date().toISOString();
+    var w = writeFile_(token, d, null, "user import undo");
+    if (!w.ok) return w;
+    return { ok: true, removed: removed, kept: kept, restored: restored };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 // 以前 GAS で作り直していたときのトリガーの後始末（トリガーから呼ばれたら自分を消す）

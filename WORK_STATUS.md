@@ -192,3 +192,9 @@ Kingshot関連の単体HTMLツールのうち、ゲームプレイの実務で�
 - 残り（ユーザー承認後）: 本番GAS再デプロイ → mainへpush → ユーザーが816用サーバーにbot追加・Secret DISCORD_CHANNEL_ID_816登録 → Actions手動実行で確認。
 
 - 2026-11-12: キャッシュ対策のバージョンスタンプ（?v=時刻）を廃止（ユーザー判断）。全HTML/JSから ?v= を除去済み。work/stamp_version.py は、?v=の除去と noindex の確認だけを行うスクリプトに変更（実行しても害はなく、必須でもない）。ページの内容は、最大約10分（Pagesのキャッシュ）で最新になる。
+## 2026-11-12 816ユーザーの取り込み（実装・testまで。本番未反映）
+- worktree: ツール作成-user-import（ブランチ ツール作成/user-import）。方針：画面は最小（admin/user-import.html 1ページ）、1回限り。
+- GAS（test GAS @21。変更前: gas_clasp\members_proxy_test\backup\コード.js_20261112_pre-user-import / _pre-user-import2）：users.gid/source/importedAt、pubGet users に gid、userImportPendingSet/Info/Preview/Commit/Undo、commit前の自動バックアップ（Drive: members_backup_pre-import_日時.json）、put で gid を消さない保護。work/gas_members_proxy.gs に同じ変更。
+- Actions: .github/workflows/user-import-816.yml ＋ .github/scripts/user_import_816.py（手動実行。ドライランは固定サンプル）。新Secret（任意）RELAY_PASSWORD_TEST（test GASを対象に実行するときだけ）。
+- test/admin/user-import.html と test/admin/admin-common.js（gid を保存で消さない・統合で残す）を変更。本番側 admin/ は未変更。
+- 本番に出すとき: 本番GAS再デプロイ（pubGetの件数不変を確認）→ admin/user-import.html・admin/admin-common.js・workflow・script を main へ → ユーザーが Actions を実行。
