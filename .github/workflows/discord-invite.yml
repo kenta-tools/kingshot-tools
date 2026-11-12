@@ -1,4 +1,4 @@
-# Discord の招待リンクを毎朝作り直して、個人登録ページのボタンに出す（中身は .github/scripts/discord_invite.py）
+# Discord の招待リンクを毎朝作り直して、個人登録ページ（全体鯖）・EGG新規加入者マニュアル（816用）のボタンに出す（中身は .github/scripts/discord_invite.py）
 # Discord は Google（GAS）のサーバーからの通信を断るので、GAS ではなくここで作る
 name: Discord招待リンクの更新
 
@@ -20,5 +20,6 @@ jobs:
         env:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           DISCORD_CHANNEL_ID: ${{ secrets.DISCORD_CHANNEL_ID }}
+          DISCORD_CHANNEL_ID_816: ${{ secrets.DISCORD_CHANNEL_ID_816 }}
           RELAY_PASSWORD: ${{ secrets.RELAY_PASSWORD }}
         run: python3 .github/scripts/discord_invite.py

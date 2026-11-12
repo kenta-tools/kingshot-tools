@@ -184,3 +184,9 @@ Kingshot関連の単体HTMLツールのうち、ゲームプレイの実務で�
 - 2026-11-08 追記（KVKの最大隊数を容量から計算・容量の仮置き・空の隊・リーダー候補を自動で入れる・**test/ のみ**、worktree: チーム分け機能/kvk-maxteams の別コミット）：test/admin/teams.html。kvkMaxInfo()（リーダー候補を集結容量順にk人決め、Σ(集結容量−本人の出征容量) ≦ リーダー以外の出征容量の合計＋k×平均 を満たす最大のk）。KVKイベントのbuildPeopleで未入力容量を等級で仮置き（PROV_CAP・marchProv/rallyProv/provNone）、表示は manP()（「20万（仮）」「0（等級なし）」）。applyKvkTeamCounts は空の隊（leaderId空）を作る／fillKvkLeaders（#leaderFillBtn）／autoKvk はリーダー未設定の隊に入れない。三盟・聖剣・遺跡争奪は変更なし。
 - 2026-11-08 追記（聖剣：メンバー・遊撃手を解放前と解放後で共通に・**test/ のみ**、worktree: チーム分け機能/sk-shared の別コミット）：test/admin/teams.html。skEnsure で sk.after の teams/assign/pins/raiders を sk.before と同じオブジェクトにリンク（解放前が正・保存形式は変えない）。skAddRally は共通の assign を消さない／skAddRaider は両段階の集結主を確認／skAutoTeams はその段階のメンバー一覧のみ対象／skCopyBeforeToAfter は rally のみコピー／「割り当てを外す」は中身を消す（参照を壊さない）／carrySeiken は前回の解放前を共通の1つとして引き継ぎ・rally は段階ごと。teams/ と entry/ は変更なし（保存形式が同じため）。
 - 2026-11-08 追記（固定の保存バー・**test/ のみ**、worktree: チーム分け機能/savebar の別コミット）：test/admin/teams.html。#saveBar（position:fixed 右下・スマホは下いっぱい）に sbSave/sbPublish/sbUnpublish と状態 sbState。renderStatus で readOnly のとき非表示・未保存のとき dirty 表示、adjustSaveBar で移動バー（#moveBar）の上に重ねる。saveMsg を MutationObserver で sbMsg に写す。save() の連打防止ボタンにバー側も追加。下の既存ボタンは残す。
+
+## 2026-11-12 816用Discord招待リンクの自動更新（実装済み・本番未反映）
+- worktree: ツール作成-discord-816（ブランチ ツール作成/discord-816、まだmainに入れていない）。
+- GAS: setDiscordInvite に key（""＝全体鯖／"816"）を追加、保存先 DISCORD_INVITE_816、pubGet に discordInvite816。test GAS @19 に反映・確認済み（変更前: gas_clasp\members_proxy_test\backup\コード.js_20261112_pre-discord816）。本番GASは未反映。
+- Actions: discord_invite.py を2チャンネル（DISCORD_CHANNEL_ID／DISCORD_CHANNEL_ID_816）対応に。816用Secretが無ければ飛ばす。片方失敗でももう片方は続け、最後にどれか失敗なら赤にする。workflowのenvにSecret追加。
+- 残り（ユーザー承認後）: 本番GAS再デプロイ → mainへpush → ユーザーが816用サーバーにbot追加・Secret DISCORD_CHANNEL_ID_816登録 → Actions手動実行で確認。

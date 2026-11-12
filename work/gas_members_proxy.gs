@@ -81,7 +81,7 @@ function handle_(p) {
     // ブロックするIPの一覧（管理画面で編集。まるごと置き換え）
     if (p.action === "setBlocklist") return json_(writeBlocklist_(p.list));
     // Discord の招待リンク（GitHub Actions が毎朝作って送ってくる）
-    if (p.action === "setDiscordInvite") return json_(setDiscordInvite_(p.invite));
+    if (p.action === "setDiscordInvite") return json_(setDiscordInvite_(p.invite, p.key));
     // いたずらの取り消し: 指定IP（末尾 * で前方一致）からの個人登録を、新しい順に元へ戻す（dryRun なら一覧だけ）
     if (p.action === "revertByIp") return json_(revertByIp_(token, p));
     // KvK相手突合せの「うちの誰が相手の誰と対戦するか」の保存（管理者のみ）。組み合わせ（パターン）を複数持てる。matchupId なしは「標準」を上書き
@@ -174,7 +174,9 @@ function pubGet_(token) {
       entries: (d.entries || []).map(noSurvey_)
     },
     // Discord の招待リンク（GitHub Actions が毎朝作り直して setDiscordInvite で送ってくる。未設定なら ""）
-    discordInvite: PropertiesService.getScriptProperties().getProperty("DISCORD_INVITE") || ""
+    discordInvite: PropertiesService.getScriptProperties().getProperty("DISCORD_INVITE") || "",
+    // 816用Discordサーバーの招待リンク（EGG新規加入者マニュアルが読む。未設定なら ""）
+    discordInvite816: PropertiesService.getScriptProperties().getProperty("DISCORD_INVITE_816") || ""
   };
 }
 
@@ -1210,13 +1212,17 @@ function importFromGitHub_(token) {
 // リンクを作るのは GitHub Actions（.github/workflows/discord-invite.yml、毎朝5時台）。作ったリンクを
 // action=setDiscordInvite（パスワード必須）でここに送ってきて、pubGet の discordInvite で個人登録ページに出す。
 //   DISCORD_INVITE / DISCORD_INVITE_AT : 今の招待リンクと、受け取った日時（自動）
-function setDiscordInvite_(invite) {
+// key: 省略／"" ＝ 全体鯖（DISCORD_INVITE）、"816" ＝ 816用サーバー（DISCORD_INVITE_816 / DISCORD_INVITE_816_AT）
+function setDiscordInvite_(invite, key) {
   var url = String(invite || "");
   if (!/^https:\/\/discord\.gg\/[A-Za-z0-9-]{2,32}$/.test(url)) return { ok: false, status: 400, error: "招待リンクの形が違います" };
+  var k = String(key == null ? "" : key);
+  if (k !== "" && k !== "816") return { ok: false, status: 400, error: "どのサーバーのリンクか（key）が正しくありません" };
+  var name = k === "816" ? "DISCORD_INVITE_816" : "DISCORD_INVITE";
   var props = PropertiesService.getScriptProperties();
-  props.setProperty("DISCORD_INVITE", url);
-  props.setProperty("DISCORD_INVITE_AT", new Date().toISOString());
-  return { ok: true, invite: url };
+  props.setProperty(name, url);
+  props.setProperty(name + "_AT", new Date().toISOString());
+  return { ok: true, invite: url, key: k };
 }
 
 // 以前 GAS で作り直していたときのトリガーの後始末（トリガーから呼ばれたら自分を消す）
