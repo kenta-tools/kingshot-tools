@@ -116,6 +116,16 @@
   /* 遺跡争奪: 時間ごとに 参加／行けるかも／不参加 */
   .ruin-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 0; border-bottom: 1px solid #eef0f3; }
   .ruin-row .t { min-width: 92px; font-weight: bold; }
+  /* 確認事項（アンケート）: 全部に答えたら登録できる */
+  .survey { background: #fff8e6; border: 1px solid #f0d58a; border-radius: 10px; padding: 12px; }
+  .sv-lead { font-size: 13px; line-height: 1.6; color: #555; margin-bottom: 8px; }
+  .sv-row { padding: 8px 0; border-bottom: 1px solid #f0e3b8; }
+  .sv-row:last-child { border-bottom: 0; }
+  .sv-q { font-weight: bold; line-height: 1.6; margin-bottom: 6px; }
+  .sv-row .chip span { padding: 11px 18px; }
+  .sv-copy { white-space: pre-wrap; background: #fff; border: 1px solid #e6d9ac; border-radius: 8px; padding: 8px 10px; font-size: 14px; line-height: 1.7; margin: 6px 0; }
+  .sv-note { font-size: 13px; font-weight: bold; color: #c0392b; margin-top: 8px; min-height: 1em; }
+  button:disabled { opacity: 0.5; }
   .ruin-sum { white-space: pre-wrap; background: #f6f8fb; border-radius: 8px; padding: 8px 10px; font-size: 13px; line-height: 1.7; margin: 6px 0 10px; }
   .list-filter { margin-top: 10px; max-width: 200px; }
   th { background: #f0f2f5; white-space: nowrap; }
@@ -312,10 +322,10 @@
     </div>
 
     <div class="rally">
-      <div class="rally-title">⚔️ 集結の指示があった人だけ</div>
-      <div class="rally-sub">指示があった人は、下のボタンを押して3つ入れてください。</div>
+      <div class="rally-title">⚔️ 本イベントで集結主をしたことある人だけ</div>
+      <div class="rally-sub">集結主をしたことがある人は、下のボタンを押して3つ入れてください。</div>
       <div class="chips">
-        <label class="chip"><input type="checkbox" id="fRallyOn"><span>集結の指示があった（押す）</span></label>
+        <label class="chip"><input type="checkbox" id="fRallyOn"><span>集結主をしたことがある（押す）</span></label>
       </div>
       <div id="rallyFields" style="margin-top: 12px;">
         <div class="field">
@@ -338,6 +348,13 @@
     <div class="field">
       <span class="cap">ひとこと（なくてOK）</span>
       <input type="text" id="fNote" maxlength="100">
+    </div>
+
+    <!-- 確認事項（アンケート）：イベントに設問があるときだけ出す。全部に答えると登録できる -->
+    <div class="field survey" id="surveyField" style="display: none;">
+      <span class="cap">確認してください<span class="req">必須</span></span>
+      <div id="surveyList"></div>
+      <div class="sv-note" id="surveyNote"></div>
     </div>
 
     <div class="warn" style="margin-bottom: 10px;">⚠ 登録した参加時間に参加できなそうなときは、必ず連絡してください。</div>
@@ -863,7 +880,7 @@
     $(id).value = v == null ? "" : v;
   }
 
-  // 「一部参加」「集結の指示」を押したときだけ、時刻・集結の欄を出す
+  // 「一部参加」「集結主をしたことがある」を押したときだけ、時刻・集結の欄を出す
   function syncSubFields() {
     var ruin = isRuin();
     $("ruinField").style.display = ruin ? "block" : "none";
@@ -872,6 +889,7 @@
     $("partField").style.display = radioValue("fEntry") === "part" ? "grid" : "none";
     $("rallyFields").style.display = $("fRallyOn").checked ? "block" : "none";
     $("joinFields").style.display = radioValue("fEntry") === "absent" ? "none" : "block";
+    renderSurvey();
   }
   document.querySelectorAll("input[name=fEntry], #fRallyOn").forEach(function(el) {
     el.addEventListener("change", syncSubFields);
@@ -887,6 +905,7 @@
     $("proxyNameText").textContent = $("proxyNameText2").textContent = name;
     $("proxyNow").style.display = name ? "block" : "none";
     $("proxyNowName").textContent = name;
+    renderSurvey(); // 代理入力モードかどうかで、確認事項の出し方が変わる
   }
   $("proxyStartBtn").addEventListener("click", function() {
     $("proxySetup").style.display = "block";
@@ -916,7 +935,118 @@
     $("proxyBar").scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  // ---------- 確認事項（アンケート） ----------
+  // イベントごとの設問（events[].survey = [{id, text, show, kind}]）。
+  //   show: "all"＝全員／"rally"＝集結の欄（集結部隊数など）を入れた人（集結主）だけ
+  //   kind: "ask"＝「了解」「内容わかりません」を答える（既定）／"skip"＝「わかってません」のチェック（チェックした人は、ほかの設問は答えなくてよい）
+  // 答えは entries[].survey = {設問id: "ok"|"unknown"|"check"}。代理入力モードは答えず、条件に合う設問をコピーして本人に伝え、「連携します」にチェック（entries[].surveyProxy）。
+  // 不参加の登録は答えなくてよい（中継役の selfSave_ と同じ決まり）
+  var surveyAns = {}, surveyLink = false;
+  // 先頭は固定の設問「そもそも{イベントの種類}のルールがあまりわかってません」（どのイベントにも出る。イベントのデータには持たない）。
+  // 古いデータの kind:"skip" の設問は、固定の設問に置き換わったので無視する
+  var RULE_ID = "q_rule";
+  function surveyAll() {
+    var ev = eventById(currentEventId);
+    var rule = { id: RULE_ID, text: "そもそも" + (ev ? ev.type : "") + "のルールがあまりわかってません", kind: "skip" };
+    return [rule].concat(ev && Array.isArray(ev.survey) ? ev.survey.filter(function(q) { return q && q.id && q.text && q.kind !== "skip"; }) : []);
+  }
+  function rallyActive() { return !isRuin() && $("fRallyOn").checked; }
+  function surveyQs() { var r = rallyActive(); return surveyAll().filter(function(q) { return q.show !== "rally" || r; }); }
+  function skipQ() { return surveyQs().filter(function(q) { return q.kind === "skip"; })[0]; }
+  function skipOn() { var q = skipQ(); return !!q && surveyAns[q.id] === "check"; }
+  function askQs() { return surveyQs().filter(function(q) { return q.kind !== "skip"; }); }
+  function formIsAbsent() {
+    if (isRuin()) {
+      var ts = ruinTimes();
+      return ts.length > 0 && ts.every(function(k) { return radioValue("fSlot" + k) === "no"; });
+    }
+    return radioValue("fEntry") === "absent";
+  }
+  // 確認事項の欄を出すか。代理入力は、本人に伝える設問（ask）があるときだけ
+  function surveyShown() {
+    if (formIsAbsent()) return false;
+    return proxyBy() ? askQs().length > 0 : true; // 固定の設問があるので、代理入力でなければいつも出る
+  }
+  function surveyMissing() {
+    if (!surveyShown()) return 0;
+    if (proxyBy()) return surveyLink ? 0 : 1;
+    if (skipOn()) return 0;
+    return askQs().filter(function(q) { return !surveyAns[q.id]; }).length;
+  }
+  function surveyText() {
+    return "【" + eventLabel(eventById(currentEventId)) + "】登録前の確認事項\n" + askQs().map(function(q, i) { return (i + 1) + ". " + q.text; }).join("\n");
+  }
+  function renderSurvey() {
+    if (!surveyAll().length) { $("surveyList").innerHTML = ""; syncSurvey(); return; }
+    if (proxyBy()) {
+      $("surveyList").innerHTML = '<div class="sv-lead">代理入力です。答えは入れなくて大丈夫です。下の内容をコピーして、本人に伝えてください。</div>' +
+        '<div class="sv-copy" id="surveyCopyText">' + escapeHtml(surveyText()) + '</div>' +
+        '<button type="button" class="sub-btn" id="surveyCopyBtn">コピー</button>' +
+        '<div class="chips" style="margin-top: 10px;"><label class="chip"><input type="checkbox" id="svLink"' + (surveyLink ? " checked" : "") + '><span>連携します</span></label></div>';
+    } else {
+      var sk = skipQ(), html = "";
+      var hasAsk = askQs().length > 0;
+      html += '<div class="sv-lead">' + (!hasAsk ? "ルールがわからない人は、チェックしてください（チェックしなくても登録できます）。"
+        : "ルールがわからない人は、いちばん上にチェックすれば、ほかは答えなくて大丈夫です。" +
+          (skipOn() ? "" : "それぞれ読んで、「了解」か「内容わかりません」を押してください。全部に答えると登録できます。")) + '</div>';
+      if (sk) {
+        html += '<div class="sv-row"><div class="chips"><label class="chip"><input type="checkbox" id="svSkip"' + (skipOn() ? " checked" : "") + '><span>' + escapeHtml(sk.text) + '</span></label></div></div>';
+      }
+      if (skipOn() && hasAsk) html += '<div class="sv-lead" style="margin-top: 8px;">ほかの確認は要りません。そのまま登録できます。</div>';
+      else html += askQs().map(function(q, i) {
+        var a = surveyAns[q.id];
+        return '<div class="sv-row"><div class="sv-q">' + (i + 1) + ". " + escapeHtml(q.text) + '</div><div class="chips">' +
+          [["ok", "了解"], ["unknown", "内容わかりません"]].map(function(c) {
+            return '<label class="chip"><input type="radio" name="sv_' + escapeHtml(q.id) + '" data-q="' + escapeHtml(q.id) + '" value="' + c[0] + '"' + (a === c[0] ? " checked" : "") + '><span>' + c[1] + '</span></label>';
+          }).join("") + "</div></div>";
+      }).join("");
+      $("surveyList").innerHTML = html;
+    }
+    syncSurvey();
+  }
+  // 設問の出し分け（不参加なら隠す）と、登録ボタンを押せるかの切り替え
+  function syncSurvey() {
+    $("surveyField").style.display = surveyShown() ? "block" : "none";
+    var req = $("surveyField").querySelector(".req");
+    if (req) req.style.display = askQs().length ? "" : "none"; // 設問が固定の1つだけのときは「必須」を出さない
+    var miss = surveyMissing();
+    $("saveBtn").disabled = saving || miss > 0;
+    $("surveyNote").textContent = miss <= 0 ? "" : proxyBy() ? "「連携します」にチェックすると登録できます" : "あと" + miss + "問、答えると登録できます";
+  }
+  $("surveyList").addEventListener("change", function(e) {
+    var t = e.target;
+    if (t.id === "svLink") { surveyLink = t.checked; syncSurvey(); }
+    else if (t.id === "svSkip") {
+      var sk = skipQ();
+      if (sk) { if (t.checked) surveyAns[sk.id] = "check"; else delete surveyAns[sk.id]; }
+      renderSurvey(); // チェックしたら、ほかの設問は隠す
+    } else if (t.dataset && t.dataset.q) { surveyAns[t.dataset.q] = t.value; syncSurvey(); }
+  });
+  $("surveyList").addEventListener("click", function(e) {
+    if (e.target.id !== "surveyCopyBtn") return;
+    var btn = e.target, text = surveyText();
+    function done() { btn.textContent = "コピーしました"; setTimeout(function() { btn.textContent = "コピー"; }, 1500); }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, function() {});
+  });
+  document.addEventListener("change", function(e) {
+    var n = e.target && e.target.name;
+    if (n === "fEntry" || (n && n.indexOf("fSlot") === 0)) syncSurvey();
+  });
+
   function readForm() {
+    var m = readFormBase();
+    if (surveyShown() && m.entry !== "absent") {
+      if (m.proxyBy) m.surveyProxy = surveyLink;
+      else {
+        m.survey = {};
+        if (skipOn()) m.survey[skipQ().id] = "check";
+        else askQs().forEach(function(q) { if (surveyAns[q.id]) m.survey[q.id] = surveyAns[q.id]; });
+      }
+    }
+    return m;
+  }
+
+  function readFormBase() {
     var troops = "";
     document.querySelectorAll(".fTroop:checked").forEach(function(cb) { troops += cb.value; });
     var choice = radioValue("fEntry") || "full";
@@ -999,6 +1129,7 @@
     setNum("fRallyCount", m.rallyCount);
     setNum("fRallyPet", m.rallyPet);
     setNum("fRallySpeedPet", m.rallySpeedPet);
+    surveyAns = {}; surveyLink = false; // 確認事項は毎回答え直す（前回の答えは引き継がない）
     $("fRallyOn").checked = m.rallyCount != null || m.rallyPet != null || m.rallySpeedPet != null;
     syncSubFields();
   }
@@ -1008,6 +1139,13 @@
     function bad(v) { return v != null && !(v >= 0 && Math.floor(v) === v); }
     if (m.proxyBy && nameKey(m.proxyBy) === nameKey(me.name)) return "代理入力モードのまま、自分（入力者と同じ名前）を登録しようとしています。自分の分は、上の「代理入力モードをやめる」を押してから登録してください";
     if (!/^[A-Za-z]{3}$/.test(m.alliance)) return "同盟は英字3文字で入れてください（例: EGG）";
+    if (surveyShown() && m.entry !== "absent") {
+      if (m.proxyBy) { if (!m.surveyProxy) return "確認事項の「連携します」にチェックしてください"; }
+      else if (!skipOn()) {
+        var left = askQs().filter(function(q) { return !(m.survey || {})[q.id]; }).length;
+        if (left) return "確認事項に全部答えてください（あと" + left + "問）";
+      }
+    }
     if (m.slots) {
       var miss = ruinTimes().filter(function(k) { return !m.slots[k]; });
       return miss.length ? miss.map(slotLabel).join("・") + "の参加を選んでください（全部の時間を選んでください）" : "";
@@ -1027,6 +1165,7 @@
   function setSaving(on) {
     saving = on;
     ["saveBtn", "cancelEntryBtn", "backBtn"].forEach(function(id) { $(id).disabled = on; });
+    syncSurvey(); // 確認事項に答えていないうちは登録ボタンを押せない
   }
 
   function send(cancel) {
@@ -1148,6 +1287,16 @@
       var v = t.view || {};
       (v.teams || []).forEach(function(team) {
         (team.members || []).forEach(function(p) { if (me && norm(p.name) === me) where.push(team.name); });
+      });
+      // 聖剣：解放前／解放後ごとの、拠点（集結主）・チーム・遊撃手
+      (v.phases || []).forEach(function(ph) {
+        (ph.facilities || []).forEach(function(f) {
+          (f.leaders || []).forEach(function(p) { if (me && norm(p.name) === me) where.push(ph.label + "：" + f.name + "（" + p.army + "軍）"); });
+        });
+        (ph.teams || []).forEach(function(tm) {
+          (tm.members || []).forEach(function(p) { if (me && norm(p.name) === me) where.push(ph.label + "：" + tm.name); });
+        });
+        (ph.raiders || []).forEach(function(p) { if (me && norm(p.name) === me) where.push(ph.label + "：遊撃手"); });
       });
       // 遺跡争奪は時間帯ごと（「12時：要塞1」のように、時間帯ごとの場所を並べる）
       (v.slots || []).forEach(function(s) {

@@ -84,11 +84,25 @@
   .empty-hint { color: #aaa; font-size: 12px; }
   /* 完了したイベント：保存済みの内容を見るだけ（編集できる部分は触れない） */
   body.ks-readonly #settingsCard, body.ks-readonly #viewArea { pointer-events: none; opacity: 0.88; }
-  body.ks-readonly #viewArea [data-slot], body.ks-readonly #viewArea th[data-sort] { pointer-events: auto; } /* 見る画面の切り替え（時間帯・並べ替え）はできる */
+  body.ks-readonly #viewArea [data-slot], body.ks-readonly #viewArea th[data-sort], body.ks-readonly #settingsCard [data-skph] { pointer-events: auto; } /* 見る画面の切り替え（時間帯・並べ替え）はできる */
   body.ks-readonly #viewArea [draggable] { -webkit-user-drag: none; }
   #roBanner { display: none; background: #fff1d6; color: #8a5600; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; font-size: 13px; }
 
   /* 移動バー（チップを押したときに下に出る） */
+  /* 固定の保存バー（常に見える位置。完了イベントでは出さない） */
+  #saveBar { display: none; position: fixed; right: 12px; bottom: 12px; z-index: 100001; max-width: calc(100vw - 24px); box-sizing: border-box;
+    background: #1a2332; color: #fff; border-radius: 22px; padding: 5px 8px 5px 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.3); align-items: center; gap: 6px; flex-wrap: nowrap; font-size: 12px; }
+  #saveBar.show { display: flex; }
+  #saveBar button { font-size: 12px; padding: 4px 9px; margin: 0; white-space: nowrap; }
+  #saveBar button.sub { background: #3a4a63; color: #fff; border-color: #4a5a73; }
+  #saveBar .sb-state { white-space: nowrap; color: #b9c4d6; }
+  #saveBar.dirty .sb-state { color: #ffd66b; font-weight: bold; }
+  #saveBar .sb-msg { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #b9c4d6; }
+  @media (max-width: 600px) {
+    #saveBar { left: 8px; right: 8px; bottom: 8px; max-width: none; justify-content: space-between; padding: 4px 6px 4px 10px; }
+    #saveBar .sb-long { display: none; }
+    #saveBar .sb-msg { display: none; }
+  }
   #moveBar {
     display: none; position: fixed; left: 0; right: 0; bottom: 0; z-index: 100002; background: #1a2332; color: #fff;
     padding: 10px 14px; box-shadow: 0 -2px 8px rgba(0,0,0,0.25); font-size: 13px;
@@ -141,7 +155,7 @@
   <div class="sub">
     イベントの参加者（参加登録の内容）をチームに分けます。分けた結果は「📢 公開する」を押すまでは下書きで、管理者だけが見られます。
     公開すると <a href="../teams/" target="_blank">チーム分けの閲覧ページ</a> と参加登録ページに表示されます。
-    <br><b style="color:#b4441c;">※ 「公開する」を押すと、パスワードなしで誰でも見られます。公開されるのは、名前・同盟・区分・印（◇VC・◆ビビアン）・参加時間・チーム（遺跡争奪は時間帯ごとの要塞・遺跡）だけです（◯マンスリー、部隊数・容量・ペット・ひとことは出ません）。</b>
+    <br><b style="color:#b4441c;">※ 「公開する」を押すと、パスワードなしで誰でも見られます。公開されるのは、名前・同盟・区分・印（◇VC・◆ビビアン）・参加時間・チーム（遺跡争奪は時間帯ごとの要塞・遺跡）だけです（◯マンスリー、部隊数・容量・ペット・ひとことは出ません）。ただしKVKでは、同盟（ひよこ・666）ごとの「マンスリー持ちの人数と合計分数」の集計は公開されます（誰が◯かは出ません）。</b>
   </div>
 
   <div id="roBanner">🔒 このイベントは完了しているため、保存済みのチーム分けを見るだけです（編集・保存・公開はできません）。</div>
@@ -198,6 +212,13 @@
     </div>
     <div class="msg" id="saveMsg"></div>
   </div>
+  <div id="saveBar" role="toolbar" aria-label="保存と公開">
+    <span class="sb-state" id="sbState">保存済み</span>
+    <button type="button" id="sbSave">💾<span class="sb-long"> 下書き保存</span></button>
+    <button type="button" id="sbPublish">📢<span class="sb-long"> 保存して公開する</span></button>
+    <button type="button" class="sub" id="sbUnpublish">🙈<span class="sb-long"> 非公開に戻す</span></button>
+    <span class="sb-msg" id="sbMsg"></span>
+  </div>
 </div>
 
 <div id="moveBar">
@@ -219,7 +240,7 @@
   var TEAM_TYPES = ["KVK", "聖剣", "聖剣リーグ", "三盟", "遺跡争奪"]; // 炎龍はチーム分けの対象外
   var MODE_BY_TYPE = { "KVK": "kvk", "聖剣": "seiken", "聖剣リーグ": "seiken", "三盟": "sanmei", "遺跡争奪": "ruins" };
   var MODE_LABELS = {
-    kvk: "KVK方式（集結リーダー＋乗り手）", seiken: "聖剣方式（集結主＋乗り手チーム）",
+    kvk: "KVK方式（集結リーダー＋乗り手）", seiken: "聖剣方式（祭壇の解放前後・拠点の集結主＋4チーム＋遊撃手）",
     sanmei: "三盟方式（上・中・下を手で決める）", ruins: "遺跡争奪方式（時間帯ごとに要塞・遺跡へ）"
   };
   // 遺跡争奪：時間帯（entries[].slots のキー。admin-common.js の RUIN_SLOTS と同じ）と、要塞・遺跡（events[].ruinTargets の値）
@@ -388,6 +409,13 @@
   }
   function newId() { return "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function man(n) { return n == null ? "—" : (n / 10000).toFixed(n >= 1000000 ? 0 : 1) + "万"; }
+  // KVK：容量が未入力の人の仮置き（等級ごと）。画面は「20万（仮）」、等級もない人は「0（等級なし）」
+  var PROV_CAP = { G8: 200000, G7: 190000, G6: 180000, G5: 170000 };
+  function manP(p, key) {
+    var v = p[key], prov = key === "marchCap" ? p.marchProv : p.rallyProv;
+    if (!prov) return man(v);
+    return p.provNone ? "0（等級なし）" : man(v).replace(".0万", "万") + "（仮）";
+  }
 
   // ---------- 時刻（30分単位の時間帯） ----------
   // 分（0:00からの分）で扱う。戦闘の開始より12時間以上前の時刻は日をまたいだものとして24時間足す（0時30分 → 24:30）
@@ -475,6 +503,7 @@
     byUid = {};
     var ruinEvent = (eventById(eventId) || {}).type === "遺跡争奪";
     var kvk = ruinEvent ? latestKvkByUser() : {};
+    var kvkEvent = (eventById(eventId) || {}).type === "KVK";
     (data.entries || []).forEach(function(x, i) {
       if (x.eventId !== eventId || x.entry === "absent") return;
       var u = users[x.userId];
@@ -501,6 +530,12 @@
       p.timeUnknown = (p.entry === "late" && !p.joinAt) || (p.leaveEarly && !p.joinAt && !p.leaveAt);
       p.fullTime = !p.timeUnknown && !p.joinAt && !p.leaveAt && !p.leaveEarly && p.entry === "start";
       p.isRallyer = p.rallyCount != null && p.rallyCount > 0;
+      if (kvkEvent) {   // KVK：容量が未入力の人は等級で仮置き（G8=20万・G7=19万・G6=18万・G5=17万。等級もない人は0）。画面は「（仮）」つき
+        p.marchProv = p.marchCap == null; p.rallyProv = p.rallyCap == null;
+        if (p.marchProv) p.marchCap = PROV_CAP[p.grade] || 0;
+        if (p.rallyProv) p.rallyCap = PROV_CAP[p.grade] || 0;
+        p.provNone = !PROV_CAP[p.grade];
+      }
       p.slots = slots || {};
       p.fromKvk = !!x.fromKvk;
       people.push(p);
@@ -525,6 +560,7 @@
       return d;
     }
     if (mode === "kvk") {
+      d.settings.start = KVK_START; d.settings.end = KVK_END;
       people.filter(function(p) { return p.isRallyer; }).sort(function(a, b) {
         return ((b.rallyCap || 0) - (a.rallyCap || 0)) || strongerFirst(a, b);
       }).forEach(function(p) {
@@ -534,8 +570,7 @@
         d.pins[p.uid] = true;
       });
     } else if (mode === "seiken") {
-      d.teams.push({ id: newId(), kind: "rallyers", name: "集結主", leaderId: "" });
-      for (var i = 0; i < d.settings.teamCount; i++) d.teams.push({ id: newId(), kind: "group", name: "", leaderId: "" });
+      d.sk = { cur: "before", before: skNewPhase(), after: skNewPhase() };
     } else {
       ["上", "中", "下"].forEach(function(n) { d.teams.push({ id: newId(), kind: "group", name: n, leaderId: "" }); });
     }
@@ -613,6 +648,7 @@
     eventId = id;
     readOnly = !!(eventById(id) || {}).done;
     outSlots = RUIN_SLOTS.slice();
+    outPhases = ["before", "after"];
     try { localStorage.setItem(LAST_EVENT_KEY, id); } catch (e) {}
     buildPeople();
     record = (data.teams || []).filter(function(t) { return t.eventId === id; })[0] || null;
@@ -645,6 +681,9 @@
     draft.pins = draft.pins || {};
     draft.teams = draft.teams || [];
     if (draft.mode === "ruins") draft.ruins = Object.assign({ seed: "s", targets: null, slots: {}, cur: "" }, draft.ruins || {});
+    if (draft.mode === "kvk") fixKvkSettings();   // 設定欄から消した項目は既定値で固定
+    if (draft.mode === "sanmei") { draft.settings.start = defaultSettings().start; draft.settings.end = defaultSettings().end; }   // 三盟の戦闘時間は入力させず、既定値で固定
+    if (draft.mode === "seiken") skEnsure();   // 古い形式（集結主＋乗り手チーム）で保存されていたものは、新しい形で開き直す（古い内容は使わない）
     selectedUid = "";
     document.body.classList.toggle("ks-readonly", readOnly);
     $("roBanner").style.display = readOnly ? "block" : "none";
@@ -659,8 +698,11 @@
   // KVK: リーダーの集結容量（から本人の出征容量を引いた分）に収まるように、強い人から番号の小さい隊へ詰める。あふれたら次の隊へ
   function autoKvk() {
     var s = draft.settings;
-    var rally = draft.teams.filter(function(t) { return t.kind === "rally"; });
-    if (!rally.length) return "隊がありません。「隊を作り直す」か「＋隊を追加」で隊を作ってください";
+    var allRally = draft.teams.filter(function(t) { return t.kind === "rally"; });
+    if (!allRally.length) return "隊がありません。「隊を作り直す」か「＋隊を追加」で隊を作ってください";
+    var noLeader = allRally.filter(function(t) { return !(t.leaderId && byUid[t.leaderId]); }).length;
+    var rally = allRally.filter(function(t) { return t.leaderId && byUid[t.leaderId]; });   // リーダーが決まっていない隊には新しい人を入れない
+    if (!rally.length) return "リーダーを決めてください（リーダーが決まっている隊がありません）";
     var leaders = {};
     rally.forEach(function(t) { if (t.leaderId && byUid[t.leaderId]) { leaders[t.leaderId] = true; draft.assign[t.leaderId] = t.id; } });
     // 固定していない人を一度外す
@@ -697,7 +739,7 @@
     });
     if (s.spreadVivian) spreadVivian(rally, room, top);
     var standby = membersOf("standby").length;
-    return "振り分けました" + (standby ? "（容量に入りきらない " + standby + "人は待機にしました）" : "");
+    return "振り分けました" + (standby ? "（容量に入りきらない " + standby + "人は待機にしました）" : "") + (noLeader ? "（リーダーを決めてください：リーダー未設定の " + noLeader + " 隊には入れていません）" : "");
   }
 
   // ◆（ビビアン星4以上）のいない隊に、◆が2人以上いる隊から入れ替えで1人回す（容量・上位隊の条件を守れるときだけ）
@@ -808,6 +850,95 @@
     });
   }
 
+  // 三盟：参加者（不参加を除く）を上・中・下へ。出征容量の大きい人から順に、合計がいちばん小さいチーム（同じなら人数の少ないチーム）へ入れる
+  // （聖剣の4チーム均等分けと同じ考え方）。📌固定の人は動かさない。同盟や登録順の偏りは出ない
+  function autoSanmei() {
+    var groups = draft.teams.filter(function(t) { return t.kind === "group"; });
+    if (!groups.length) return "チームがありません。「＋チームを追加」で作ってください";
+    people.forEach(function(p) { if (!isPinned(p.uid)) delete draft.assign[p.uid]; });
+    function sum(t) { return membersOf(t.id).reduce(function(s, p) { return s + (p.marchCap || 0); }, 0); }
+    people.filter(function(p) { return !placeOf(p.uid); })
+      .sort(function(a, b) { return ((b.marchCap || 0) - (a.marchCap || 0)) || strongerFirst(a, b); })
+      .forEach(function(p) {
+        var t = groups.slice().sort(function(a, b) { return (sum(a) - sum(b)) || (membersOf(a.id).length - membersOf(b.id).length); })[0];
+        draft.assign[p.uid] = t.id;
+      });
+    return "振り分けました（" + groups.map(function(t) { return teamName(t) + membersOf(t.id).length + "人"; }).join("・") + "）";
+  }
+
+  // ---------- KVK：隊の数（全体で1つ） ----------
+  // 最大作成できる隊数（容量から計算）：リーダー候補（集結部隊数を登録した人）を集結容量の大きい順に1人ずつリーダーにしていき、
+  // 「各隊の乗り手で埋める量＝リーダーの集結容量−リーダー自身の出征容量」の合計が、リーダー以外の全員の出征容量の合計
+  // ＋（1隊あたり乗り手1人分＝リーダー以外の平均の出征容量）以内なら、その数の隊は作れるとみなす。作れる最大の数が「最大」
+  function kvkMaxInfo() {
+    var cands = people.filter(function(p) { return p.isRallyer; }).sort(function(x, y) { return ((y.rallyCap || 0) - (x.rallyCap || 0)) || strongerFirst(x, y); });
+    var total = people.reduce(function(s, p) { return s + (p.marchCap || 0); }, 0);
+    var best = 0, need = 0, leadersMarch = 0;
+    var info = { max: 0, cands: cands.length, total: total, prov: people.filter(function(p) { return p.marchProv || p.rallyProv; }).length, none: people.filter(function(p) { return (p.marchProv || p.rallyProv) && p.provNone; }).length };
+    for (var k = 1; k <= cands.length; k++) {
+      var l = cands[k - 1];
+      need += Math.max(0, (l.rallyCap || 0) - (l.marchCap || 0));
+      leadersMarch += (l.marchCap || 0);
+      var restN = people.length - k, have = total - leadersMarch, avg = restN > 0 ? have / restN : 0;
+      if (have + k * avg >= need) best = k; else break;
+    }
+    info.max = best;
+    return info;
+  }
+  function kvkMaxTeams() { return kvkMaxInfo().max; }
+  function kvkTeamCountHtml() {
+    var cur = draft.teams.filter(function(t) { return t.kind === "rally"; }).length, mi = kvkMaxInfo();
+    var prov = mi.prov ? "容量が未入力の " + mi.prov + " 人は等級で仮置き（G8=20万・G7=19万・G6=18万・G5=17万。画面は「20万（仮）」）" + (mi.none ? "。等級もない " + mi.none + " 人は0で計算（表示は「0（等級なし）」）" : "") + "。" : "";
+    return '<div class="row" style="margin-top:0;"><label class="inline"><b style="font-size:13px;">隊の数</b> <input type="number" min="0" max="' + Math.max(mi.max, cur) + '" data-tc="all" value="' + cur + '"> 隊 <span class="note">最大 ' + mi.max + ' 隊</span></label>' +
+      '<button type="button" id="tcBtn">隊数を反映</button><button type="button" class="sub" id="leaderFillBtn">リーダー候補を自動で入れる</button></div>' +
+      '<div class="note" style="margin:2px 0 6px;">最大の計算：集結部隊数を登録した人を集結容量の大きい順にリーダーにして、「リーダーの集結容量−本人の出征容量」の合計を、リーダー以外の出征容量の合計（1隊あたり乗り手1人分の不足まで）で埋められる隊の数です（人数ではなく容量で決めます）。' + prov +
+      '「隊数を反映」はリーダー未設定の空の隊を作ります（リーダーは隊ごとのプルダウンで選びます。「リーダー候補を自動で入れる」で、集結容量の大きい順に空の隊へ入れることもできます）。減らすときは後ろの隊から消します（確認は出ません）。リーダーを決めてから「自動で振り分ける」を押してください。</div>';
+  }
+  // 「リーダー候補を自動で入れる」：リーダー未設定の隊へ、まだリーダーでない集結部隊数ありの人を集結容量の大きい順に入れる（あとから手で直せる）
+  function fillKvkLeaders() {
+    var empty = draft.teams.filter(function(t) { return t.kind === "rally" && !t.leaderId; });
+    if (!empty.length) return "リーダー未設定の隊はありません";
+    var isLeader = {};
+    draft.teams.forEach(function(x) { if (x.leaderId) isLeader[x.leaderId] = true; });
+    var cands = people.filter(function(p) { return p.isRallyer && !isLeader[p.uid]; })
+      .sort(function(x, y) { return ((y.rallyCap || 0) - (x.rallyCap || 0)) || strongerFirst(x, y); });
+    var n = 0;
+    empty.forEach(function(t) {
+      var p = cands.shift(); if (!p) return;
+      t.leaderId = p.uid; draft.assign[p.uid] = t.id; draft.pins[p.uid] = true; n++;
+    });
+    return "リーダー候補を" + n + "隊に入れました" + (n < empty.length ? "（リーダーにできる人が足りず " + (empty.length - n) + " 隊は未設定です）" : "");
+  }
+  function applyKvkTeamCounts() {
+    var input = document.querySelector('[data-tc="all"]');
+    if (!input) return "";
+    var rally = draft.teams.filter(function(t) { return t.kind === "rally"; });
+    var cur = rally.length, limit = Math.max(kvkMaxTeams(), cur);
+    var n = Math.max(0, Math.min(limit, Math.floor(Number(input.value)) || 0));
+    if (n > cur) {
+      for (var a = 0; a < n - cur; a++) draft.teams.push({ id: newId(), kind: "rally", name: "", leaderId: "", ally: "" });   // リーダー未設定の空の隊
+      return "隊数を反映しました：" + cur + "→" + n + "隊（リーダー未設定の空の隊です。リーダーを選んでください）";
+    }
+    if (n < cur) {
+      rally.slice(n).forEach(function(t) {      // 後ろの隊から消す（確認なし）。入っていた人は未割り当てに戻る
+        membersOf(t.id).forEach(function(p) { delete draft.assign[p.uid]; delete draft.pins[p.uid]; });
+        if (t.leaderId) delete draft.pins[t.leaderId];
+        draft.teams.splice(draft.teams.indexOf(t), 1);
+      });
+      return "隊数を反映しました：" + cur + "→" + n + "隊（" + (cur - n) + "隊を削除）";
+    }
+    return "隊数は変わりません";
+  }
+  // KVKは、設定欄から消した項目（戦闘時間・人数の目安・上位隊ルール・◆を散らす）を既定値で固定する（保存済みの値は使わない）
+  // 戦闘時間はKVKだけ 21:00〜26:00（26:00＝翌2:00）。三盟・聖剣などの既定値（21:00〜25:00）は変えない
+  var KVK_START = 21 * 60, KVK_END = 26 * 60;
+  function fixKvkSettings() {
+    var d = defaultSettings();
+    ["start", "end", "minSize", "maxSize", "topRule", "topSize", "spreadVivian"].forEach(function(k) { draft.settings[k] = d[k]; });
+    draft.settings.start = KVK_START;
+    draft.settings.end = KVK_END;
+  }
+
   // 聖剣：引き継いだあとに、まだどこにも入っていない人だけを入れる（集結部隊数の人は集結主チーム、残りは出征容量の合計が小さいチームへ）
   function fillNewSeiken() {
     var rallyers = draft.teams.filter(function(t) { return t.kind === "rallyers"; })[0];
@@ -832,10 +963,11 @@
     var teams = (pd.teams || []).map(function(t) {
       var id = newId();
       map[t.id] = id;
-      return { id: id, kind: t.kind, name: t.name || "", leaderId: "" };
+      return { id: id, kind: t.kind, name: t.name || "", leaderId: "", ally: t.ally || "" };
     });
     draft.teams = teams;
     draft.settings = Object.assign(defaultSettings(), pd.settings || {});
+    if (draft.mode === "kvk") fixKvkSettings();
     draft.assign = {};
     draft.pins = {};
     Object.keys(pd.assign || {}).forEach(function(uid) {
@@ -904,13 +1036,17 @@
     });
   }
 
+  // 引き継げる前回か：分け方が同じ。聖剣は、新しい形（祭壇の解放前後）で保存されたものだけ
+  function canCarry(pd) { return pd.mode === draft.mode && (draft.mode !== "seiken" || !!pd.sk); }
+
   function carryOver() {
     var pv = prevRecord();
     if (!pv) return "前回の同じ種類のイベントのチーム分けが見つかりません";
     var pd = pv.rec.draft;
-    if (pd.mode !== draft.mode) return "前回は別の分け方で保存されているため、引き継げません";
+    if (!canCarry(pd)) return "前回は別の分け方（または古い形式）で保存されているため、引き継げません";
     var info = { same: 0, gone: 0, added: 0 };
     if (draft.mode === "ruins") carryRuins(pd, info);
+    else if (draft.mode === "seiken") carrySeiken(pd, info);
     else carryGeneric(pd, info);
     draft.carriedFrom = { eventId: pv.ev.id, label: eventLabel(pv.ev), at: new Date().toISOString() };
     return "前回（" + eventLabel(pv.ev) + "）から引き継ぎました：同じチームの人 " + info.same + "人／前回いたが今回は参加しない（または場所が無い）人 " + info.gone + "人は外しました／新しく入った人・場所が決まっていない人 " + info.added + "人は自動で振り分けました。容量オーバーや集結主なしの注意は、各チームの表示で確認してください。";
@@ -923,8 +1059,8 @@
     var pv = prevRecord(), html = "";
     if (!pv) {
       html = '<div class="note">📋 前回の同じ種類のイベントのチーム分けは保存されていません（今までどおり、下の「自動で振り分ける」を使います）。</div>';
-    } else if (pv.rec.draft.mode !== draft.mode) {
-      html = '<div class="note">📋 前回（' + escapeHtml(eventLabel(pv.ev)) + '）は別の分け方で保存されているため、引き継げません。</div>';
+    } else if (!canCarry(pv.rec.draft)) {
+      html = '<div class="note">📋 前回（' + escapeHtml(eventLabel(pv.ev)) + '）は別の分け方（または古い形式）で保存されているため、引き継げません。</div>';
     } else {
       html = '<div class="row" style="margin-top:0;"><button type="button" id="carryBtn">📋 前回と同じチームにする</button>' +
         '<span class="note">前回：' + escapeHtml(eventLabel(pv.ev)) + '（保存 ' + escapeHtml(formatTime(pv.rec.updatedAt)) + '）。同じ人は前回と同じチームに、新しい人だけ自動で振り分けます</span></div>';
@@ -939,6 +1075,421 @@
     });
   }
 
+  // ---------- 聖剣（祭壇解放前／解放後） ----------
+  // 下書き：draft.sk = { cur: "before"|"after", before: P, after: P }、P（1つの段階）=
+  //   { teams: [{id,name}]×4,                  メンバーを均等に分ける4チーム（拠点とは別。軍は付けない）
+  //     assign: {uid: teamId},  pins: {uid:true},
+  //     raiders: {uid:true},                   遊撃手（どの拠点・チームにも属さない）
+  //     rally: {拠点名: [{uid, army}]} }       拠点の集結主。「人＋〇軍」の組を1つの単位にして、1つの拠点に複数置ける
+  // 決まり：同じ拠点に同じ人は1軍分だけ（別の軍で重ねて入れない）／別の拠点には入れる／同じ「人＋〇軍」は複数の拠点に置けない
+  // KVKの同盟ラベル（隊に付ける）と、マンスリー人数の数え方（2026-11-08 ユーザー回答：ひよこ＝同盟名EGG、参加できる人＝全部参加＋一部参加）。変えるときはここだけ直す
+  var KVK_ALLIANCES = [{ label: "ひよこ", name: "EGG" }, { label: "666", name: "666" }];
+  var MONTHLY_MIN = 3;            // マンスリー持ち1人あたりの分数（「1人×3分」）
+  var MONTHLY_SCOPE_PARTIAL = true;  // 「参加できる人」に一部参加（途中参加・途中抜け。時刻が未定の人も）を含める。false にすると全部参加の人だけ
+  // 参加できる人のうち、同盟ごとのマンスリー持ちの人数と、人数×3分の合計（◯が誰かは出さない。人数だけ）
+  function kvkMonthly() {
+    return KVK_ALLIANCES.map(function(a) {
+      var n = people.filter(function(p) {
+        return p.alliance === a.name && p.monthly && (MONTHLY_SCOPE_PARTIAL || p.fullTime);   // people は不参加の人を含まない
+      }).length;
+      return { label: a.label, name: a.name, count: n, minutes: n * MONTHLY_MIN };
+    });
+  }
+  function kvkMonthlyHtml() {
+    return '<div class="note" style="margin-top:6px;">👥 マンスリー持ち（参加できる人＝' + (MONTHLY_SCOPE_PARTIAL ? "全部参加＋一部参加" : "全部参加") + '）：' + kvkMonthly().map(function(m) {
+      return "<b>" + escapeHtml(m.label) + "</b>（同盟 " + escapeHtml(m.name) + "）" + m.count + "人（1人×" + MONTHLY_MIN + "分＝" + m.minutes + "分）";
+    }).join("　／　") + "</div>";
+  }
+
+  var SK_BASE = ["西北聖域", "東南聖域", "修道院 第一", "修道院 第二", "修道院 第三", "修道院 第四", "厩舎", "鐘楼"];
+  var SK_ALTAR = ["祭壇", "教化の間", "傭兵駐屯地"];   // 祭壇が解放されるまでは出さない（解放後だけ）
+  var SK_ARMIES = 6;                                    // 1人が出せる軍の数（1〜6軍）
+  var SK_TEAMS = ["Aチーム", "Bチーム", "Cチーム", "Dチーム"];
+  var SK_PHASES = [["before", "祭壇解放前"], ["after", "祭壇解放後"]];
+  var outPhases = ["before", "after"];                  // Discordに貼る段階（出力だけの設定。保存しない）
+  var skFacError = null;                                // 集結主を追加できなかった理由 {ph, f, msg}。その拠点のカードの中に赤字で出す
+  function skNewPhase() {
+    return { teams: SK_TEAMS.map(function(n) { return { id: newId(), name: n }; }), assign: {}, pins: {}, raiders: {}, rally: {} };
+  }
+  function skEnsure() {
+    var sk = draft.sk = draft.sk || {};
+    if (sk.cur !== "before" && sk.cur !== "after") sk.cur = "before";
+    ["before", "after"].forEach(function(ph) {
+      var P = sk[ph] = sk[ph] || skNewPhase();
+      P.teams = P.teams && P.teams.length ? P.teams : skNewPhase().teams;
+      P.assign = P.assign || {}; P.pins = P.pins || {}; P.raiders = P.raiders || {}; P.rally = P.rally || {};
+    });
+    // ②チーム・③遊撃手（メンバーの4チーム・割り当て・📌・遊撃手）は、解放前と解放後で共通の1つ。解放前の内容を正として、解放後は同じものを指す
+    // （保存済みの古いデータで解放後だけ別のチームだったものは、読み込むときに解放前のものへ置き換わる。①拠点と集結主だけが段階ごと）
+    ["teams", "assign", "pins", "raiders"].forEach(function(k) { sk.after[k] = sk.before[k]; });
+  }
+  function skP(ph) { return draft.sk[ph]; }
+  var SK_ALL = SK_ALTAR.concat(SK_BASE);                // 画面に出す順（祭壇・教化の間・傭兵駐屯地が先頭）
+  function skFacilities(ph) { return ph === "after" ? SK_ALL : SK_BASE; }   // その段階で使える拠点（解放前は祭壇などを含めない）
+  function skRallyList(ph, f) { return (skP(ph).rally[f] || []).filter(function(e) { return byUid[e.uid]; }); }
+  // その段階で集結主として拠点に入っている人（メンバーの4チームには入れない）
+  function skRallySet(ph) {
+    var set = {};
+    skFacilities(ph).forEach(function(f) { skRallyList(ph, f).forEach(function(e) { set[e.uid] = true; }); });
+    return set;
+  }
+  function skMemberPool(ph) {
+    var P = skP(ph), rs = skRallySet(ph);
+    return people.filter(function(p) { return !P.raiders[p.uid] && !rs[p.uid]; });
+  }
+  function skTeamOf(ph, uid) {
+    var P = skP(ph), id = P.assign[uid];
+    return P.teams.filter(function(t) { return t.id === id; })[0] || null;
+  }
+  function skTeamMembers(ph, t) { return skMemberPool(ph).filter(function(p) { return skP(ph).assign[p.uid] === t.id; }); }
+  function skUsedArmies(ph, uid, exceptFacility) {
+    var used = {};
+    skFacilities(ph).forEach(function(f) {
+      if (f === exceptFacility) return;
+      skRallyList(ph, f).forEach(function(e) { if (e.uid === uid) used[e.army] = f; });
+    });
+    return used;
+  }
+  // 集結主として「人＋〇軍」を拠点に入れる。入れられないときは理由の文を返す（入れたら ""）
+  function skAddRally(ph, f, uid, army) {
+    var P = skP(ph), p = byUid[uid];
+    if (!p) return "人を選んでください";
+    if (skFacilities(ph).indexOf(f) < 0) return "⚠ 「" + f + "」は祭壇が解放されたあと（「祭壇解放後」のタブ）に使えます";
+    army = Number(army);
+    if (!(army >= 1 && army <= SK_ARMIES)) return "軍は1〜" + SK_ARMIES + "軍から選んでください";
+    if (P.raiders[uid]) return p.name + "は遊撃手です（遊撃手は解放前・解放後で共通です）。先に遊撃手から外してください";
+    var list = P.rally[f] = P.rally[f] || [];
+    var here = list.filter(function(e) { return e.uid === uid; })[0];
+    if (here) return "⚠ " + p.name + "は、この拠点に（" + here.army + "軍で）すでに入っています。1つの拠点には同じ人を1軍分だけしか入れられません。別の軍で重ねて入れることはできないので、入れ替えるなら先に外してください";
+    var used = skUsedArmies(ph, uid, f);
+    if (used[army]) return "⚠ " + p.name + "（" + army + "軍）はすでに「" + used[army] + "」に入っています。同じ人の同じ軍は複数の拠点に入れません。別の軍を選ぶか、先に「" + used[army] + "」から外してください";
+    list.push({ uid: uid, army: army });                 // 集結主になった人は、その段階のメンバーの4チームの一覧からは外れる（チームの割り当ては共通なので消さず、もう片方の段階ではメンバーのまま）
+    return "";
+  }
+  function skRemoveRally(ph, f, uid) {
+    var P = skP(ph);
+    P.rally[f] = (P.rally[f] || []).filter(function(e) { return e.uid !== uid; });
+  }
+  function skAddRaider(ph, uid) {
+    var P = skP(ph), p = byUid[uid];
+    if (!p) return "人が選ばれていません";
+    if (skRallySet("before")[uid] || skRallySet("after")[uid]) return p.name + "は集結主として拠点に入っています（遊撃手は解放前・解放後で共通なので、どちらの段階でも集結主でない人だけが遊撃手になれます）。先に拠点から外してください";
+    P.raiders[uid] = true;
+    delete P.assign[uid]; delete P.pins[uid];
+    return "";
+  }
+
+  // 集結主を自動で置く：まだ集結主のいない拠点に、「集結部隊数を登録した人」を集結容量の大きい順に1軍で1人ずつ（拠点の順番）。すでにいる拠点は触らない
+  function skAutoRally(ph) {
+    var P = skP(ph), rs = skRallySet(ph);
+    var cands = people.filter(function(p) { return p.isRallyer && !P.raiders[p.uid] && !rs[p.uid]; }).sort(leaderOrder);
+    var put = 0, empty = 0;
+    skFacilities(ph).forEach(function(f) {
+      if (skRallyList(ph, f).length) return;
+      empty++;
+      var c = cands.shift();
+      if (!c) return;
+      if (!skAddRally(ph, f, c.uid, 1)) put++;
+    });
+    return "集結主を " + put + "拠点に置きました（空きの拠点 " + empty + "、集結部隊数の人が足りない拠点 " + (empty - put) + "）";
+  }
+  // メンバーを4チームに均等に分ける：集結主・遊撃手を除いた人を、出征容量の大きい順に、合計がいちばん小さいチームへ（📌の人は動かさない）
+  function skAutoTeams(ph) {
+    var P = skP(ph), pool = skMemberPool(ph);
+    pool.forEach(function(p) { if (!P.pins[p.uid]) delete P.assign[p.uid]; });
+    Object.keys(P.assign).forEach(function(u) { if (P.raiders[u]) delete P.assign[u]; });
+    function sum(t) { return skTeamMembers(ph, t).reduce(function(s, p) { return s + (p.marchCap || 0); }, 0); }
+    pool.filter(function(p) { return !P.assign[p.uid]; })
+      .sort(function(a, b) { return ((b.marchCap || 0) - (a.marchCap || 0)) || strongerFirst(a, b); })
+      .forEach(function(p) {
+        var t = P.teams.slice().sort(function(a, b) { return (sum(a) - sum(b)) || (skTeamMembers(ph, a).length - skTeamMembers(ph, b).length); })[0];
+        P.assign[p.uid] = t.id;
+      });
+    return "メンバー " + pool.length + "人を4チームに分けました（チームは解放前・解放後で共通です）";
+  }
+  // 解放前を土台に解放後を作る：①拠点と集結主（人＋〇軍）だけをコピーする（②チーム・③遊撃手は解放前と解放後で共通なのでコピー不要）。解放後の今の集結主は置き換わる
+  function skCopyBeforeToAfter() {
+    var B = skP("before"), A = skP("after");
+    A.rally = {};
+    SK_BASE.forEach(function(f) { A.rally[f] = (B.rally[f] || []).map(function(e) { return { uid: e.uid, army: e.army }; }); });
+  }
+  function skWarns(ph, f) {
+    var list = skRallyList(ph, f), w = [];
+    if (!list.length) w.push("集結主がいません");
+    list.forEach(function(e) { if (byUid[e.uid].rallyCap == null) w.push(byUid[e.uid].name + "の集結容量が分かりません"); });
+    return w;
+  }
+  function skLabel(e) { return byUid[e.uid].name + "（" + e.army + "軍）"; }
+
+  function skChip(p, ph, extra) {
+    var P = skP(ph), cls = "chip" + (p.uid === selectedUid ? " sel" : "");
+    return '<div class="' + cls + '" draggable="true" data-uid="' + escapeHtml(p.uid) + '" title="' + escapeHtml(p.note) + '">' +
+      (P.pins[p.uid] ? "📌" : "") + "<b>" + escapeHtml(p.name) + "</b><br>" +
+      '<span class="m">' + escapeHtml(p.alliance) + "・出征" + man(p.marchCap) + (extra || "") + "</span></div>";
+  }
+
+  function renderSeiken() {
+    skEnsure();
+    var sk = draft.sk, ph = sk.cur, P = skP(ph), F = skFacilities(ph);
+    // 設定欄：段階の切り替えと説明
+    $("settingsBody").innerHTML = '<div class="tabs" style="margin-bottom:6px;">' + SK_PHASES.map(function(x) {
+      return '<button type="button" data-skph="' + x[0] + '"' + (x[0] === ph ? ' class="active"' : "") + ">" + (x[0] === "before" ? "🏰 " : "⛩️ ") + x[1] + "</button>";
+    }).join("") + "</div>" +
+      '<div class="note">' + (ph === "before"
+        ? "祭壇が解放されるまでのチームです。拠点：" + SK_BASE.join("・") + "。祭壇・教化の間・傭兵駐屯地は、解放前は灰色で見るだけです（「祭壇解放後」のタブで使えます）。"
+        : "祭壇が解放されたあとのチームです（祭壇・教化の間・傭兵駐屯地が先頭に並び、使えるようになります）。「解放前の集結主を土台に解放後を作る」で、解放前の拠点と集結主をコピーしてから直せます。②チームと③遊撃手は、解放前と解放後で共通の1つです（どちらのタブで直しても両方に反映）。") + "</div>" +
+      '<div class="note" style="margin-top:4px;">集結主は拠点に「人＋〇軍（1〜' + SK_ARMIES + '軍）」で置きます（1つの拠点に複数、同じ人が複数の拠点にも入れます。ただし同じ拠点に同じ人は1軍分だけ、同じ「人＋〇軍」は複数の拠点に置けません）。メンバー（集結主・遊撃手以外）は、拠点とは関係なく4チームに均等に分けます。遊撃手はどこにも属さず、試合中に空いた拠点へ動く人です。</div>';
+    $("autoRow").innerHTML =
+      '<button type="button" id="skAutoRallyBtn">🤖 集結主を各拠点に置く（空の拠点だけ）</button>' +
+      '<button type="button" id="skAutoTeamsBtn">🤖 メンバーを4チームに均等に分ける（📌以外）</button>' +
+      (ph === "after" ? '<button type="button" class="sub" id="skCopyBtn">📋 解放前の集結主を土台に解放後を作る</button>' : "") +
+      '<button type="button" class="sub" id="skClearBtn">↩ ' + SK_PHASES.filter(function(x) { return x[0] === ph; })[0][1] + 'の割り当てを外す（📌以外）</button>';
+    // fn が返す文：isErr=true のときは「入れられない理由」（赤字）、false のときは結果の案内（緑）。空なら何も出さない
+    function act(fn, isErr) { if (readOnly) return; skFacError = null; var msg = fn(); setMsg($("autoMsg"), msg || "", !isErr); changed(); }
+    Array.prototype.forEach.call($("settingsBody").querySelectorAll("[data-skph]"), function(b) {
+      b.addEventListener("click", function() { sk.cur = b.dataset.skph; selectedUid = ""; skFacError = null; if (!readOnly) saveLocal(); renderAll(); });
+    });
+    on("skAutoRallyBtn", "click", function() { act(function() { return skAutoRally(ph); }); });
+    on("skAutoTeamsBtn", "click", function() { act(function() { return skAutoTeams(ph); }); });
+    on("skCopyBtn", "click", function() {
+      if (readOnly) return;
+      if (!confirm("解放前の拠点と集結主（人＋〇軍）を土台に、解放後の拠点と集結主を作ります。\n解放後の今の集結主はすべて置き換わります（チーム・遊撃手は解放前と解放後で共通なので変わりません）。よろしいですか？")) return;
+      act(function() { skCopyBeforeToAfter(); return "解放前の集結主を土台に、解放後を作りました（祭壇・教化の間・傭兵駐屯地の集結主を決めてください）"; });
+    });
+    on("skClearBtn", "click", function() {
+      if (readOnly) return;
+      if (!confirm("この段階の集結主と、📌（固定）以外のチームの割り当て・遊撃手を外します。\n※チームの割り当てと遊撃手は解放前・解放後で共通なので、もう片方の段階からも外れます。よろしいですか？")) return;
+      act(function() {
+        Object.keys(P.assign).forEach(function(u) { if (!P.pins[u]) delete P.assign[u]; });
+        P.rally = {}; Object.keys(P.raiders).forEach(function(u) { delete P.raiders[u]; });
+        return "";
+      });
+    });
+
+    // 画面：①拠点と集結主 ②4チーム ③遊撃手
+    var rs = skRallySet(ph), v = '<h3 style="margin:6px 0;">① 拠点と集結主（人＋〇軍）</h3><div class="board">';
+    var candList = people.slice().sort(function(a, b) { return (b.isRallyer - a.isRallyer) || leaderOrder(a, b); });
+    SK_ALL.forEach(function(f) {
+      if (F.indexOf(f) < 0) {
+        // 祭壇解放前の祭壇・教化の間・傭兵駐屯地：表示だけ（編集不可）。データは持たず、自動配置・出力・公開の対象にもしない
+        v += '<div class="team" data-fac-off="' + escapeHtml(f) + '" style="opacity:0.5; background:#eef0f3; pointer-events:none;"><div class="team-head"><div class="team-title"><b>' + escapeHtml(f) + '</b><span class="note">（解放後）</span></div>' +
+          '<div class="team-stats">🔒 ' + escapeHtml(f) + "は祭壇が解放されたあとに使えます（「祭壇解放後」のタブで集結主を入れられます）</div></div>" +
+          '<div class="team-body"><span class="empty-hint">解放前は編集できません</span></div></div>';
+        return;
+      }
+      var list = skRallyList(ph, f), w = skWarns(ph, f);
+      var cap = list.reduce(function(s, e) { return s + (byUid[e.uid].rallyCap || 0); }, 0);
+      v += '<div class="team" data-fac="' + escapeHtml(f) + '"><div class="team-head"><div class="team-title"><b>' + escapeHtml(f) + '</b>' + (SK_ALTAR.indexOf(f) >= 0 ? '<span class="note">（解放後）</span>' : "") +
+        '<span class="note">集結主 ' + list.length + '</span></div>' +
+        '<div class="team-stats"><span>集結容量の合計 ' + man(cap) + "</span></div>" +
+        (w.length ? '<div class="team-warn">' + w.map(function(x) { return "<div>" + escapeHtml(x) + "</div>"; }).join("") + "</div>" : "") + "</div>" +
+        '<div class="team-body">' + (list.length ? list.map(function(e) {
+          return '<div class="chip leader"><b>' + escapeHtml(skLabel(e)) + "</b>" + (byUid[e.uid].rallyCap != null ? ' <span class="m">集結' + man(byUid[e.uid].rallyCap) + "</span>" : "") +
+            ' <button type="button" class="sub mini" data-skdel="' + escapeHtml(f) + "|" + escapeHtml(e.uid) + '" title="外す">✕</button></div>';
+        }).join("") : '<span class="empty-hint">集結主を入れる</span>') + "</div>" +
+        '<div class="leader-row" style="padding:0 10px 10px;"><select data-skadd-p="' + escapeHtml(f) + '"><option value="">（人を選ぶ）</option>' + candList.filter(function(p) { return !P.raiders[p.uid]; }).map(function(p) {
+          var inHere = list.filter(function(e) { return e.uid === p.uid; })[0];
+          return '<option value="' + escapeHtml(p.uid) + '">' + escapeHtml(p.name) + (p.rallyCap != null ? "（集結" + man(p.rallyCap) + "）" : "") + (inHere ? "【この拠点に" + inHere.army + "軍で入っています】" : "") + "</option>";
+        }).join("") + '</select><select data-skadd-a="' + escapeHtml(f) + '">' + Array.apply(null, Array(SK_ARMIES)).map(function(_, i) { return '<option value="' + (i + 1) + '">' + (i + 1) + "軍</option>"; }).join("") + '</select>' +
+        '<button type="button" class="mini" data-skadd="' + escapeHtml(f) + '">＋追加</button></div>' +
+        '<div class="msg err" style="padding:0 10px 8px;" data-skerr="' + escapeHtml(f) + '">' + (skFacError && skFacError.ph === ph && skFacError.f === f ? escapeHtml(skFacError.msg) : "") + "</div></div>";
+    });
+    v += "</div>";
+
+    v += '<h3 style="margin:14px 0 6px;">② チーム（メンバーを4つに均等に・解放前と解放後で共通）</h3><div class="board">';
+    P.teams.forEach(function(t) {
+      var ms = skTeamMembers(ph, t).sort(function(a, b) { return ((b.marchCap || 0) - (a.marchCap || 0)) || (a.order - b.order); });
+      var cap = ms.reduce(function(s, p) { return s + (p.marchCap || 0); }, 0);
+      v += '<div class="team" data-drop="' + t.id + '"><div class="team-head"><div class="team-title"><b>' + escapeHtml(t.name) + '</b><span class="note">' + ms.length + '人</span></div>' +
+        '<div class="team-stats"><span>出征容量の合計 ' + man(cap) + "</span></div></div>" +
+        '<div class="team-body">' + (ms.length ? ms.map(function(p) { return skChip(p, ph); }).join("") : '<span class="empty-hint">ここに入れる</span>') + "</div></div>";
+    });
+    var un = skMemberPool(ph).filter(function(p) { return !skTeamOf(ph, p.uid); });
+    v += '<div class="team special" data-drop="none"><div class="team-head"><div class="team-title"><b>📥 未割り当て</b><span class="note">' + un.length + '人</span></div><div class="team-stats">まだどのチームにも入っていないメンバー</div></div>' +
+      '<div class="team-body">' + (un.length ? un.map(function(p) { return skChip(p, ph); }).join("") : '<span class="empty-hint">（なし）</span>') + "</div></div></div>";
+
+    var rd = people.filter(function(p) { return P.raiders[p.uid]; });
+    v += '<h3 style="margin:14px 0 6px;">③ 遊撃手（どの拠点にも属さない・解放前と解放後で共通）</h3><div class="board"><div class="team special" data-drop="raider"><div class="team-head"><div class="team-title"><b>🏃 遊撃手</b><span class="note">' + rd.length + '人（拠点の人数には数えません）</span></div></div>' +
+      '<div class="team-body">' + (rd.length ? rd.map(function(p) {
+        return '<div class="chip"><b>' + escapeHtml(p.name) + '</b> <span class="m">' + escapeHtml(p.alliance) + '</span> <button type="button" class="sub mini" data-skraiderdel="' + escapeHtml(p.uid) + '" title="外す">✕</button></div>';
+      }).join("") : '<span class="empty-hint">遊撃手を入れる</span>') + "</div>" +
+      '<div class="leader-row" style="padding:0 10px 10px;"><select id="skRaiderSel"><option value="">（人を選ぶ）</option>' + people.filter(function(p) { return !P.raiders[p.uid] && !rs[p.uid]; }).map(function(p) {
+        return '<option value="' + escapeHtml(p.uid) + '">' + escapeHtml(p.name) + "</option>";
+      }).join("") + '</select><button type="button" class="mini" id="skRaiderAdd">＋遊撃手にする</button></div></div></div>';
+    $("tabHint").textContent = "拠点の集結主は「人を選ぶ→軍を選ぶ→＋追加」。メンバーは名前を押す（またはドラッグ）で4チームへ移せます。📌は「固定」：自動で動かしません。";
+    $("viewArea").innerHTML = v;
+
+    // 操作
+    Array.prototype.forEach.call($("viewArea").querySelectorAll("[data-skadd]"), function(b) {
+      var f = b.dataset.skadd;
+      var ps = $("viewArea").querySelector('[data-skadd-p="' + f + '"]'), as = $("viewArea").querySelector('[data-skadd-a="' + f + '"]');
+      // 軍の選択肢：その人が別の拠点で使っている軍には「（〇〇で使用中）」と出す（選べるが、追加しようとすると断る）。人を選んだら、使っていない軍のうち先頭を選んでおく
+      ps.addEventListener("change", function() {
+        var used = ps.value ? skUsedArmies(ph, ps.value, f) : {}, first = 0;
+        Array.prototype.forEach.call(as.options, function(o) { o.textContent = o.value + "軍" + (used[o.value] ? "（" + used[o.value] + "で使用中）" : ""); if (!used[o.value] && !first) first = o.value; });
+        if (first) as.value = first;
+      });
+      b.addEventListener("click", function() {
+        if (readOnly) return;
+        var msg = skAddRally(ph, f, ps.value, as.value);
+        skFacError = msg ? { ph: ph, f: f, msg: msg } : null;     // 断ったときは、その拠点のカードの中に赤字で理由を出す
+        setMsg($("autoMsg"), msg || "", !msg);
+        changed();
+      });
+    });
+    Array.prototype.forEach.call($("viewArea").querySelectorAll("[data-skdel]"), function(b) {
+      b.addEventListener("click", function() { var a = b.dataset.skdel.split("|"); act(function() { skRemoveRally(ph, a[0], a[1]); return ""; }); });
+    });
+    on("skRaiderAdd", "click", function() { act(function() { return skAddRaider(ph, $("skRaiderSel").value); }, true); });
+    Array.prototype.forEach.call($("viewArea").querySelectorAll("[data-skraiderdel]"), function(b) {
+      b.addEventListener("click", function() { act(function() { delete P.raiders[b.dataset.skraiderdel]; return ""; }); });
+    });
+    Array.prototype.forEach.call($("viewArea").querySelectorAll(".chip[data-uid]"), function(c) {
+      c.addEventListener("click", function(e) { e.stopPropagation(); if (readOnly) return; selectedUid = selectedUid === c.dataset.uid ? "" : c.dataset.uid; renderAll(); });
+      c.addEventListener("dragstart", function(e) { e.dataTransfer.setData("text/plain", c.dataset.uid); });
+    });
+    Array.prototype.forEach.call($("viewArea").querySelectorAll("[data-drop]"), function(box) {
+      box.addEventListener("dragover", function(e) { e.preventDefault(); box.classList.add("drop-ok"); });
+      box.addEventListener("dragleave", function() { box.classList.remove("drop-ok"); });
+      box.addEventListener("drop", function(e) {
+        e.preventDefault();
+        var uid = e.dataTransfer.getData("text/plain");
+        if (uid) { selectedUid = ""; act(function() { return skMove(ph, uid, box.dataset.drop); }, true); }
+      });
+    });
+    renderSkOut();
+
+    // 名前を押したときの移動バー（メンバーだけ）
+    var bar = $("moveBar"), p = byUid[selectedUid];
+    if (readOnly || !p || !skMemberPool(ph).some(function(x) { return x.uid === p.uid; })) { bar.style.display = "none"; return; }
+    bar.style.display = "block";
+    $("moveName").textContent = p.name;
+    $("pinBtn").textContent = P.pins[p.uid] ? "📌 固定を外す" : "📌 固定する";
+    var here = (skTeamOf(ph, p.uid) || { id: "none" }).id;
+    $("moveTargets").innerHTML = P.teams.map(function(t) { return [t.id, t.name + "（" + skTeamMembers(ph, t).length + "人）"]; }).concat([["none", "📥 未割り当て"], ["raider", "🏃 遊撃手にする"]]).map(function(x) {
+      return '<button type="button" data-to="' + x[0] + '"' + (x[0] === here ? ' class="here"' : "") + ">" + escapeHtml(x[1]) + (x[0] === here ? "（今ここ）" : "") + "</button>";
+    }).join("");
+    Array.prototype.forEach.call($("moveTargets").querySelectorAll("[data-to]"), function(b) {
+      b.addEventListener("click", function() { var uid = selectedUid; selectedUid = ""; act(function() { return skMove(ph, uid, b.dataset.to); }, true); });
+    });
+  }
+  // メンバーの移動（4チーム／未割り当て／遊撃手）
+  function skMove(ph, uid, to) {
+    var P = skP(ph), p = byUid[uid];
+    if (!p) return "";
+    if (skRallySet(ph)[uid]) return p.name + "は集結主として拠点に入っているので、チームには移せません";
+    if (to === "raider") return skAddRaider(ph, uid);
+    delete P.raiders[uid];
+    if (to === "none") delete P.assign[uid];
+    else if (P.teams.some(function(t) { return t.id === to; })) P.assign[uid] = to;
+    return "";
+  }
+
+  // ---------- 聖剣のDiscord用テキストと公開用データ ----------
+  function skPhaseText(ph) {
+    var lines = [], blocks = [];
+    function flush() { if (lines.length) { blocks.push("```\n" + lines.join("\n") + "\n```"); lines = []; } }
+    function push(group) {
+      if (lines.length && lines.length + 1 + group.length > 10) flush();
+      if (lines.length) lines.push("");
+      lines = lines.concat(group);
+    }
+    // 拠点は1拠点1行（拠点の間に空行は入れず、10行ずつコードブロックを分ける）
+    skFacilities(ph).forEach(function(f) {
+      var list = skRallyList(ph, f);
+      var line = f + (list.length ? "（集結主" + list.length + "）" : "") + " 集結主:" + (list.length ? list.map(skLabel).join("、") : "未定");
+      if (lines.length >= 10) flush();
+      lines.push(line);
+    });
+    flush();
+    skP(ph).teams.forEach(function(t) {
+      var ms = skTeamMembers(ph, t).sort(function(a, b) { return ((b.marchCap || 0) - (a.marchCap || 0)) || (a.order - b.order); });
+      push([t.name + "（" + ms.length + "人）", ms.length ? ms.map(function(p) { return p.name; }).join("、") : "（なし）"]);
+    });
+    var rd = people.filter(function(p) { return skP(ph).raiders[p.uid]; });
+    if (rd.length) push(["遊撃手（" + rd.length + "人）", rd.map(function(p) { return p.name; }).join("、")]);
+    flush();
+    return blocks.join("\n");
+  }
+  function buildSeikenText(sel) {
+    sel = sel || ["before", "after"];
+    if (!draft.sk) return "";
+    skEnsure();
+    if (!sel.length) return "段階を選んでください";
+    var parts = ["■ " + eventLabel(eventById(eventId)) + " チーム分け"];
+    SK_PHASES.forEach(function(x) {
+      if (sel.indexOf(x[0]) < 0) return;
+      parts.push("", "【" + x[1] + "】", skPhaseText(x[0]));
+    });
+    return parts.join("\n");
+  }
+  function buildSeikenView() {
+    skEnsure();
+    function person(p) { return { name: p.name, alliance: p.alliance }; }
+    return {
+      mode: "seiken", title: eventLabel(eventById(eventId)),
+      phases: SK_PHASES.map(function(x) {
+        var ph = x[0], P = skP(ph);
+        return {
+          key: ph, label: x[1],
+          facilities: skFacilities(ph).map(function(f) {
+            return { name: f, leaders: skRallyList(ph, f).map(function(e) { return { name: byUid[e.uid].name, alliance: byUid[e.uid].alliance, army: e.army }; }) };
+          }),
+          teams: P.teams.map(function(t) { return { name: t.name, members: skTeamMembers(ph, t).sort(function(a, b) { return ((b.marchCap || 0) - (a.marchCap || 0)) || (a.order - b.order); }).map(person) }; }),
+          raiders: people.filter(function(p) { return P.raiders[p.uid]; }).map(person)
+        };
+      }),
+      text: buildSeikenText()
+    };
+  }
+  // Discord出力の段階チェック（解放前／解放後）。切り替えたら出力欄だけ即更新する
+  function renderSkOut() {
+    var row = $("outSlotsRow");
+    row.style.display = "flex";
+    row.innerHTML = '<span class="note">貼る段階：</span>' + SK_PHASES.map(function(x) {
+      return '<label class="inline"><input type="checkbox" data-outph="' + x[0] + '"' + (outPhases.indexOf(x[0]) >= 0 ? " checked" : "") + "> " + x[1] + "</label>";
+    }).join("");
+    Array.prototype.forEach.call(row.querySelectorAll("[data-outph]"), function(cb) {
+      cb.addEventListener("change", function() {
+        outPhases = SK_PHASES.map(function(x) { return x[0]; }).filter(function(k) { var c = row.querySelector('[data-outph="' + k + '"]'); return c && c.checked; });
+        $("outText").value = buildSeikenText(outPhases);
+      });
+    });
+    $("outText").value = buildSeikenText(outPhases);
+  }
+
+  // 聖剣の引き継ぎ：前回のチーム（4つ）・メンバーの所属・遊撃手・📌は、解放前と解放後で共通の1つ（前回の解放前を正とする。前回が古い形で解放後だけ別だった場合も解放前のものを使う）。
+  // 集結主（人＋〇軍）だけ、解放前・解放後それぞれ前回のものをそのまま。今回いない人は外す。集結主のいなくなった拠点は、
+  // まだどこにも入っていない「集結部隊数を登録した人」を集結容量の大きい順に置き、今回新しく参加したメンバーだけを4チームへ均等に入れる（引き継いだ人は動かさない）
+  function carrySeiken(pd, info) {
+    skEnsure();
+    var base = pd.sk && (pd.sk.before || pd.sk.after);
+    if (!base) return;
+    var N = skNewPhase(), idMap = {};
+    (base.teams || []).forEach(function(t, i) { if (N.teams[i]) { N.teams[i].name = t.name; idMap[t.id] = N.teams[i].id; } });
+    Object.keys(base.assign || {}).forEach(function(u) {
+      if (!byUid[u]) { info.gone++; return; }
+      if (idMap[base.assign[u]]) { N.assign[u] = idMap[base.assign[u]]; info.same++; if (base.pins && base.pins[u]) N.pins[u] = true; }
+    });
+    Object.keys(base.raiders || {}).forEach(function(u) { if (byUid[u]) { N.raiders[u] = true; info.same++; } else info.gone++; });
+    ["before", "after"].forEach(function(ph) {
+      var S = pd.sk && pd.sk[ph], R = {};
+      if (S) Object.keys(S.rally || {}).forEach(function(f) {
+        if (skFacilities(ph).indexOf(f) < 0) return;
+        R[f] = (S.rally[f] || []).filter(function(e) { if (byUid[e.uid]) { info.same++; return true; } info.gone++; return false; })
+          .map(function(e) { return { uid: e.uid, army: e.army }; });
+      });
+      draft.sk[ph] = { teams: N.teams, assign: N.assign, pins: N.pins, raiders: N.raiders, rally: R };
+    });
+    ["before", "after"].forEach(function(ph) { if (pd.sk && pd.sk[ph]) skAutoRally(ph); });
+    var P = skP("before"), tmp = [], before = Object.keys(P.assign).length;
+    Object.keys(P.assign).forEach(function(u) { if (!P.pins[u]) { P.pins[u] = true; tmp.push(u); } });
+    skAutoTeams("before");
+    skAutoTeams("after");
+    tmp.forEach(function(u) { delete P.pins[u]; });
+    info.added += Object.keys(P.assign).length - before;
+  }
+
   // ---------- 集計と注意 ----------
   function teamStats(t, index) {
     var s = draft.settings;
@@ -949,6 +1500,7 @@
       count: ms.length, leader: leader,
       riderCap: riders.reduce(function(sum, p) { return sum + (p.marchCap || 0); }, 0),
       capMissing: riders.filter(function(p) { return p.marchCap == null; }).length,
+      provN: ms.filter(function(p) { return p.marchProv || (p === leader && p.rallyProv); }).length,
       capLimit: leader && leader.rallyCap != null ? leader.rallyCap - (leader.marchCap || 0) : null,
       avgG: ms.length ? ms.reduce(function(sum, p) { return sum + p.g; }, 0) / ms.length : 0,
       vc: ms.filter(function(p) { return p.vc; }).length,
@@ -965,6 +1517,7 @@
     });
     if (draft.mode === "kvk" && t.kind === "rally") {
       if (!leader) st.warns.push("リーダーが決まっていません");
+      else if (leader.rallyProv) st.warns.push("リーダーの集結容量は未入力のため" + (leader.provNone ? "0（等級なし）" : manP(leader, "rallyCap")) + "で計算しています");
       else if (leader.rallyCap == null) st.warns.push("リーダーの集結容量が未入力です");
       if (st.capLimit != null && st.riderCap > st.capLimit) st.warns.push("容量オーバー（" + man(st.riderCap - st.capLimit) + "多い）");
       if (st.count && st.count < s.minSize) st.warns.push("人数が少なめ（" + st.count + "人／目安" + s.minSize + "〜" + s.maxSize + "人）");
@@ -1019,8 +1572,9 @@
   function renderAll() {
     if (!draft) return;
     renderMode();
-    $("tabs").style.display = draft.mode === "ruins" ? "none" : "";
+    $("tabs").style.display = draft.mode === "ruins" || draft.mode === "seiken" ? "none" : "";
     if (draft.mode === "ruins") { renderStatus(); renderRuins(); renderCarry(); return; }
+    if (draft.mode === "seiken") { renderStatus(); renderSeiken(); renderCarry(); return; }
     renderStatus();
     renderSettings();
     renderCarry();
@@ -1058,31 +1612,50 @@
     if (readOnly) txt.push("🔒 完了したイベント（見るだけ）");
     txt.push("参加者 " + people.length + "人（不参加を除く）");
     $("statusText").textContent = txt.join("　");
+    // 固定の保存バー：完了イベントでは出さない。未保存のときは「まだ保存していない変更があります」
+    var bar = $("saveBar");
+    bar.className = readOnly || !draft ? "" : "show" + (unsaved ? " dirty" : "");
+    $("sbState").textContent = unsaved ? "● まだ保存していない変更があります" : "保存済み";
+    adjustSaveBar();
+  }
+  // 名前を押したときの移動バー（画面の下に出る）が出ているあいだは、その上に重ねる
+  function adjustSaveBar() {
+    var mb = $("moveBar"), bar = $("saveBar");
+    var h = mb && mb.style.display === "block" ? mb.offsetHeight : 0;
+    bar.style.bottom = (h + (window.innerWidth <= 600 ? 8 : 12)) + "px";
   }
 
   function renderSettings() {
     var s = draft.settings, html = "";
-    html += '<div class="row" style="margin-top:0;">' +
-      '<label class="inline">戦闘時間 <select data-set="start">' + timeOptions(s.start) + '</select> 〜 <select data-set="end">' + timeOptions(s.end) + "</select></label>";
-    if (draft.mode === "kvk") {
-      html += '<label class="inline">人数の目安 <input type="number" min="1" max="50" data-set="minSize" value="' + s.minSize + '">〜<input type="number" min="1" max="50" data-set="maxSize" value="' + s.maxSize + '">人</label>';
+    var row = "";
+    // 戦闘時間：KVK・三盟では出さない（KVKは21:00〜26:00、三盟は21:00〜25:00で固定）
+    if (draft.mode !== "sanmei" && draft.mode !== "kvk") {
+      row += '<label class="inline">戦闘時間 <select data-set="start">' + timeOptions(s.start) + '</select> 〜 <select data-set="end">' + timeOptions(s.end) + "</select></label>";
     }
     if (draft.mode === "seiken") {
-      html += '<label class="inline">乗り手のチーム数 <input type="number" min="0" max="20" data-set="teamCount" value="' + draft.teams.filter(function(t) { return t.kind === "group"; }).length + '"></label>';
+      row += '<label class="inline">乗り手のチーム数 <input type="number" min="0" max="20" data-set="teamCount" value="' + draft.teams.filter(function(t) { return t.kind === "group"; }).length + '"></label>';
     }
-    html += "</div>";
+    if (row) html += '<div class="row" style="margin-top:0;">' + row + "</div>";
     if (draft.mode === "kvk") {
-      html += '<div class="row">' +
-        '<label class="inline"><input type="checkbox" data-set="topRule"' + (s.topRule ? " checked" : "") + '> 上位隊ルール：第1〜3隊はリーダーを含めて <input type="number" min="2" max="20" data-set="topSize" value="' + s.topSize + '">人、全部参加＋◇の人を強い順に</label>' +
-        '<label class="inline"><input type="checkbox" data-set="spreadVivian"' + (s.spreadVivian ? " checked" : "") + "> ◆を各隊に散らす</label>" +
-        "</div>" +
-        '<div class="note">自動振り分け：リーダーの集結容量（から本人の出征容量を引いた分）に収まるように、強い人（G→T11→出征容量の順）から番号の小さい隊へ詰め、あふれたら次の隊へ入れます。どこにも入らない人は「待機」、時間未定の人は「時間未定」に置きます。人数は目安で、外れたら注意を出すだけです。</div>';
+      html += kvkTeamCountHtml() +
+        '<div class="note">自動振り分け：リーダーの集結容量（から本人の出征容量を引いた分）に収まるように、強い人（G→T11→出征容量の順）から番号の小さい隊へ詰め、あふれたら次の隊へ入れます。第1〜3隊は、リーダーを含めて8人まで、全部参加＋◇の人を強い順に入れます。◆（ビビアン星4以上）のいない隊には、◆が2人以上いる隊から1人回します。どこにも入らない人は「待機」、時間未定の人は「時間未定」に置きます。人数は8〜10人が目安で、外れたら注意を出すだけです（これらの決まりは固定です）。隊ごとの「同盟」（ひよこ／666）は、隊に付けるラベルです（自動振り分けでは使いません）。</div>' + kvkMonthlyHtml();
     } else if (draft.mode === "seiken") {
       html += '<div class="note">自動振り分け：集結部隊数を登録した人は「集結主」チームにまとめ、残りの人を、各チームの出征容量の合計がそろうように分けます。</div>';
     } else {
-      html += '<div class="note">三盟は自動振り分けなしです。ボードか表で、上・中・下に割り当ててください（チーム名は変えられます）。</div>';
+      html += '<div class="note">自動振り分け：参加者（不参加を除く）を、出征容量の合計がそろうように、上・中・下へ均等に分けます（📌固定の人は動かしません）。あとからボードか表で手で直せます（チーム名は変えられます）。前回の同じ種類のイベントがあれば、下の「前回と同じチームにする」も使えます。</div>';
     }
     $("settingsBody").innerHTML = html;
+    on("leaderFillBtn", "click", function() {
+      if (readOnly) return;
+      setMsg($("autoMsg"), fillKvkLeaders(), true);
+      changed();
+    });
+    on("tcBtn", "click", function() {
+      if (readOnly) return;
+      var msg = applyKvkTeamCounts();
+      setMsg($("autoMsg"), msg, true);
+      changed();
+    });
     Array.prototype.forEach.call($("settingsBody").querySelectorAll("[data-set]"), function(el) {
       el.addEventListener("change", function() {
         var k = el.dataset.set;
@@ -1098,6 +1671,8 @@
     if (draft.mode === "kvk") {
       auto += '<button type="button" id="autoBtn">🤖 自動で振り分ける</button>' +
         '<button type="button" class="sub" id="rebuildBtn">👑 隊を作り直す（集結容量の大きい順）</button>';
+    } else if (draft.mode === "sanmei") {
+      auto += '<button type="button" id="autoBtn">🤖 自動で上・中・下に分ける</button>';
     } else if (draft.mode === "seiken") {
       auto += '<button type="button" id="autoBtn">🤖 自動で振り分ける</button>';
     }
@@ -1105,7 +1680,7 @@
       '<button type="button" class="sub" id="clearBtn">↩ 割り当てを外す（📌以外）</button>';
     $("autoRow").innerHTML = auto;
     on("autoBtn", "click", function() {
-      var msg = draft.mode === "kvk" ? autoKvk() : autoSeiken();
+      var msg = draft.mode === "kvk" ? autoKvk() : draft.mode === "sanmei" ? autoSanmei() : autoSeiken();
       setMsg($("autoMsg"), msg, msg.indexOf("振り分けました") === 0);
       changed();
     });
@@ -1146,7 +1721,7 @@
   function marks(p) { return (p.monthly ? "◯" : "") + (p.vc ? "◇" : "") + (p.vivian4 ? "◆" : ""); }
   function chipHtml(p, t) {
     var isLeader = t && t.leaderId === p.uid;
-    var cap = isLeader ? "集結" + man(p.rallyCap) : draft.mode === "sanmei" ? "" : man(p.marchCap);
+    var cap = isLeader ? "集結" + manP(p, "rallyCap") : draft.mode === "sanmei" ? "" : manP(p, "marchCap");
     var tl = timeLabel(p);
     var cls = "chip" + (isLeader ? " leader" : "") + (p.uid === selectedUid ? " sel" : "") + (p.timeUnknown ? " unknown" : "");
     return '<div class="' + cls + '" draggable="true" data-uid="' + escapeHtml(p.uid) + '" title="' + escapeHtml(p.note) + '">' +
@@ -1170,7 +1745,7 @@
     draft.teams.forEach(function(t, i) {
       var st = stats[t.id];
       html += '<div class="team" data-drop="' + t.id + '">' +
-        '<div class="team-head"><div class="team-title"><b>' + escapeHtml(teamName(t)) + "</b>" +
+        '<div class="team-head"><div class="team-title"><b>' + escapeHtml(teamName(t)) + "</b>" + (t.ally ? '<span class="status-pill pub">' + escapeHtml(t.ally) + "</span>" : "") +
         '<span class="note">' + st.count + "人</span>" +
         '<span class="tools">' +
           '<button type="button" class="sub mini" data-act="up" data-id="' + t.id + '"' + (i === 0 ? " disabled" : "") + ">↑</button>" +
@@ -1181,13 +1756,17 @@
       if (t.kind === "rally") {
         html += '<div class="leader-row">リーダー <select data-leader="' + t.id + '"><option value="">（選ぶ）</option>' +
           people.slice().sort(function(a, b) { return (b.isRallyer - a.isRallyer) || ((b.rallyCap || 0) - (a.rallyCap || 0)) || strongerFirst(a, b); }).map(function(p) {
-            return '<option value="' + escapeHtml(p.uid) + '"' + (p.uid === t.leaderId ? " selected" : "") + ">" + escapeHtml(p.name) + (p.rallyCap != null ? "（集結" + man(p.rallyCap) + "）" : "") + "</option>";
+            return '<option value="' + escapeHtml(p.uid) + '"' + (p.uid === t.leaderId ? " selected" : "") + ">" + escapeHtml(p.name) + (p.rallyCap != null ? "（集結" + manP(p, "rallyCap") + "）" : "") + "</option>";
+          }).join("") + "</select>" +
+          ' 同盟 <select data-ally="' + t.id + '"><option value="">（未設定）</option>' + KVK_ALLIANCES.map(function(a) {
+            return '<option value="' + escapeHtml(a.label) + '"' + (t.ally === a.label ? " selected" : "") + ">" + escapeHtml(a.label) + "</option>";
           }).join("") + "</select></div>";
       }
       var line = [];
       if (draft.mode !== "sanmei") {
-        if (st.capLimit != null) line.push("容量 " + man(st.riderCap) + "／" + man(st.capLimit));
-        else line.push("出征容量 計" + man(st.riderCap));
+        var provMark = st.provN ? "（仮置き" + st.provN + "人を含む）" : "";
+        if (st.capLimit != null) line.push("容量 " + man(st.riderCap) + "／" + man(st.capLimit) + provMark);
+        else line.push("出征容量 計" + man(st.riderCap) + provMark);
       }
       line.push("平均G " + (st.count ? st.avgG.toFixed(2) : "—"), "◇" + st.vc, "◆" + st.viv, "◯" + st.monthly, "T11 " + st.t11);
       html += '<div class="team-stats">' + line.map(function(x) { return "<span>" + x + "</span>"; }).join("") + "</div>";
@@ -1255,6 +1834,15 @@
     Array.prototype.forEach.call(area.querySelectorAll("[data-act]"), function(b) {
       b.addEventListener("click", function() { teamAction(b.dataset.act, b.dataset.id); });
     });
+    Array.prototype.forEach.call(area.querySelectorAll("[data-ally]"), function(sel) {
+      sel.addEventListener("change", function() {
+        if (readOnly) return;
+        var t = teamById(sel.dataset.ally);
+        if (!t) return;
+        t.ally = sel.value;     // 隊に付ける同盟ラベル（自動振り分けでは使わない。表示・集計のためのラベル）
+        changed();
+      });
+    });
     Array.prototype.forEach.call(area.querySelectorAll("[data-leader]"), function(sel) {
       sel.addEventListener("change", function() { setLeader(sel.dataset.leader, sel.value); });
     });
@@ -1284,8 +1872,7 @@
       t.name = n.trim().slice(0, 20);
     }
     if (act === "del") {
-      if (!confirm("「" + teamName(t) + "」を消します。入っている人は未割り当てに戻ります。よろしいですか？")) return;
-      membersOf(t.id).forEach(function(p) { delete draft.assign[p.uid]; });
+      membersOf(t.id).forEach(function(p) { delete draft.assign[p.uid]; });   // 確認なしで消す。入っていた人は未割り当てに戻る
       draft.teams.splice(i, 1);
       if (t.kind === "group") draft.settings.teamCount = draft.teams.filter(function(x) { return x.kind === "group"; }).length;
     }
@@ -1360,7 +1947,7 @@
         '<td><input type="checkbox" data-pin="' + escapeHtml(p.uid) + '"' + (isPinned(p.uid) ? " checked" : "") + "></td>" +
         "<td>" + escapeHtml(p.alliance) + "</td><td>" + escapeHtml(p.name) + "</td><td>" + escapeHtml(p.grade) + "</td><td>" + marks(p) + "</td>" +
         "<td>" + (p.t11n ? escapeHtml(p.troops) : "") + "</td><td>" + escapeHtml(timeLabel(p) || "全部") + "</td>" +
-        '<td class="num">' + man(p.marchCap) + '</td><td class="num">' + (p.rallyCap != null ? man(p.rallyCap) : "") + "</td></tr>";
+        '<td class="num">' + manP(p, "marchCap") + '</td><td class="num">' + (p.rallyCap != null ? manP(p, "rallyCap") : "") + "</td></tr>";
     });
     html += "</tbody></table></div></div>";
     $("viewArea").innerHTML = html;
@@ -1414,6 +2001,7 @@
   // 公開用（閲覧ページ・参加登録ページ）。ユーザーIDではなく表示に使う値を埋め込む
   function buildView() {
     if (draft.mode === "ruins") return buildRuinsView();
+    if (draft.mode === "seiken") return buildSeikenView();
     // 公開用の印は◇（VC）◆（ビビアン）だけ。◯（マンスリー＝課金の状況）は公開しない
     function person(p, leader) {
       return { name: p.name, alliance: p.alliance, grade: p.grade, marks: (p.vc ? "◇" : "") + (p.vivian4 ? "◆" : ""), time: timeLabel(p), leader: !!leader };
@@ -1422,14 +2010,16 @@
     return {
       mode: draft.mode,
       title: eventLabel(ev),
-      battle: fmtMin(draft.settings.start) + "〜" + fmtMin(draft.settings.end),
+      battle: draft.mode === "sanmei" ? "" : fmtMin(draft.settings.start) + "〜" + fmtMin(draft.settings.end) + (draft.settings.end >= 1440 ? "（翌" + fmtMin(draft.settings.end - 1440) + "）" : ""),
       teams: draft.teams.map(function(t) {
         var l = leaderOf(t);
         return {
-          name: teamName(t), kind: t.kind, leader: l ? l.name : "",
+          name: teamName(t), kind: t.kind, leader: l ? l.name : "", ally: t.ally || "",
           members: sortForTeam(membersOf(t.id), t).map(function(p) { return person(p, p === l); })
         };
       }),
+      // 同盟ごとのマンスリー持ちの人数と合計分数だけ（誰が◯かは出さない）
+      monthly: draft.mode === "kvk" ? kvkMonthly().map(function(m) { return { label: m.label, count: m.count, minutes: m.minutes, per: MONTHLY_MIN }; }) : [],
       standby: membersOf("standby").sort(strongerFirst).map(function(p) { return person(p); }),
       pending: membersOf("pending").sort(strongerFirst).map(function(p) { return person(p); }),
       text: buildText()
@@ -1438,6 +2028,7 @@
 
   function buildText() {
     if (draft.mode === "ruins") return buildRuinsText();
+    if (draft.mode === "seiken") return buildSeikenText();
     var lines = [], blocks = [];
     var ev = eventById(eventId);
     function flush() { if (lines.length) { blocks.push("```\n" + lines.join("\n") + "\n```"); lines = []; } }
@@ -1450,7 +2041,7 @@
       var l = leaderOf(t);
       var ms = sortForTeam(membersOf(t.id), t).filter(function(p) { return p !== l; });
       var head = draft.mode === "kvk" && t.kind === "rally"
-        ? teamName(t) + " リーダー:" + (l ? memberLabel(l) : "未定") + "（" + (ms.length + (l ? 1 : 0)) + "人）"
+        ? teamName(t) + (t.ally ? "（" + t.ally + "）" : "") + " リーダー:" + (l ? memberLabel(l) : "未定") + "（" + (ms.length + (l ? 1 : 0)) + "人）"
         : "【" + teamName(t) + "】（" + ms.length + "人）";
       push([head, ms.length ? ms.map(memberLabel).join("、") : "（なし）"]);
     });
@@ -1817,7 +2408,7 @@
   // ---------- 保存 ----------
   function save(publish, force) {
     if (readOnly) { setMsg($("saveMsg"), "完了したイベントは保存・公開できません", false); return Promise.resolve(); }
-    var btns = ["saveBtn", "publishBtn", "unpublishBtn"];
+    var btns = ["saveBtn", "publishBtn", "unpublishBtn", "sbSave", "sbPublish", "sbUnpublish"];
     btns.forEach(function(id) { $(id).disabled = true; });
     setMsg($("saveMsg"), "保存中…", true);
     var payload = { action: "teamSave", eventId: eventId, draft: draft, baseUpdatedAt: record ? record.updatedAt : "", publish: publish, force: !!force };
@@ -1862,7 +2453,7 @@
   });
   on("moveCancel", "click", function() { selectedUid = ""; renderAll(); });
   on("pinBtn", "click", function() {
-    var pins = draft.mode === "ruins" ? ruinState(curSlot()).pins : draft.pins;
+    var pins = draft.mode === "ruins" ? ruinState(curSlot()).pins : draft.mode === "seiken" ? skP(draft.sk.cur).pins : draft.pins;
     if (pins[selectedUid]) delete pins[selectedUid];
     else pins[selectedUid] = true;
     changed();
@@ -1871,12 +2462,23 @@
     navigator.clipboard.writeText($("outText").value).then(function() { setMsg($("copyMsg"), "コピーしました", true); },
       function() { $("outText").select(); setMsg($("copyMsg"), "コピーできませんでした。選択して手でコピーしてください", false); });
   });
-  on("saveBtn", "click", function() { save("keep"); });
-  on("publishBtn", "click", function() { save("publish"); });
-  on("unpublishBtn", "click", function() {
+  function doUnpublish() {
     if (!record || !record.published) { setMsg($("saveMsg"), "まだ公開していません", false); return; }
     if (confirm("公開をやめます（閲覧ページ・参加登録ページに出なくなります）。下書きは残ります。よろしいですか？")) save("unpublish");
-  });
+  }
+  on("saveBtn", "click", function() { save("keep"); });
+  on("publishBtn", "click", function() { save("publish"); });
+  on("unpublishBtn", "click", doUnpublish);
+  on("sbSave", "click", function() { save("keep"); });
+  on("sbPublish", "click", function() { save("publish"); });
+  on("sbUnpublish", "click", doUnpublish);
+  // 下の「保存と公開」のメッセージ（保存しました・エラーなど）を、固定バーにも写す
+  new MutationObserver(function() {
+    var m = $("saveMsg"), s = $("sbMsg");
+    s.textContent = m.textContent; s.title = m.textContent; s.style.color = m.className.indexOf("err") >= 0 ? "#ff9a9a" : "";
+  }).observe($("saveMsg"), { childList: true, characterData: true, subtree: true, attributes: true });
+  new MutationObserver(adjustSaveBar).observe($("moveBar"), { attributes: true, attributeFilter: ["style"] });
+  window.addEventListener("resize", adjustSaveBar);
   on("copyUrlBtn", "click", function() {
     var url = new URL("../teams/", location.href).href;
     navigator.clipboard.writeText(url).then(function() { setMsg($("saveMsg"), "コピーしました: " + url, true); },

@@ -200,6 +200,26 @@
 
   <button type="button" class="float-save" id="floatSaveBtn"></button>
 
+  <!-- 登録ユーザー一覧（閲覧用・参加記録は含めない） -->
+  <div class="card" id="ulCard">
+    <h2 style="margin: 0 0 6px;">📋 登録ユーザー一覧（閲覧用） <span id="ulCount" class="hint"></span></h2>
+    <div class="hint" style="margin-bottom: 8px;">登録されているユーザーだけの一覧です（参加登録の内容は含みません。見るだけで、ここでは変更しません。変更は下の「ユーザー一覧（蓄積）」で行います）。同盟の表記ゆれ（例：「ゴッドハンター」と「GDH」）はそのまま別々に数えます。</div>
+    <div id="ulChips" style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;"></div>
+    <div class="row" style="gap: 8px; margin-bottom: 8px; align-items: center;">
+      <label>同盟 <select id="ulAlliance"><option value="">すべて</option></select></label>
+      <input type="search" id="ulSearch" placeholder="名前で検索（部分一致）">
+      <label>並び替え <select id="ulSort"><option value="alliance">同盟順（人数の多い同盟から）</option><option value="name">名前順</option><option value="order">登録順</option></select></label>
+      <button type="button" class="small sub-btn" id="ulCsv">CSVでダウンロード</button>
+    </div>
+    <div class="scroll">
+      <table>
+        <thead><tr id="ulHead"></tr></thead>
+        <tbody id="ulBody"></tbody>
+      </table>
+    </div>
+    <div class="hint" style="margin-top: 6px;">CSVは、いま表示している絞り込み・並び順のとおりに出力します（Excelでそのまま開けます）。</div>
+  </div>
+
   <!-- ユーザー一覧（蓄積） -->
   <div class="card">
     <div class="row" style="justify-content: space-between; margin-bottom: 10px;">

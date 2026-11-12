@@ -38,6 +38,50 @@
     RUIN_SLOTS.forEach(function(k) { if (["yes", "maybe", "no"].indexOf(src[k]) >= 0) { out[k] = src[k]; any = true; } });
     return any ? out : undefined;
   }
+  // 確認事項（アンケート）：イベントごとの設問 events[].survey = [{id, text, show?, kind?}]（1問80字・最大10問）。
+  //   show: "rally"＝集結の欄（集結部隊数など）を入れた人（集結主）だけに出す（省略＝全員）
+  //   kind: "skip"＝「わかってません」のチェック。チェックした人は、ほかの設問は答えなくてよい（省略＝「了解」「内容わかりません」を答える）
+  // 参加登録ページでは設問ごとに 了解／内容わかりません を答えてもらう（entries[].survey = {設問id: "ok"|"unknown"|"check"}）。
+  // 代理入力のときは答えは持たず、「連携します」にチェックしたこと（entries[].surveyProxy）だけ残る。中継役の selfSave_ と同じ決まり
+  var SURVEY_MAX = 10, SURVEY_TEXT_MAX = 80;
+  // 固定の設問（ルール未理解のチェック）：どのイベントにも必ず出る。イベントの設問データには持たない（画面と判定が自動で補う）。
+  // 答えは entries[].survey[SURVEY_RULE_ID] = "check"。文言の種類名は、そのイベントの種類
+  var SURVEY_RULE_ID = "q_rule";
+  function ruleText(type) { return "そもそも" + (type || "") + "のルールがあまりわかってません"; }
+  var SURVEY_DEFAULTS = { "KVK": [
+    { text: "Ａチーム（王城駐屯組）は、差込頑張ってください" },
+    { text: "ゴースト同盟は、王城駐屯したら抜ける準備してください" },
+    { text: "集結時の左英雄（アマデウス、インウー、チェンコ、あまね、マーゴ、ビビアン）" },
+    { text: "駐屯時の左英雄（ヒルデ、殺傷、ゴードン）" },
+    { text: "集結主は装備付け替えの可能性があります", show: "rally" },
+    { text: "集結主は集結メンバーの順番を入れ替えてください（現在：殺傷2、攻撃1、ビビアン1）", show: "rally" }
+  ] };
+  function defaultSurvey(type) {
+    return (SURVEY_DEFAULTS[type] || []).map(function(q) {
+      var o = { id: newId("q"), text: q.text };
+      if (q.show) o.show = q.show;
+      return o;
+    });
+  }
+  function normSurvey(src) {
+    if (!Array.isArray(src)) return undefined;
+    var out = [];
+    src.forEach(function(q) {
+      var text = str(q && q.text).slice(0, SURVEY_TEXT_MAX);
+      if (!text || out.length >= SURVEY_MAX) return;
+      if (q.kind === "skip") return; // 古い「ルール未理解」の設問は、固定の設問に置き換わった（保存し直すと消える）
+      var o = { id: str(q.id) || newId("q"), text: text };
+      if (q.show === "rally") o.show = "rally";
+      out.push(o);
+    });
+    return out.length ? out : undefined;
+  }
+  function normSurveyAnswers(src) {
+    if (!src || typeof src !== "object") return undefined;
+    var out = {}, any = false;
+    Object.keys(src).forEach(function(k) { if (src[k] === "ok" || src[k] === "unknown" || src[k] === "check") { out[k] = src[k]; any = true; } });
+    return any ? out : undefined;
+  }
   var GRADES = ["G8", "G7", "G6", "G5", "その他"];
   var ENTRY_LABEL = { start: "最初から参加できる", late: "途中参加", absent: "不参加" };
   var ENTRY_SHORT = { start: "最初から", late: "途中参加", absent: "不参加" };
@@ -383,7 +427,9 @@
       updatedAt: str(m.updatedAt), // 最後に登録・変更した日時（ISO）
       proxyBy: str(m.proxyBy), // 個人登録ページで代理入力した人の名前（本人の入力なら ""）
       sameAs: str(m.sameAs), // AI変換で登録者が「同一人物」と確認した登録済みユーザー名（取り込み時のみ使う）
-      slots: normSlots(m.slots) // 遺跡争奪の時間ごとの参加（それ以外のイベントでは無し）
+      slots: normSlots(m.slots), // 遺跡争奪の時間ごとの参加（それ以外のイベントでは無し）
+      survey: normSurveyAnswers(m.survey), // 確認事項の答え（設問のあるイベントで、不参加以外・代理入力でないとき）
+      surveyProxy: m.surveyProxy === true ? true : undefined // 代理入力で「連携します」にチェックした
     }));
   }
 
@@ -459,7 +505,8 @@
       return { id: e.id || newId("e"), type: EVENT_TYPES.indexOf(e.type) >= 0 ? e.type : EVENT_TYPES[0], date: str(e.date),
         open: e.open === true, // open: 個人登録ページ（entry/）で受付中
         done: e.done === true, // done: 完了したイベント（イベント一覧から外し「完了したイベント」に出す）
-        ruinTargets: normRuinTargets(e.ruinTargets) }; // 遺跡争奪だけ：時間帯ごとの対象（要塞・遺跡）
+        ruinTargets: normRuinTargets(e.ruinTargets), // 遺跡争奪だけ：時間帯ごとの対象（要塞・遺跡）
+        survey: normSurvey(e.survey) }; // 確認事項（アンケート）の設問
     });
     var userIds = {}, eventIds = {};
     users.forEach(function(u) { userIds[u.id] = true; });
@@ -607,6 +654,7 @@
         if (bV[v.id] && bV[v.id].open !== v.open) o.open = v.open; // 自分が受付中／締切を切り替えた
         if (bV[v.id] && bV[v.id].done !== v.done) o.done = v.done; // 自分が完了／進行中を切り替えた
         if (bV[v.id] && JSON.stringify(bV[v.id].ruinTargets) !== JSON.stringify(v.ruinTargets)) o.ruinTargets = clone(v.ruinTargets || null) || undefined; // 自分が遺跡争奪の対象を変えた
+        if (bV[v.id] && JSON.stringify(bV[v.id].survey) !== JSON.stringify(v.survey)) o.survey = clone(v.survey || null) || undefined; // 自分が確認事項の設問を変えた
         eventMap[v.id] = o.id;
         return;
       }
@@ -913,6 +961,8 @@
     if (existing) {
       var merged = mergeImported(row, existing);
       if (!merged.slots && existing.slots) merged.slots = existing.slots; // フォームからの変更でも遺跡争奪の時間は消さない
+      if (!merged.survey && existing.survey) merged.survey = existing.survey; // 確認事項の答えも消さない
+      if (!merged.surveyProxy && existing.surveyProxy) merged.surveyProxy = existing.surveyProxy;
       state.entries[state.entries.indexOf(existing)] = toEntry(merged, u.user.id, existing.id);
       return { result: "updated", newUser: u.created };
     }
@@ -1307,6 +1357,7 @@
     var has = !!currentEventId;
     $("eventView").style.display = has ? "block" : "none";
     renderRuinTargets();
+    renderSurveyCard();
     $("noEventView").style.display = has ? "none" : "block";
     document.querySelectorAll(".event-name").forEach(function(el) {
       el.textContent = eventLabel(eventById(currentEventId));
@@ -1352,6 +1403,306 @@
       }).join("") + '</tbody></table></div>';
   }
 
+  // 参加者1人の確認事項の状態（不参加なら null）。集結主のみの設問は、集結の欄を入れた人にだけ数える
+  function surveyState(ev, m) {
+    if (m.entry === "absent") return null;
+    var all = (ev && ev.survey) || [];
+    var rally = m.rallyCount != null || m.rallyPet != null || m.rallySpeedPet != null;
+    var askQ = all.filter(function(q) { return q.show !== "rally" || rally; });
+    var a = m.survey || {};
+    var skipOn = Object.keys(a).some(function(k) { return a[k] === "check"; }); // 固定の設問（古いデータの「ルール未理解」の設問も同じ）
+    var proxy = m.surveyProxy === true;
+    return { a: a, askQ: askQ, skipOn: skipOn, proxy: proxy,
+      unknown: skipOn || proxy ? 0 : askQ.filter(function(q) { return a[q.id] === "unknown"; }).length,
+      missing: skipOn || proxy ? 0 : askQ.filter(function(q) { return !a[q.id]; }).length };
+  }
+  // 一覧の絞り込み（""＝全員／skip＝ルール未理解／unknown＝内容わかりません あり／missing＝未回答あり）
+  var svFilter = "";
+  function surveyMatch(m) {
+    if (!svFilter) return true;
+    var s = surveyState(eventById(m.eventId || currentEventId), m);
+    if (!s) return false;
+    return svFilter === "skip" ? s.skipOn : svFilter === "unknown" ? s.unknown > 0 : s.missing > 0;
+  }
+
+  // イベントページ：確認事項（アンケート）の設問を決める欄と、参加者の答えの一覧
+  function renderSurveyCard() {
+    if (!$("newEventType") || !$("eventView")) return; // イベントページだけ
+    var ev = eventById(currentEventId), card = $("surveyCard");
+    if (!ev) { if (card) card.style.display = "none"; return; }
+    if (!card) {
+      card = document.createElement("div");
+      card.className = "card";
+      card.id = "surveyCard";
+      var anchor = $("ruinTargetsCard");
+      $("eventView").insertBefore(card, anchor && anchor.nextSibling ? anchor.nextSibling : $("eventView").firstChild);
+      card.addEventListener("change", function(e) {
+        var el = e.target, cur = eventById(currentEventId);
+        if (!el.dataset) return;
+        if (el.dataset.svFilter != null) { svFilter = el.value; renderEntries(); return; }
+        if (!cur || !cur.survey) return;
+        if (el.dataset.svText != null) {
+          var i = Number(el.dataset.svText);
+          if (!cur.survey[i]) return;
+          cur.survey[i].text = str(el.value).slice(0, SURVEY_TEXT_MAX);
+          if (!cur.survey[i].text) cur.survey.splice(i, 1); // 空にしたら設問を消す
+        } else if (el.dataset.svShow != null) {
+          var q = cur.survey[Number(el.dataset.svShow)];
+          if (!q) return;
+          if (el.value === "rally") q.show = "rally"; else delete q.show;
+        } else if (el.dataset.svKind != null) {
+          var k = cur.survey[Number(el.dataset.svKind)];
+          if (!k) return;
+          if (el.value === "skip") k.kind = "skip"; else delete k.kind;
+        } else return;
+        if (!cur.survey.length) cur.survey = undefined;
+        commit();
+      });
+      card.addEventListener("click", function(e) {
+        var b = e.target.closest ? e.target.closest("button") : null, cur = eventById(currentEventId);
+        if (!b || !cur || !b.dataset.sv) return;
+        var list = (cur.survey || []).slice(), i = Number(b.dataset.i);
+        if (b.dataset.sv === "add") {
+          if (list.length >= SURVEY_MAX) return;
+          list.push({ id: newId("q"), text: "" });
+        } else if (b.dataset.sv === "default") {
+          if (list.length && !confirm("今の設問を消して、既定の設問に置き換えます。よろしいですか？")) return;
+          list = defaultSurvey(cur.type);
+        } else if (b.dataset.sv === "up" && i > 0) { var a = list[i]; list[i] = list[i - 1]; list[i - 1] = a; }
+        else if (b.dataset.sv === "down" && i < list.length - 1) { var c = list[i]; list[i] = list[i + 1]; list[i + 1] = c; }
+        else if (b.dataset.sv === "del") {
+          if (!confirm("この設問を消します。よろしいですか？")) return;
+          list.splice(i, 1);
+        } else return;
+        cur.survey = list.length ? list : undefined;
+        var isAdd = b.dataset.sv === "add";
+        commit();
+        if (isAdd) { var ins = card.querySelectorAll("input[data-sv-text]"); if (ins.length) ins[ins.length - 1].focus(); }
+      });
+    }
+    card.style.display = "block";
+    var qs = ev.survey || [];
+    var html = '<h2>📋 参加登録のアンケート（確認事項） → <span class="event-name"></span></h2>' +
+      '<div class="hint">参加登録ページに出す確認事項（チェックリスト）です。参加する人は、設問ごとに「了解」か「内容わかりません」を押し、全部に答えると登録できます（不参加の登録は答えなくてOK）。' +
+      '「表示する人」を「集結主のみ」にすると、集結の欄（集結部隊数など）を入れた人にだけ出ます。いちばん上の固定の設問（「そもそも○○のルールがあまりわかってません」。○○はイベントの種類）は、すべてのイベントに必ず出ます。チェックした人は、ほかの設問に答えなくても登録できます（チェックしなくても登録はできます）。' +
+      '代理入力のときは、答えの代わりに設問の文（条件に合うもの）をコピーして本人に伝え、「連携します」にチェックしてもらいます。設問は最大' + SURVEY_MAX + '問・1問' + SURVEY_TEXT_MAX + '字までです。変えたら「💾 保存する」を押してください。' +
+      '設問を変えても、すでに登録された人の答えは変わりません（登録をやり直すときは、毎回答え直しです）。</div>';
+    html += surveyEditorHtml(qs, "sv", ev.type);
+    html += surveyAnswersHtml(ev);
+    card.innerHTML = html;
+    card.querySelectorAll(".event-name").forEach(function(el) { el.textContent = eventLabel(ev); });
+  }
+
+  // 設問を編集する欄（行・追加・既定ボタン）。p は属性の頭（"sv"＝作成後のイベントの欄、"nsv"＝新しいイベントを作る欄）
+  function surveyEditorHtml(qs, p, type) {
+    var html = '<div style="margin-top: 8px;"><div class="rule-fixed" style="margin-bottom: 8px; padding: 6px 8px; background: #eef0f3; color: #666; border-radius: 6px;">' +
+      '🔒 <b>固定の設問</b>（すべてのイベントに必ず出ます。編集・並べ替え・削除はできません）<br>' + escapeHtml(ruleText(type)) +
+      '<span class="hint">　← チェックした人は、ほかの設問に答えなくても登録できます</span></div></div>' +
+      '<div style="margin-top: 8px;">' + (qs.length ? qs.map(function(q, i) {
+      return '<div style="margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #eef0f3;"><div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">' +
+        '<span style="min-width: 1.6em;">' + (i + 1) + '.</span>' +
+        '<input type="text" style="flex: 1; min-width: 220px;" maxlength="' + SURVEY_TEXT_MAX + '" data-' + p + '-text="' + i + '" value="' + escapeHtml(q.text) + '">' +
+        '<button type="button" class="small sub-btn" data-' + p + '="up" data-i="' + i + '"' + (i === 0 ? " disabled" : "") + '>↑</button>' +
+        '<button type="button" class="small sub-btn" data-' + p + '="down" data-i="' + i + '"' + (i === qs.length - 1 ? " disabled" : "") + '>↓</button>' +
+        '<button type="button" class="small danger" data-' + p + '="del" data-i="' + i + '">削除</button></div>' +
+        '<div class="hint" style="margin: 4px 0 0 28px; display: flex; gap: 10px; flex-wrap: wrap;">' +
+        '<label>表示する人 <select data-' + p + '-show="' + i + '"><option value="all">全員</option><option value="rally"' + (q.show === "rally" ? " selected" : "") + '>集結主のみ（集結の欄を入れた人）</option></select></label></div></div>';
+    }).join("") : '<div class="hint">追加の設問はありません（固定の設問だけが出ます）。</div>') + '</div>';
+    html += '<div style="margin-top: 6px;"><button type="button" class="small" data-' + p + '="add"' + (qs.length >= SURVEY_MAX ? " disabled" : "") + '>＋ 設問を追加</button> ' +
+      (SURVEY_DEFAULTS[type] ? '<button type="button" class="small sub-btn" data-' + p + '="default">既定の設問を入れる（' + escapeHtml(type) + '）</button>' : "") + '</div>';
+    return html;
+  }
+
+  // 新しいイベントを作るときの設問の下書き（作成と同時にイベントに付く）。種類がKVKなら既定の7問から始まる。
+  // 編集したあとに種類を変えても、編集した設問は上書きしない（「既定の設問を入れる」を押したときだけ入れ替える）
+  var newSurvey = [], newSurveyDirty = false;
+  function renderNewSurvey() {
+    var box = $("newSurveyBox");
+    if (!box) return;
+    box.querySelector(".nsv-body").innerHTML = surveyEditorHtml(newSurvey, "nsv", $("newEventType").value);
+    box.querySelector(".nsv-count").textContent = "（" + (newSurvey.filter(function(q) { return str(q.text); }).length || "なし") + (newSurvey.length ? "問" : "") + "）";
+  }
+  function resetNewSurvey() {
+    newSurveyDirty = false;
+    newSurvey = defaultSurvey($("newEventType").value);
+    renderNewSurvey();
+  }
+  function initNewSurvey() {
+    var row = $("createEventBtn") && ($("createEventBtn").closest(".row") || $("createEventBtn").parentNode);
+    if (!row || $("newSurveyBox")) return;
+    var box = document.createElement("details");
+    box.id = "newSurveyBox";
+    box.open = true;
+    box.style.marginTop = "8px";
+    box.innerHTML = '<summary style="cursor: pointer; font-weight: bold;">📋 参加登録のアンケート（確認事項）を作成と同時に決める <span class="hint nsv-count"></span></summary>' +
+      '<div class="hint" style="margin-top: 4px;">作ったイベントに付く設問です（KVKは既定の6問が入っています。そのまま作成しても、直してから作成してもOK。ルール未理解の固定の設問は、いつも付きます）。設問は最大' + SURVEY_MAX + '問・1問' + SURVEY_TEXT_MAX + '字まで。作成後も、イベントのページの「📋 参加登録のアンケート」欄でいつでも直せます。</div>' +
+      '<div class="nsv-body"></div>';
+    row.parentNode.insertBefore(box, row.nextSibling);
+    box.addEventListener("change", function(e) {
+      var el = e.target;
+      if (!el.dataset) return;
+      var q;
+      if (el.dataset.nsvText != null) {
+        var i = Number(el.dataset.nsvText);
+        if (!newSurvey[i]) return;
+        newSurvey[i].text = str(el.value).slice(0, SURVEY_TEXT_MAX);
+        if (!newSurvey[i].text) newSurvey.splice(i, 1); // 空にしたら設問を消す
+      } else if (el.dataset.nsvShow != null) {
+        q = newSurvey[Number(el.dataset.nsvShow)];
+        if (!q) return;
+        if (el.value === "rally") q.show = "rally"; else delete q.show;
+      } else if (el.dataset.nsvKind != null) {
+        q = newSurvey[Number(el.dataset.nsvKind)];
+        if (!q) return;
+        if (el.value === "skip") q.kind = "skip"; else delete q.kind;
+      } else return;
+      newSurveyDirty = true;
+      renderNewSurvey();
+    });
+    box.addEventListener("click", function(e) {
+      var b = e.target.closest ? e.target.closest("button") : null;
+      if (!b || !b.dataset.nsv) return;
+      var i = Number(b.dataset.i), isAdd = b.dataset.nsv === "add";
+      if (isAdd) {
+        if (newSurvey.length >= SURVEY_MAX) return;
+        newSurvey.push({ id: newId("q"), text: "" });
+      } else if (b.dataset.nsv === "default") {
+        if (newSurveyDirty && newSurvey.length && !confirm("今の設問を消して、既定の設問に置き換えます。よろしいですか？")) return;
+        resetNewSurvey();
+        return;
+      } else if (b.dataset.nsv === "up" && i > 0) { var a = newSurvey[i]; newSurvey[i] = newSurvey[i - 1]; newSurvey[i - 1] = a; }
+      else if (b.dataset.nsv === "down" && i < newSurvey.length - 1) { var c = newSurvey[i]; newSurvey[i] = newSurvey[i + 1]; newSurvey[i + 1] = c; }
+      else if (b.dataset.nsv === "del") newSurvey.splice(i, 1);
+      else return;
+      newSurveyDirty = true;
+      renderNewSurvey();
+      if (isAdd) { var ins = box.querySelectorAll("input[data-nsv-text]"); if (ins.length) ins[ins.length - 1].focus(); }
+    });
+    $("newEventType").addEventListener("change", function() {
+      if (!newSurveyDirty) newSurvey = defaultSurvey($("newEventType").value);
+      renderNewSurvey();
+    });
+    resetNewSurvey();
+  }
+
+  // 参加者の答え（設問ごとに、了解／内容わかりません／まだ答えていない 人の名前）。不参加の人は数えない
+  function surveyAnswersHtml(ev) {
+    var qs = ev.survey || [];
+    var rows = state.entries.filter(function(x) { return x.eventId === ev.id && x.entry !== "absent"; }).map(function(x) {
+      var u = userById(x.userId);
+      return { name: u ? u.name : "?", m: x, s: surveyState(ev, x) };
+    }).filter(function(r) { return r.s; });
+    var html = '<h3 style="margin: 14px 0 6px; font-size: 15px;">参加者の答え（不参加の人は除く・' + rows.length + '人）</h3>';
+    html += '<div class="hint" style="margin-bottom: 6px;">参加者の一覧の絞り込み：<select data-sv-filter="1">' +
+      [["", "全員"], ["skip", "ルール未理解の人"], ["unknown", "「内容わかりません」がある人"], ["missing", "まだ答えていない設問がある人"]].map(function(o) {
+        return '<option value="' + o[0] + '"' + (svFilter === o[0] ? " selected" : "") + '>' + o[1] + '</option>';
+      }).join("") + '</select></div>';
+    if (!rows.length) return html + '<div class="hint">まだ参加の登録がありません。</div>';
+    function names(list) { return list.length ? escapeHtml(list.map(function(r) { return r.name; }).join("、")) : "なし"; }
+    var ruleOn = rows.filter(function(r) { return r.s.skipOn; });
+    html += '<div style="margin-bottom: 10px; line-height: 1.7;"><b>🔒 ' + escapeHtml(ruleText(ev.type)) + '</b> <span class="hint">（固定の設問）</span><br>' +
+      '<span class="tag new">ルール未理解 ' + ruleOn.length + '人</span> ' + names(ruleOn) + '</div>';
+    html += qs.map(function(q, i) {
+      var tag = q.show === "rally" ? '<span class="hint">（集結主のみ）</span> ' : "";
+      var target = rows.filter(function(r) { return !r.s.proxy && !r.s.skipOn && r.s.askQ.some(function(x) { return x.id === q.id; }); });
+      var ok = target.filter(function(r) { return r.s.a[q.id] === "ok"; });
+      var unk = target.filter(function(r) { return r.s.a[q.id] === "unknown"; });
+      var none = target.filter(function(r) { return !r.s.a[q.id]; });
+      return '<div style="margin-bottom: 10px; line-height: 1.7;"><b>' + (i + 1) + '. ' + escapeHtml(q.text) + '</b> ' + tag + '<span class="hint">（対象 ' + target.length + '人）</span><br>' +
+        '<span class="tag new">内容わかりません ' + unk.length + '人</span> ' + names(unk) + '<br>' +
+        '了解 ' + ok.length + '人：' + names(ok) + '<br>' +
+        '<span class="hint">まだ答えていない ' + none.length + '人：' + names(none) + '</span></div>';
+    }).join("");
+    var proxyRows = rows.filter(function(r) { return r.s.proxy; });
+    if (proxyRows.length) html += '<div class="hint">代理入力で「連携します」にチェックした人（' + proxyRows.length + '人・本人の答えはありません）：' + escapeHtml(proxyRows.map(function(r) { return r.name; }).join("、")) + '</div>';
+    return html;
+  }
+
+  // 参加者の行の名前の横に出す印（ルール未理解／確認事項に「内容わかりません」がある／まだ答えていない／代理で連携済み）
+  function surveyTag(m) {
+    var s = surveyState(eventById(m.eventId || currentEventId), m);
+    if (!s) return "";
+    if (s.skipOn) return ' <span class="tag new">ルール未理解</span>';
+    if (s.proxy) return ' <span class="hint">（確認事項：代理で連携済み）</span>';
+    return (s.unknown ? ' <span class="tag new">確認事項：わかりません' + s.unknown + '</span>' : "") + (s.missing ? ' <span class="hint">（確認事項：未回答' + s.missing + '）</span>' : "");
+  }
+
+  // ---------- 登録ユーザー一覧（閲覧用・users.html）。参加登録の内容は含めず、登録されているユーザーだけを見やすく並べる ----------
+  // 列：No／名前／同盟／別名（別名 aliases・旧名 nameHistory）／ゲームID（gid）／（あれば）取り込み元・取り込み日。同盟の表記は変換しない
+  function ulAliasText(u) {
+    var seen = {}, out = [];
+    (u.aliases || []).forEach(function(a) { if (a && !seen[a]) { seen[a] = 1; out.push(a); } });
+    (u.nameHistory || []).forEach(function(h) { if (h.name && !seen[h.name]) { seen[h.name] = 1; out.push(h.name + "（旧名）"); } });
+    return out.join("、");
+  }
+  function ulAllianceCounts() {
+    var c = {};
+    state.users.forEach(function(u) { var a = u.alliance || "（同盟なし）"; c[a] = (c[a] || 0) + 1; });
+    return c;
+  }
+  function ulRows() {
+    var counts = ulAllianceCounts(), q = ($("ulSearch").value || "").trim().toLowerCase(), fa = $("ulAlliance").value, sort = $("ulSort").value;
+    var list = state.users.map(function(u, i) { return { u: u, i: i, a: u.alliance || "（同盟なし）" }; }).filter(function(r) {
+      return (!fa || r.a === fa) && (!q || r.u.name.toLowerCase().indexOf(q) >= 0);
+    });
+    list.sort(function(x, y) {
+      if (sort === "order") return x.i - y.i;
+      if (sort === "name") return x.u.name.localeCompare(y.u.name, "ja") || x.i - y.i;
+      return (counts[y.a] - counts[x.a]) || x.a.localeCompare(y.a, "ja") || x.u.name.localeCompare(y.u.name, "ja");
+    });
+    return list;
+  }
+  function ulColumns() {
+    var hasSrc = state.users.some(function(u) { return u.source || u.importedAt; });
+    var cols = ["No", "名前", "同盟", "別名（旧名など）", "ゲームID"];
+    if (hasSrc) cols.push("取り込み元", "取り込み日");
+    return cols;
+  }
+  function ulCells(r, n, cols) {
+    var u = r.u, row = [String(n), u.name, u.alliance || "", ulAliasText(u), u.gid || ""];
+    if (cols.length > 5) row.push(u.source || "", u.importedAt ? String(u.importedAt).slice(0, 10) : "");
+    return row;
+  }
+  function renderUserList() {
+    if (!$("ulBody")) return;
+    var counts = ulAllianceCounts(), names = Object.keys(counts).sort(function(a, b) { return counts[b] - counts[a] || a.localeCompare(b, "ja"); });
+    $("ulChips").innerHTML = names.map(function(a) {
+      return '<span class="tag" style="padding: 3px 10px;">' + escapeHtml(a) + ' ' + counts[a] + '人</span>';
+    }).join("");
+    var sel = $("ulAlliance"), cur = sel.value;
+    sel.innerHTML = '<option value="">すべて</option>' + names.map(function(a) {
+      return '<option value="' + escapeHtml(a) + '"' + (a === cur ? " selected" : "") + '>' + escapeHtml(a) + '（' + counts[a] + '）</option>';
+    }).join("");
+    var rows = ulRows(), cols = ulColumns();
+    $("ulHead").innerHTML = cols.map(function(c) { return "<th>" + c + "</th>"; }).join("");
+    $("ulBody").innerHTML = rows.length ? rows.map(function(r, i) {
+      return "<tr>" + ulCells(r, i + 1, cols).map(function(v, k) {
+        return '<td' + (k === 0 ? ' class="num"' : "") + '>' + escapeHtml(v) + "</td>";
+      }).join("") + "</tr>";
+    }).join("") : '<tr><td colspan="' + cols.length + '" class="hint" style="text-align:center;">該当するユーザーはいません</td></tr>';
+    var total = state.users.length;
+    $("ulCount").textContent = "合計 " + total + "人" + (rows.length !== total ? "（表示 " + rows.length + "人）" : "");
+  }
+  function ulCsvText() {
+    var rows = ulRows(), cols = ulColumns();
+    function q(v) { return '"' + String(v).replace(/"/g, '""') + '"'; }
+    var lines = [cols.map(q).join(",")];
+    rows.forEach(function(r, i) { lines.push(ulCells(r, i + 1, cols).map(q).join(",")); });
+    return "﻿" + lines.join("\r\n") + "\r\n";
+  }
+  on("ulSearch", "input", renderUserList);
+  on("ulAlliance", "change", renderUserList);
+  on("ulSort", "change", renderUserList);
+  on("ulCsv", "click", function() {
+    var blob = new Blob([ulCsvText()], { type: "text/csv;charset=utf-8" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "登録ユーザー一覧_" + today().replace(/-/g, "") + ".csv";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function() { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  });
+
   function defaultCompare(a, b) {
     return a.alliance.localeCompare(b.alliance, "ja")
       || ENTRY_ORDER.indexOf(a.entry) - ENTRY_ORDER.indexOf(b.entry)
@@ -1375,7 +1726,7 @@
       '<td><span class="tag ' + m.entry + '">' + ENTRY_SHORT[m.entry] + '</span>' +
         (m.mayChange ? ' <span class="tag new">変更かも</span>' : '') + '</td>' +
       '<td>' + escapeHtml(m.grade) + '</td>' +
-      '<td>' + escapeHtml(m.name) + (m.proxyBy ? ' <span class="hint">（代理: ' + escapeHtml(m.proxyBy) + '）</span>' : '') + '</td>' +
+      '<td>' + escapeHtml(m.name) + (m.proxyBy ? ' <span class="hint">（代理: ' + escapeHtml(m.proxyBy) + '）</span>' : '') + surveyTag(m) + '</td>' +
       '<td class="marks">' + marksOf(m) + '</td>' +
       '<td>' + escapeHtml(troopText(m)) + '</td>' +
       '<td>' + escapeHtml(timeText(m)) + '</td>' +
@@ -1442,7 +1793,7 @@
   function ruinRowHtml(m) {
     return '<td>' + escapeHtml(m.alliance) + '</td>' +
       '<td><span class="tag ' + m.entry + '">' + (m.entry === "absent" ? "不参加" : "参加") + '</span></td>' +
-      '<td>' + escapeHtml(m.name) + (m.proxyBy ? ' <span class="hint">（代理: ' + escapeHtml(m.proxyBy) + '）</span>' : '') + '</td>' +
+      '<td>' + escapeHtml(m.name) + (m.proxyBy ? ' <span class="hint">（代理: ' + escapeHtml(m.proxyBy) + '）</span>' : '') + surveyTag(m) + '</td>' +
       ruinTimes().map(function(k) { return '<td style="text-align: center;">' + (SLOT_MARK[(m.slots || {})[k]] || "") + '</td>'; }).join("") +
       '<td>' + escapeHtml(m.note) + '</td>' +
       '<td style="white-space: nowrap;">' + escapeHtml(m.updatedAt ? formatTime(m.updatedAt) : "") + '</td>' +
@@ -1470,6 +1821,7 @@
     sortRows(rows).forEach(function(m) {
       if (fa && m.alliance !== fa) return;
       if (q && (m.name + " " + m.note).toLowerCase().indexOf(q) < 0) return;
+      if (!surveyMatch(m)) return;
       shown++;
       html.push('<tr data-id="' + m.id + '"' + (m.id === editingId ? ' class="editing"' : "") + '>' + (ruin ? ruinRowHtml(m) : memberRowHtml(m, true)) + '</tr>');
     });
@@ -1583,6 +1935,7 @@
       refreshAiText();
     }
     renderUsers();
+    renderUserList();
   }
 
   // 見出しは遺跡争奪のとき差し替えるので、クリックはまとめて受ける
@@ -1616,6 +1969,7 @@
   if ($("newEventType")) { // イベント欄があるページだけ
     $("newEventType").innerHTML = EVENT_TYPES.map(function(t) { return "<option>" + t + "</option>"; }).join("");
     $("newEventDate").value = today();
+    initNewSurvey();
   }
 
   on("eventSelect", "change", function() {
@@ -1637,8 +1991,11 @@
       setMsg($("eventMsg"), "「" + eventLabel(ev) + "」はすでにあるので選択しました", true);
     } else {
       ev = { id: newId("e"), type: type, date: date };
+      var sv = normSurvey(newSurvey); // 作成フォームで決めた設問（空なら付けない）
+      if (sv) ev.survey = sv;
       state.events.push(ev);
-      setMsg($("eventMsg"), "「" + eventLabel(ev) + "」を作成しました。個人登録ページに出すには「受付を始める」→「💾 保存する」を押してください", true);
+      setMsg($("eventMsg"), "「" + eventLabel(ev) + "」を作成しました" + (sv ? "（アンケート" + sv.length + "問つき）" : "") + "。個人登録ページに出すには「受付を始める」→「💾 保存する」を押してください", true);
+      resetNewSurvey();
     }
     currentEventId = ev.id;
     resetForm(false);
@@ -1827,6 +2184,8 @@
       var idx = state.entries.findIndex(function(x) { return x.id === editingId; });
       m.proxyBy = state.entries[idx].proxyBy || ""; // 管理画面で直しても、代理入力した人の記録は残す
       if (!m.slots && state.entries[idx].slots) m.slots = state.entries[idx].slots; // 遺跡争奪の時間も残す（フォームに欄が無いため）
+      if (!m.survey && state.entries[idx].survey) m.survey = state.entries[idx].survey; // 確認事項の答えも残す
+      if (!m.surveyProxy && state.entries[idx].surveyProxy) m.surveyProxy = state.entries[idx].surveyProxy;
       state.entries[idx] = toEntry(m, u.user.id, editingId);
       resetForm(false);
       commit();
@@ -2308,7 +2667,7 @@
       "- T: 兵士レベル（大きいほど強い）。空欄は不明",
       "- 参加開始・抜ける時刻: 途中から参加する時刻／途中で抜ける時刻。空欄は指定なし",
       "- 出征部隊数・出征容量ペットLv: 出せる部隊の数と、出征容量を上げるペットのレベル（全員が登録）",
-      "- 集結部隊数・集結容量ペットLv・行軍速度ペットLv: 集結の部隊の数と、集結容量・行軍速度を上げるペットのレベル（集結の指示があった人だけ登録。空欄は対象外）",
+      "- 集結部隊数・集結容量ペットLv・行軍速度ペットLv: 集結の部隊の数と、集結容量・行軍速度を上げるペットのレベル（本イベントで集結主をしたことがある人だけ登録。空欄は対象外）",
       "- ペットLvの効果（0は持っていない）: 出征容量ペット Lv×1,500（最大Lv10で+15,000）／集結容量ペット 50,000＋Lv×10,000（Lv1で+60,000、最大Lv10で+150,000）／行軍速度ペット Lv1で+15%・Lv7まで1つ上がるごとに+2%（Lv7で+27%）・最大Lv8で+30%",
       "- 出征部隊数・集結部隊数: ペットのスキルやバフがない状態で、野獣に1軍で攻撃（集結攻撃）したときの数",
       "- 出征容量（計算後）・集結容量（計算後）: 上の部隊数にスキルとバフを加えた容量。計算の条件: " + CAP_RULE,
