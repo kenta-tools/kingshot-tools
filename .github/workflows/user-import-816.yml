@@ -1,0 +1,51 @@
+# 816鯖のプレイヤー一覧を MightPulse API から集めて、中継役（GAS）に送り、照合（preview）または登録（commit）する。手動実行だけ（1回限りの取り込み用）。
+# 中身は .github/scripts/user_import_816.py。取得した名前・ゲーム内IDは、ログ・artifacts・リポジトリには出さない（人数などの集計だけ）。
+# 名前・IDの詳細は、管理画面の admin/user-import.html（管理者だけ）で見て、同盟なしの人を選んで登録できる。
+# 実行は日本時間 9:00〜10:00 を避ける（聖剣リーグの自動更新が同じAPIキーを使うため）。
+name: 816ユーザー取得（取り込み）
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "対象の中継役（GAS）"
+        type: choice
+        options: [test, prod]
+        default: test
+      top_n:
+        description: "総力の上位何人まで取り込むか"
+        type: string
+        default: "200"
+      include_no_alliance:
+        description: "同盟なしの人も全員登録する（通常はfalseにして、管理画面で選ぶ）"
+        type: boolean
+        default: false
+      commit:
+        description: "登録まで行う（falseなら照合だけで何も登録しない）"
+        type: boolean
+        default: false
+      dry_run:
+        description: "ドライラン（APIを呼ばず、固定のサンプルで動作だけ確認する）"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: 816ユーザーを取得して照合・登録
+        env:
+          TARGET: ${{ inputs.target }}
+          TOP_N: ${{ inputs.top_n }}
+          INCLUDE_NO_ALLIANCE: ${{ inputs.include_no_alliance }}
+          COMMIT: ${{ inputs.commit }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          MIGHTPULSE_API_KEY: ${{ secrets.MIGHTPULSE_API_KEY }}
+          RELAY_PASSWORD: ${{ secrets.RELAY_PASSWORD }}
+          RELAY_PASSWORD_TEST: ${{ secrets.RELAY_PASSWORD_TEST }}
+        run: python3 .github/scripts/user_import_816.py
