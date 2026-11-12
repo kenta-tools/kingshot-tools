@@ -449,6 +449,11 @@
         // 名前の履歴: 以前の名前と、いつまでその名前だったか（改名・統合のたびに追加）
         nameHistory: (u.nameHistory || []).map(function(h) { return { name: str(h.name), until: str(h.until) }; })
           .filter(function(h) { return h.name; }) };
+    }).map(function(o, i) {
+      // ゲーム内ID（816ユーザー取り込みで付く）。この画面では編集しないが、保存で消さないように持ち回る
+      var u = (data.users || []).filter(function(x) { return (x.id || "") === o.id; })[0] || (data.users || [])[i];
+      if (u && u.gid) { o.gid = String(u.gid); if (u.source) o.source = str(u.source); if (u.importedAt) o.importedAt = str(u.importedAt); }
+      return o;
     }).filter(function(u) { return u.name; });
     var events = (data.events || []).map(function(e) {
       return { id: e.id || newId("e"), type: EVENT_TYPES.indexOf(e.type) >= 0 ? e.type : EVENT_TYPES[0], date: str(e.date),
@@ -934,6 +939,7 @@
       moved++;
       return true;
     });
+    if (from.gid && !to.gid) { to.gid = from.gid; to.source = from.source; to.importedAt = from.importedAt; } // 統合してもゲーム内IDは残す
     userNames(from).forEach(function(n) { addAlias(to, n); });
     to.nameHistory = unionHistory(to.nameHistory, from.nameHistory);
     addHistory(to, [from.name]);

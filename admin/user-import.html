@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>816ユーザー取り込み（管理者）</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif; background: #f4f5f7; color: #222; max-width: 1100px; margin: 30px auto; padding: 0 16px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 0 0 10px; }
+  .sub, .hint { color: #666; font-size: 13px; line-height: 1.6; }
+  .card { background: #fff; border-radius: 12px; padding: 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 16px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+  input[type=text], input[type=password], input[type=number], select { font: inherit; font-size: 14px; padding: 6px 8px; border: 1px solid #ccd2db; border-radius: 6px; background: #fff; }
+  button { font: inherit; font-size: 13px; padding: 7px 14px; border-radius: 6px; border: 1px solid #3a4a63; background: #1a2332; color: #fff; cursor: pointer; }
+  button.sub-btn { background: #fff; color: #1a2332; }
+  button:disabled { opacity: 0.4; cursor: default; }
+  .msg { font-size: 13px; margin-top: 8px; min-height: 1em; white-space: pre-wrap; }
+  .msg.ok { color: #1e7d3a; } .msg.err { color: #c0392b; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 6px 8px; border-bottom: 1px solid #e6e9ee; text-align: left; vertical-align: middle; }
+  th { background: #f0f2f5; white-space: nowrap; }
+  td.num { text-align: right; }
+  .pills { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+  .pill { background: #eef1f7; border-radius: 999px; padding: 4px 12px; font-size: 13px; }
+  .pill b { font-size: 15px; }
+  .scroll { max-height: 460px; overflow-y: auto; }
+  .warn { background: #fff8e6; border: 1px solid #f0d9a0; border-radius: 8px; padding: 8px 12px; font-size: 13px; line-height: 1.7; margin: 8px 0; }
+  #loginView { max-width: 360px; margin: 80px auto; text-align: center; }
+  #loginView input { width: 100%; margin: 12px 0; }
+  #loginView button { width: 100%; }
+  #appView { display: none; }
+  .top-link { font-size: 13px; color: #2c5cc5; text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div id="loginView" class="card">
+  <h2>🔒 ログインしてください</h2>
+  <div class="hint">管理画面と同じパスワードを入力してください。</div>
+  <input type="password" id="pwInput" placeholder="パスワード" autocomplete="current-password">
+  <button type="button" id="loginBtn">ログイン</button>
+  <div class="msg err" id="loginMsg"></div>
+  <a href="../index.html" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
+</div>
+
+<div id="appView">
+  <h1>📥 816ユーザーの取り込み</h1>
+  <div class="sub">GitHub Actions（816ユーザー取得）が集めた、816鯖のプレイヤー一覧の照合結果です。使い終わったら、このページは削除できます。名前・ゲーム内IDが出るので、画面を人に見せないでください。</div>
+
+  <!-- 保存カード（管理画面の共通スクリプトが使う。ここでは使いません） -->
+  <div id="saveCard" style="display:none;"><span id="saveTitle"></span><span id="saveSub"></span><button type="button" id="publishBtn"></button><button type="button" id="discardBtn"></button><div id="ghMsg"></div><details id="ghDetails"><summary></summary><button type="button" id="pullBtn"></button><button type="button" id="exportJsonBtn"></button></details></div>
+  <button type="button" id="floatSaveBtn" style="display:none;"></button>
+
+  <div class="card">
+    <h2>① 取り込み待ちのデータ</h2>
+    <div id="pendingInfo" class="hint">読み込み中…</div>
+    <div class="row" style="margin-top:10px;">
+      <label>総力の上位 <input type="number" id="topN" value="200" min="1" max="1500" style="width:90px;"> 人まで</label>
+      <button type="button" id="impPreviewBtn">照合する（何も書き込みません）</button>
+    </div>
+    <div class="msg" id="previewMsg"></div>
+  </div>
+
+  <div class="card" id="resultCard" style="display:none;">
+    <h2>② 照合結果</h2>
+    <div class="pills" id="pills"></div>
+    <div class="warn" id="coverageNote"></div>
+
+    <h2 style="margin-top:16px;">同盟なしの人（チェックした人だけ登録します）</h2>
+    <div class="row"><button type="button" class="sub-btn" id="naAllBtn">全員にチェック</button><button type="button" class="sub-btn" id="naNoneBtn">全員外す</button></div>
+    <div class="scroll"><table><thead><tr><th>登録</th><th>順位</th><th>名前</th><th>ゲーム内ID</th><th class="num">総力</th></tr></thead><tbody id="naBody"></tbody></table></div>
+    <div class="hint" id="naEmpty"></div>
+
+    <h2 style="margin-top:16px;">要確認の人（既定は「登録しない」）</h2>
+    <div class="hint">同じ名前の別人かもしれない人・名前は同じで同盟が違う人・候補が複数の人です。選んだ処理だけ行います。</div>
+    <div class="scroll"><table><thead><tr><th>順位</th><th>名前（ゲームの値）</th><th>ゲーム内ID</th><th>同盟</th><th>理由</th><th>処理</th></tr></thead><tbody id="rvBody"></tbody></table></div>
+    <div class="hint" id="rvEmpty"></div>
+
+    <details style="margin-top:16px;"><summary style="cursor:pointer;font-weight:bold;">新規・既存と一致の人の一覧を見る</summary>
+      <div class="scroll"><table><thead><tr><th>順位</th><th>名前</th><th>ゲーム内ID</th><th>同盟</th><th>処理</th><th>変わる内容</th></tr></thead><tbody id="okBody"></tbody></table></div>
+    </details>
+
+    <div class="row" style="margin-top:18px;">
+      <button type="button" id="commitBtn">この内容で登録する</button>
+      <span class="hint">登録の前に、データのバックアップ（Googleドライブにコピー）を自動で残します。同じ人を2回登録しても増えません（ゲーム内IDで同じ人と判断します）。</span>
+    </div>
+    <div class="msg" id="commitMsg"></div>
+  </div>
+</div>
+
+<script src="../config.js"></script>
+<script src="admin-common.js"></script>
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){ return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function pw(){ try { return sessionStorage.getItem("ksAdminPw") || ""; } catch (e) { return ""; } }
+  function call(payload){
+    payload.password = pw();
+    return fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) })
+      .then(function(r){ return r.json(); })
+      .catch(function(){ throw new Error("通信できませんでした"); });
+  }
+  function fmtTime(iso){ var d = new Date(iso); return isNaN(d) ? "" : d.toLocaleString("ja-JP"); }
+  function num(n){ return n == null ? "—" : Number(n).toLocaleString("ja-JP"); }
+  function setMsg(el, text, ok){ el.textContent = text; el.className = "msg " + (ok ? "ok" : "err"); }
+
+  var items = [];
+
+  function loadInfo(){
+    call({ action: "userImportInfo" }).then(function(res){
+      if(!res.ok){ $("pendingInfo").textContent = "読み込めませんでした: " + (res.error || res.status); return; }
+      var p = res.pending;
+      if(!p){ $("pendingInfo").textContent = "まだ取り込み待ちのデータがありません。GitHub Actions の「816ユーザー取得」を実行してください。"; $("impPreviewBtn").disabled = true; return; }
+      var cov = (p.playerCount != null && p.playerCount > 0) ? "／816鯖の人数 " + p.playerCount + " 人のうち " + p.count + " 人を取得（" + Math.round(p.count * 100 / p.playerCount) + "%）" : "";
+      $("pendingInfo").innerHTML = "取得: " + esc(fmtTime(p.fetchedAt)) + "（" + esc(p.source || "") + "）／ " + p.count + " 人" + esc(cov) +
+        (p.notes && p.notes.length ? "<br>" + p.notes.map(esc).join("<br>") : "") +
+        (res.imports && res.imports.length ? "<br>これまでの取り込み: " + res.imports.length + " 回（最後: " + esc(fmtTime(res.imports[0].at)) + "）" : "");
+      $("impPreviewBtn").disabled = false;
+    }).catch(function(e){ $("pendingInfo").textContent = e.message; });
+  }
+
+  function params(){ return { fromPending: true, topN: parseInt($("topN").value, 10) || 200 }; }
+
+  function renderResult(res){
+    items = res.items || [];
+    var c = res.counts || {};
+    $("pills").innerHTML = [
+      ["新規登録", c.create], ["既存と一致（gidを付ける）", c.link], ["うち名前が変わる", c.rename], ["うち同盟が変わる", c.realliance], ["要確認", c.review], ["同盟なし", c.noalliance], ["今回は登録しない", c.skip]
+    ].map(function(x){ return '<span class="pill">' + x[0] + ' <b>' + (x[1] || 0) + '</b></span>'; }).join("");
+    var cov = res.coverage || {};
+    var lines = ["総力の上位 " + res.topN + " 人まで（取得した " + res.total + " 人の中）を対象にしています。"];
+    if(cov.playerCount) lines.push("816鯖の人数 " + cov.playerCount + " 人に対して、取得できたのは " + cov.fetched + " 人です。取れなかった見込み: " + Math.max(0, cov.playerCount - cov.fetched) + " 人。");
+    lines.push("同盟なしの人は、総力ボード等の上位100までに入った人しか取れません（それ以下の人は出てきません）。");
+    $("coverageNote").innerHTML = lines.map(esc).join("<br>");
+
+    var na = items.filter(function(i){ return i.kind === "noalliance"; });
+    $("naBody").innerHTML = na.map(function(i){
+      return '<tr><td><input type="checkbox" class="na" data-gid="' + esc(i.gid) + '"></td><td>' + i.rank + '</td><td>' + esc(i.name) + '</td><td>' + esc(i.gid) + '</td><td class="num">' + num(i.power) + '</td></tr>';
+    }).join("");
+    $("naEmpty").textContent = na.length ? "" : "同盟なしの人はいません。";
+
+    var rv = items.filter(function(i){ return i.kind === "review"; });
+    $("rvBody").innerHTML = rv.map(function(i){
+      var opts = '<option value="">登録しない</option>' + '<option value="createSuffixed">名前の後ろにゲーム内IDを付けて新規（' + esc(i.name) + '(' + esc(i.gid.slice(-4)) + ')）</option>' +
+        i.candidates.map(function(cd){ return '<option value="link:' + esc(cd.userId) + '">この人と同じ人として結びつける：' + esc(cd.name) + (cd.alliance ? "（" + esc(cd.alliance) + "）" : "") + (cd.gid ? " ※gid " + esc(cd.gid) : "") + '</option>'; }).join("");
+      return '<tr><td>' + i.rank + '</td><td>' + esc(i.name) + '</td><td>' + esc(i.gid) + '</td><td>' + esc(i.siteAlliance) + '</td><td>' + esc(i.reason) + '</td><td><select class="rv" data-gid="' + esc(i.gid) + '">' + opts + '</select></td></tr>';
+    }).join("");
+    $("rvEmpty").textContent = rv.length ? "" : "要確認の人はいません。";
+
+    var label = { create: "新規登録", createSuffixed: "名前にIDを付けて新規", link: "既存にgidを付ける", skip: "登録しない" };
+    $("okBody").innerHTML = items.filter(function(i){ return i.kind === "new" || i.kind === "match-id" || i.kind === "match-name"; }).map(function(i){
+      var d = [];
+      if(i.diffs && i.diffs.name) d.push("名前: " + esc(i.diffs.name[0]) + " → " + esc(i.diffs.name[1]));
+      if(i.diffs && i.diffs.alliance) d.push("同盟: " + esc(i.diffs.alliance[0] || "（なし）") + " → " + esc(i.diffs.alliance[1]));
+      return '<tr><td>' + i.rank + '</td><td>' + esc(i.name) + '</td><td>' + esc(i.gid) + '</td><td>' + esc(i.siteAlliance) + '</td><td>' + (i.kind === "match-id" ? "IDで一致" : i.kind === "match-name" ? "名前で一致" : "新規") + ' → ' + esc(label[i.action] || i.action) + '</td><td>' + (d.join("<br>") || "—") + '</td></tr>';
+    }).join("");
+    $("resultCard").style.display = "block";
+  }
+
+  $("impPreviewBtn").addEventListener("click", function(){
+    setMsg($("previewMsg"), "照合中…", true);
+    call(Object.assign({ action: "userImportPreview" }, params())).then(function(res){
+      if(!res.ok) throw new Error(res.error || res.status);
+      setMsg($("previewMsg"), "照合しました（まだ何も書き込んでいません）", true);
+      renderResult(res);
+    }).catch(function(e){ setMsg($("previewMsg"), "できませんでした: " + e.message, false); });
+  });
+  $("naAllBtn").addEventListener("click", function(){ document.querySelectorAll(".na").forEach(function(c){ c.checked = true; }); });
+  $("naNoneBtn").addEventListener("click", function(){ document.querySelectorAll(".na").forEach(function(c){ c.checked = false; }); });
+
+  $("commitBtn").addEventListener("click", function(){
+    var noAll = [];
+    document.querySelectorAll(".na").forEach(function(c){ if(c.checked) noAll.push(c.dataset.gid); });
+    var decisions = {};
+    document.querySelectorAll(".rv").forEach(function(s){
+      if(!s.value) return;
+      if(s.value === "createSuffixed") decisions[s.dataset.gid] = { action: "createSuffixed" };
+      else if(s.value.indexOf("link:") === 0) decisions[s.dataset.gid] = { action: "link", userId: s.value.slice(5) };
+    });
+    var msg = "登録します。\n\n・自動で新規登録・gid付与する人\n・同盟なしで選んだ " + noAll.length + " 人\n・要確認で処理を選んだ " + Object.keys(decisions).length + " 人\n\n登録前にバックアップを残します。よろしいですか？";
+    if(!confirm(msg)) return;
+    $("commitBtn").disabled = true;
+    setMsg($("commitMsg"), "登録中…", true);
+    call(Object.assign({ action: "userImportCommit", decisions: decisions, noAllianceGids: noAll }, params())).then(function(res){
+      if(!res.ok) throw new Error(res.error || res.status);
+      setMsg($("commitMsg"), "登録しました。新規 " + res.created + " 人、既存に結びつけ " + res.linked + " 人（バックアップ: " + res.backup + "）。ユーザー管理の一覧を開き直すと反映されます。", true);
+      loadInfo();
+    }).catch(function(e){ setMsg($("commitMsg"), "登録できませんでした: " + e.message, false); }).then(function(){ $("commitBtn").disabled = false; });
+  });
+
+  // ログインは admin-common.js が行う。ログイン済みなら取り込み待ちを読み込む
+  var t = setInterval(function(){ if($("appView").style.display === "block"){ clearInterval(t); loadInfo(); } }, 300);
+})();
+</script>
+</body>
+</html>
