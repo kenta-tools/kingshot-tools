@@ -58,7 +58,7 @@
     <h2>① 取り込み待ちのデータ</h2>
     <div id="pendingInfo" class="hint">読み込み中…</div>
     <div class="row" style="margin-top:10px;">
-      <label>総力の上位 <input type="number" id="topN" value="200" min="1" max="1500" style="width:90px;"> 人まで</label>
+      <label>総力の上位 <input type="number" id="topN" value="100" min="1" max="1500" style="width:90px;"> 人まで</label>
       <button type="button" id="impPreviewBtn">照合する（何も書き込みません）</button>
     </div>
     <div class="msg" id="previewMsg"></div>
@@ -123,7 +123,7 @@
     }).catch(function(e){ $("pendingInfo").textContent = e.message; });
   }
 
-  function params(){ return { fromPending: true, topN: parseInt($("topN").value, 10) || 200 }; }
+  function params(){ return { fromPending: true, topN: parseInt($("topN").value, 10) || 100 }; }
 
   function renderResult(res){
     items = res.items || [];
@@ -132,9 +132,7 @@
       ["新規登録", c.create], ["既存と一致（gidを付ける）", c.link], ["うち名前が変わる", c.rename], ["うち同盟が変わる", c.realliance], ["要確認", c.review], ["同盟なし", c.noalliance], ["今回は登録しない", c.skip]
     ].map(function(x){ return '<span class="pill">' + x[0] + ' <b>' + (x[1] || 0) + '</b></span>'; }).join("");
     var cov = res.coverage || {};
-    var lines = ["総力の上位 " + res.topN + " 人まで（取得した " + res.total + " 人の中）を対象にしています。"];
-    if(cov.playerCount) lines.push("816鯖の人数 " + cov.playerCount + " 人に対して、取得できたのは " + cov.fetched + " 人です。取れなかった見込み: " + Math.max(0, cov.playerCount - cov.fetched) + " 人。");
-    lines.push("同盟なしの人は、総力ボード等の上位100までに入った人しか取れません（それ以下の人は出てきません）。");
+    var lines = ["取り込み対象は、816の総力ランキング上位 " + res.total + " 人だけです（それより下の人は含みません）。"];
     $("coverageNote").innerHTML = lines.map(esc).join("<br>");
 
     var na = items.filter(function(i){ return i.kind === "noalliance"; });

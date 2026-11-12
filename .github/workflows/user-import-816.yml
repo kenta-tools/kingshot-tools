@@ -13,9 +13,9 @@ on:
         options: [test, prod]
         default: test
       top_n:
-        description: "総力の上位何人まで取り込むか"
+        description: "総力ランキングの上位何人まで取り込むか（取得は上位100人だけ）"
         type: string
-        default: "200"
+        default: "100"
       include_no_alliance:
         description: "同盟なしの人も全員登録する（通常はfalseにして、管理画面で選ぶ）"
         type: boolean

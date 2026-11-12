@@ -23,12 +23,11 @@ GAS = {
     "prod": "https://script.google.com/macros/s/AKfycbxu5HW9uLU9pCsUs1r_45xpuofWZmQAyZFDwSLK1C_7GvA7SDXZ4ayBEJTS0sR_8oToAw/exec",
     "test": "https://script.google.com/macros/s/AKfycbztnub9vRBiRHdL5Xea7hoThHWRzDSF9Www0eImUs8YlZQglMKNnMR90v6hD87hMlPk/exec",
 }
-PERSONAL_BOARDS = ["personal_power", "kills", "town_center", "master_power", "mystic_trial", "pet_power"]
 KEEP_ROWS = 600          # GASに送る人数（総力の大きい順）。取り込み画面で上位N人に絞る
 MIN_INTERVAL = 1.15      # 1キー60回/分の制限を守る（聖剣リーグの自動更新と同じキーなので9:00〜10:00 JSTは避ける）
 
 TARGET = os.environ.get("TARGET", "test").strip()
-TOP_N = int(os.environ.get("TOP_N", "200") or 200)
+TOP_N = int(os.environ.get("TOP_N", "100") or 100)
 INCLUDE_NO_ALLIANCE = os.environ.get("INCLUDE_NO_ALLIANCE", "false").lower() == "true"
 COMMIT = os.environ.get("COMMIT", "false").lower() == "true"
 DRY_RUN = os.environ.get("DRY_RUN", "true").lower() == "true"
@@ -131,109 +130,70 @@ def sample_rows():
 
 
 def fetch_real():
+    """816の総力（personal_power）ランキング上位100人だけを取る（2026-11-13 ユーザー決定）。
+    ranks を1回 → その100人を /players で引いて同盟（abbr・name）と総力を付ける。同盟が空なら同盟なし。呼び出しは合計5〜6回。"""
     if not API_KEY:
         fail("MIGHTPULSE_API_KEY が設定されていません")
-    stats = {}
     api_get("/usage")  # 残り回数の確認（回数には数えない）
-    k = api_get("/kingdoms/%d" % KID)
-    if not k or not k.get("ok", True):
-        fail("王国情報を取得できませんでした")
-    alliance_count = as_int(dig(k, "alliance_count"))
-    player_count = as_int(dig(k, "player_count"))
-    located = as_int(dig(k, "located"))
-    print("王国%d: 同盟 %s・プレイヤー %s・located %s" % (KID, alliance_count, player_count, located))
-    if alliance_count is not None and alliance_count > 100:
-        fail("同盟が100を超えています（%d）。一覧が1回で取れないため止めます" % alliance_count)
+    d = api_get("/kingdoms/%d/ranks" % KID, {"board": "personal_power", "limit": 100})
+    board = ((d or {}).get("board", {}) or {}).get("rows", []) if d else []
+    top = []
+    for r in board:
+        gid = str(r.get("governor_id") or "")
+        if gid:
+            top.append((gid, str(r.get("nick_name") or ""), as_int(r.get("score"))))
+    if not top:
+        fail("総力ランキングを取得できませんでした")
+    print("総力ランキング上位 %d 人を取得しました" % len(top))
 
-    board = api_get("/kingdoms/%d/ranks" % KID, {"board": "alliance_power", "limit": 100})
-    arows = (board or {}).get("board", {}).get("rows", []) if board else []
-    alliances = [{"abbr": str(a.get("abbr") or ""), "name": str(a.get("name") or "")} for a in arows if a.get("abbr")]
-    if not alliances:
-        fail("同盟の一覧を取得できませんでした")
-    print("同盟 %d 件（タグ↔名前）:" % len(alliances))
-    for a in alliances:
-        print("  %s = %s" % (a["abbr"], a["name"]))  # 同盟の情報はログに出してよい（プレイヤー情報ではない）
-
-    people = {}
-    dup = 0
-    missing_power = 0
-    for a in alliances:
-        d = api_get("/alliances/%d/%s" % (KID, a["abbr"]), {"include": "info,roster"})
-        if not d:
-            continue
-        roster = d.get("roster")
-        members = roster.get("members") if isinstance(roster, dict) else roster
-        if not isinstance(members, list):
-            print("  名簿の形が想定と違います（%s）。キー: %s" % (a["abbr"], ",".join(sorted(d.keys()))))
-            continue
-        info = d.get("info") or {}
-        aname = str(info.get("name") or a["name"])
-        for m in members:
-            gid = str(m.get("governor_id") or "")
-            if not gid:
-                continue
-            power = as_int(m.get("power"))
-            if power is None:
-                missing_power += 1
-                power = 0
-            row = {"gid": gid, "name": str(m.get("nick_name") or ""), "tag": a["abbr"], "allianceName": aname, "kid": str(KID), "noAlliance": False,
-                   "power": power, "kills": as_int(m.get("kills")), "townCenter": as_int(m.get("town_center_level")),
-                   "allianceRank": str(m.get("alliance_rank_label") or m.get("alliance_rank") or ""), "source": "roster"}
-            if gid in people:
-                dup += 1
-                if people[gid]["power"] >= power:
-                    continue
-            people[gid] = row
-    stats["rosterPeople"] = len(people)
-    stats["dup"] = dup
-    stats["missingPower"] = missing_power
-    print("名簿から %d 人（重複 %d・総力の欠損 %d）" % (len(people), dup, missing_power))
-
-    # 同盟なしの洗い出し：個人ボード上位100に出てくるが、名簿に無い人 → /players で同盟の有無を確認
-    cand = {}
-    for b in PERSONAL_BOARDS:
-        d = api_get("/kingdoms/%d/ranks" % KID, {"board": b, "limit": 100})
-        for r in ((d or {}).get("board", {}).get("rows", []) if d else []):
-            gid = str(r.get("governor_id") or "")
-            if gid and gid not in people:
-                cand[gid] = True
-    cand_ids = list(cand.keys())
-    print("同盟なしの候補 %d 人を確認します" % len(cand_ids))
-    no_alliance = 0
-    other = 0
-    for i in range(0, len(cand_ids), 50):
-        chunk = cand_ids[i:i + 50]
-        d = api_get("/players", {"ids": ",".join(chunk), "include": "base"})
+    by_gid = {}
+    pending = 0
+    for i in range(0, len(top), 50):
+        ids = [g for g, _, _ in top[i:i + 50]]
+        d = api_get("/players", {"ids": ",".join(ids), "include": "base"})
         pl = (d or {}).get("players") if d else None
         if isinstance(pl, dict):
             pl = list(pl.values())
         for e in pl or []:
             p = e.get("player") if isinstance(e.get("player"), dict) else e
             gid = str(p.get("governor_id") or e.get("governor_id") or "")
-            if not gid:
-                continue
-            al = p.get("alliance")
-            abbr = str(al.get("abbr") or "") if isinstance(al, dict) else ""
-            power = as_int(p.get("power"))
-            if power is None:
-                missing_power += 1
-                power = 0
-            row = {"gid": gid, "name": str(p.get("nick_name") or ""), "tag": abbr, "allianceName": str(al.get("name") or "") if isinstance(al, dict) else "",
-                   "kid": str(KID), "noAlliance": not abbr, "power": power, "kills": as_int(p.get("kills")),
-                   "townCenter": as_int(p.get("town_center_level")), "source": "player"}
-            people[gid] = row
-            if abbr:
-                other += 1
-            else:
-                no_alliance += 1
+            if gid:
+                by_gid[gid] = p
         if d and d.get("pending"):
-            print("  pending あり（取りきれなかった分は今回は飛ばします）")
-    stats["noAlliance"] = no_alliance
-    stats["rosterMiss"] = other
-    print("同盟なし %d 人・名簿に無かったが同盟ありの人 %d 人" % (no_alliance, other))
-    rows = sorted(people.values(), key=lambda r: -r["power"])
-    meta = {"playerCount": player_count if player_count is not None else located, "alliances": alliances,
-            "notes": ["同盟なしの人は、個人ボードの上位100までに入った人しか取れません（総力101位以降の無所属は出てきません）"]}
+            pending += 1
+            time.sleep(min(float(d.get("retry_after") or 5), 30))
+            d2 = api_get("/players", {"ids": ",".join(ids), "include": "base"})  # pending は待って1回だけ取り直す
+            pl2 = (d2 or {}).get("players") if d2 else None
+            if isinstance(pl2, dict):
+                pl2 = list(pl2.values())
+            for e in pl2 or []:
+                p = e.get("player") if isinstance(e.get("player"), dict) else e
+                gid = str(p.get("governor_id") or e.get("governor_id") or "")
+                if gid:
+                    by_gid[gid] = p
+
+    rows = []
+    no_alliance = 0
+    missing_player = 0
+    for gid, name, score in top:
+        p = by_gid.get(gid)
+        if p is None:
+            missing_player += 1  # 同盟を確認できなかった人は、同盟の情報なし（同盟なし扱いにはせず、タグ空のまま送る）
+            p = {}
+        al = p.get("alliance")
+        abbr = str(al.get("abbr") or "") if isinstance(al, dict) else ""
+        power = as_int(p.get("power"))
+        if power is None:
+            power = score if score is not None else 0
+        row = {"gid": gid, "name": str(p.get("nick_name") or name), "tag": abbr, "allianceName": str(al.get("name") or "") if isinstance(al, dict) else "",
+               "kid": str(KID), "noAlliance": not abbr, "power": power, "kills": as_int(p.get("kills")),
+               "townCenter": as_int(p.get("town_center_level")), "source": "player" if p else "board"}
+        if not abbr:
+            no_alliance += 1
+        rows.append(row)
+    print("同盟なし %d 人・/players で引けなかった人 %d 人・pending %d 回" % (no_alliance, missing_player, pending))
+    stats = {"noAlliance": no_alliance, "missingPlayer": missing_player, "fetched": len(rows)}
+    meta = {"playerCount": None, "alliances": [], "notes": ["取り込み対象は、816の総力ランキング上位%d人だけです（それより下の人は含みません）" % len(rows)]}
     return rows, meta, stats
 
 
@@ -269,7 +229,7 @@ def main():
     if cov.get("playerCount"):
         summary.append("- 816鯖の人数 %s 人に対して取得 %s 人（取れなかった見込み %d 人）" % (cov["playerCount"], cov["fetched"], max(0, cov["playerCount"] - cov["fetched"])))
     if stats:
-        summary.append("- 名簿の重複 %s／総力の欠損 %s／同盟なし %s" % (stats.get("dup"), stats.get("missingPower"), stats.get("noAlliance")))
+        summary.append("- 取得 %s 人（816の総力ランキング上位）／同盟なし %s 人／/players で引けなかった人 %s 人" % (stats.get("fetched"), stats.get("noAlliance"), stats.get("missingPlayer")))
     if COMMIT:
         cm = relay(dict(params, action="userImportCommit"))
         if not cm.get("ok"):
