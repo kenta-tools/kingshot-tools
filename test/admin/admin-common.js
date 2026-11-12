@@ -1627,6 +1627,82 @@
     return (s.unknown ? ' <span class="tag new">確認事項：わかりません' + s.unknown + '</span>' : "") + (s.missing ? ' <span class="hint">（確認事項：未回答' + s.missing + '）</span>' : "");
   }
 
+  // ---------- 登録ユーザー一覧（閲覧用・users.html）。参加登録の内容は含めず、登録されているユーザーだけを見やすく並べる ----------
+  // 列：No／名前／同盟／別名（別名 aliases・旧名 nameHistory）／ゲームID（gid）／（あれば）取り込み元・取り込み日。同盟の表記は変換しない
+  function ulAliasText(u) {
+    var seen = {}, out = [];
+    (u.aliases || []).forEach(function(a) { if (a && !seen[a]) { seen[a] = 1; out.push(a); } });
+    (u.nameHistory || []).forEach(function(h) { if (h.name && !seen[h.name]) { seen[h.name] = 1; out.push(h.name + "（旧名）"); } });
+    return out.join("、");
+  }
+  function ulAllianceCounts() {
+    var c = {};
+    state.users.forEach(function(u) { var a = u.alliance || "（同盟なし）"; c[a] = (c[a] || 0) + 1; });
+    return c;
+  }
+  function ulRows() {
+    var counts = ulAllianceCounts(), q = ($("ulSearch").value || "").trim().toLowerCase(), fa = $("ulAlliance").value, sort = $("ulSort").value;
+    var list = state.users.map(function(u, i) { return { u: u, i: i, a: u.alliance || "（同盟なし）" }; }).filter(function(r) {
+      return (!fa || r.a === fa) && (!q || r.u.name.toLowerCase().indexOf(q) >= 0);
+    });
+    list.sort(function(x, y) {
+      if (sort === "order") return x.i - y.i;
+      if (sort === "name") return x.u.name.localeCompare(y.u.name, "ja") || x.i - y.i;
+      return (counts[y.a] - counts[x.a]) || x.a.localeCompare(y.a, "ja") || x.u.name.localeCompare(y.u.name, "ja");
+    });
+    return list;
+  }
+  function ulColumns() {
+    var hasSrc = state.users.some(function(u) { return u.source || u.importedAt; });
+    var cols = ["No", "名前", "同盟", "別名（旧名など）", "ゲームID"];
+    if (hasSrc) cols.push("取り込み元", "取り込み日");
+    return cols;
+  }
+  function ulCells(r, n, cols) {
+    var u = r.u, row = [String(n), u.name, u.alliance || "", ulAliasText(u), u.gid || ""];
+    if (cols.length > 5) row.push(u.source || "", u.importedAt ? String(u.importedAt).slice(0, 10) : "");
+    return row;
+  }
+  function renderUserList() {
+    if (!$("ulBody")) return;
+    var counts = ulAllianceCounts(), names = Object.keys(counts).sort(function(a, b) { return counts[b] - counts[a] || a.localeCompare(b, "ja"); });
+    $("ulChips").innerHTML = names.map(function(a) {
+      return '<span class="tag" style="padding: 3px 10px;">' + escapeHtml(a) + ' ' + counts[a] + '人</span>';
+    }).join("");
+    var sel = $("ulAlliance"), cur = sel.value;
+    sel.innerHTML = '<option value="">すべて</option>' + names.map(function(a) {
+      return '<option value="' + escapeHtml(a) + '"' + (a === cur ? " selected" : "") + '>' + escapeHtml(a) + '（' + counts[a] + '）</option>';
+    }).join("");
+    var rows = ulRows(), cols = ulColumns();
+    $("ulHead").innerHTML = cols.map(function(c) { return "<th>" + c + "</th>"; }).join("");
+    $("ulBody").innerHTML = rows.length ? rows.map(function(r, i) {
+      return "<tr>" + ulCells(r, i + 1, cols).map(function(v, k) {
+        return '<td' + (k === 0 ? ' class="num"' : "") + '>' + escapeHtml(v) + "</td>";
+      }).join("") + "</tr>";
+    }).join("") : '<tr><td colspan="' + cols.length + '" class="hint" style="text-align:center;">該当するユーザーはいません</td></tr>';
+    var total = state.users.length;
+    $("ulCount").textContent = "合計 " + total + "人" + (rows.length !== total ? "（表示 " + rows.length + "人）" : "");
+  }
+  function ulCsvText() {
+    var rows = ulRows(), cols = ulColumns();
+    function q(v) { return '"' + String(v).replace(/"/g, '""') + '"'; }
+    var lines = [cols.map(q).join(",")];
+    rows.forEach(function(r, i) { lines.push(ulCells(r, i + 1, cols).map(q).join(",")); });
+    return "﻿" + lines.join("\r\n") + "\r\n";
+  }
+  on("ulSearch", "input", renderUserList);
+  on("ulAlliance", "change", renderUserList);
+  on("ulSort", "change", renderUserList);
+  on("ulCsv", "click", function() {
+    var blob = new Blob([ulCsvText()], { type: "text/csv;charset=utf-8" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "登録ユーザー一覧_" + today().replace(/-/g, "") + ".csv";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function() { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  });
+
   function defaultCompare(a, b) {
     return a.alliance.localeCompare(b.alliance, "ja")
       || ENTRY_ORDER.indexOf(a.entry) - ENTRY_ORDER.indexOf(b.entry)
@@ -1859,6 +1935,7 @@
       refreshAiText();
     }
     renderUsers();
+    renderUserList();
   }
 
   // 見出しは遺跡争奪のとき差し替えるので、クリックはまとめて受ける

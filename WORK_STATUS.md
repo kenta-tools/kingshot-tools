@@ -198,3 +198,4 @@ Kingshot関連の単体HTMLツールのうち、ゲームプレイの実務で�
 - Actions: .github/workflows/user-import-816.yml ＋ .github/scripts/user_import_816.py（手動実行。ドライランは固定サンプル）。新Secret（任意）RELAY_PASSWORD_TEST（test GASを対象に実行するときだけ）。
 - test/admin/user-import.html と test/admin/admin-common.js（gid を保存で消さない・統合で残す）を変更。本番側 admin/ は未変更。
 - 本番に出すとき: 本番GAS再デプロイ（pubGetの件数不変を確認）→ admin/user-import.html・admin/admin-common.js・workflow・script を main へ → ユーザーが Actions を実行。
+- 2026-11-13 追記（ユーザ登録機能/userlist、test/のみ）：ユーザー管理（test/admin/users.html）の上に「📋 登録ユーザー一覧（閲覧用）」を追加。列 No/名前/同盟/別名（別名＋旧名）/ゲームID（＋あれば取り込み元・取り込み日）、合計人数と同盟別人数（多い順・表記は変換しない）、同盟絞り込み・名前検索・並び替え（同盟順/名前順/登録順）、CSVダウンロード（UTF-8 BOM・表示中の絞り込み/並び順のまま）。test/admin/admin-common.js の renderUserList 等と test/spec/spec.md。GAS変更なし。本番側は未反映
