@@ -15,7 +15,8 @@ label{display:block;font-size:.85rem;color:var(--mut)}input,select{width:100%;pa
 table{width:100%;border-collapse:collapse;font-size:.92rem}th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right}th:first-child,td:first-child{text-align:left}th{background:var(--hd)}
 .tw{overflow-x:auto}.big{font-size:1.5rem;font-weight:700;color:var(--acc)}.ok{color:var(--ok);font-weight:700}.ng{color:var(--ng);font-weight:700}
 details summary{cursor:pointer;color:var(--acc)}
-.kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.kpi>div.eq{grid-column:1/-1;padding:12px 16px;display:flex;flex-wrap:wrap;align-items:flex-end;gap:4px 44px}.kpi>div.eq .nm{font-size:1.1rem;width:100%;margin-bottom:0}.kpi>div.eq .row{display:block;text-align:left}.kpi>div.eq .row>span{display:block}.kpi>div.eq .row>span:last-child{margin-top:0}@media(max-width:700px){.kpi{grid-template-columns:1fr}}.kpi>div{background:var(--hd);border-radius:8px;padding:10px 12px}.kpi .row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:.88rem;color:var(--mut)}.kpi .nm{font-weight:700;color:var(--ink);margin-bottom:4px}.spin{margin-top:10px;border:1px solid var(--line);border-radius:8px;padding:10px 12px}.spin .nm{font-weight:700;margin-bottom:6px}.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}.spin .big{font-size:1.4rem;font-weight:700;color:var(--acc)}.kpi .row.short,.kpi .row.short span{font-weight:700;color:var(--acc);font-size:1.3rem}.kpi .row.short .big{font-size:1.3rem}.kpi .big{font-size:1.4rem;line-height:1.3}
+.kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.kpi>div.eq{grid-column:1/-1;padding:12px 16px;display:flex;flex-wrap:wrap;align-items:flex-end;gap:4px 44px}.kpi>div.eq .nm{font-size:1.1rem;width:100%;margin-bottom:0}.kpi>div.eq .row{display:block;text-align:left}.kpi>div.eq .row>span{display:block}.kpi>div.eq .row>span:last-child{margin-top:0}@media(max-width:700px){.kpi{grid-template-columns:1fr}}.kpi>div{background:var(--hd);border-radius:8px;padding:10px 12px}.kpi .row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:.88rem;color:var(--mut)}.kpi .nm{font-weight:700;color:var(--ink);margin-bottom:4px}.spin{margin-top:10px;border:1px solid var(--line);border-radius:8px;padding:10px 12px}.spin .nm{font-weight:700;margin-bottom:6px}.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}.spin .big{font-size:1.4rem;font-weight:700;color:var(--acc)}.kpi .row.em,.kpi .row.em span{font-weight:700;color:var(--ink);font-size:1.05rem}
+.kpi .row.short,.kpi .row.short span{font-weight:700;color:var(--acc);font-size:1.3rem}.kpi .row.short .big{font-size:1.3rem}.kpi .big{font-size:1.4rem;line-height:1.3}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}.seg button{border:0;padding:8px 16px;background:var(--bg);color:var(--ink);font-size:.95rem;cursor:pointer}.seg button.on{background:var(--acc);color:#fff}
 .hide{display:none}
 .cks{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:6px}.ck{display:flex!important;align-items:center;gap:4px;font-size:.9rem;color:var(--ink)}.ck input{width:auto;padding:0}
@@ -203,7 +204,7 @@ details summary{cursor:pointer;color:var(--acc)}
 </div></div>
 
 <div class="card"><h2>結果</h2><div class="seg" style="margin-bottom:10px"><button id="vs" class="on" type="button">簡易表示</button><button id="vd" type="button">詳細表示</button></div><div class="kpi simple" id="kpi"></div>
-<div class="card" id="timeBox" style="margin-top:10px;margin-bottom:10px"></div>
+<div id="timeBox" style="margin:10px 0"></div>
 <div class="spin" id="spin"></div>
 <details style="margin-top:10px" id="tabbox"><summary>内訳（上級研究・黄金別）</summary><div class="tw" style="margin-top:10px"><table id="tab"></table></div></details>
 <div class="note" id="msg" style="margin-top:6px"></div></div>
@@ -344,14 +345,30 @@ function renderTime(c){
   $('buffSum').textContent='バフ合計：研究 +'+bf.R+'%'+(c.showG?' ／ 建物 +'+bf.B+'%':'');
   const r0=c.doR?c.R.sec:0,g0=c.doG?c.G.sec:0,r1=r0/(1+bf.R/100),g1=g0/(1+bf.B/100);
   const sR=mn('ownSpR'),sB=mn('ownSpB'),sC=mn('ownSpC');
-  const r2=Math.max(0,r1-sR),g2=Math.max(0,g1-sB);
-  const t3=Math.max(0,r2+g2-sC);
+  // 先に、研究は研究加速・建物は建造加速を使い、足りない分に一般加速を使う
+  const rS=Math.max(0,r1-sR),gS=Math.max(0,g1-sB),rX=Math.max(0,sR-r1),gX=Math.max(0,sB-g1);
+  const need=rS+gS,tS=Math.max(0,need-sC),cX=Math.max(0,sC-need);
+  const z=s=>Math.round(s)>0;
+  const tc=(nm,base,buffed,use,useName,short,sur,surName)=>`<div><div class="nm">${nm}</div>`
+    +`<div class="row"><span>基本時間</span><span>${fT(base)}</span></div>`
+    +`<div class="row em"><span>バフ適用後</span><span>${fT(buffed)}</span></div>`
+    +(use>0?`<div class="row"><span>${useName}を使用</span><span>${fT(Math.min(use,buffed))}</span></div>`:'')
+    +`<div class="row short"><span>不足時間</span><span class="big">${z(short)?fT(short):'なし'}</span></div>`
+    +(z(sur)?`<div class="row"><span>余剰（${surName}）</span><span>${fT(sur)}</span></div>`:'')+'</div>';
+  let h='';
+  if(c.doR)h+=tc('上級研究の時間',r0,r1,sR,'研究加速',rS,rX,'研究加速');
+  if(c.doG)h+=tc('黄金（建物）の時間',g0,g1,sB,'建造加速',gS,gX,'建造加速');
+  if(c.doR||c.doG)h+=`<div><div class="nm">一般加速で補ったあと</div>`
+    +`<div class="row"><span>専用加速で足りない分</span><span>${fT(need)}</span></div>`
+    +(sC>0?`<div class="row"><span>一般加速を使用</span><span>${fT(Math.min(sC,need))}</span></div>`:'')
+    +`<div class="row short"><span>不足時間</span><span class="big">${z(tS)?fT(tS):'なし'}</span></div>`
+    +(z(cX)?`<div class="row"><span>余剰（一般加速）</span><span>${fT(cX)}</span></div>`:'')+'</div>';
+  $('kpi').insertAdjacentHTML('beforeend',h);
   const row=(n,a,b,c2)=>`<tr><td>${n}</td><td>${fT(a)}</td><td>${fT(b)}</td><td><b>${c2}</b></td></tr>`;
-  $('timeBox').innerHTML='<h2>所要時間</h2><div class="tw"><table><tr><th></th><th>基本時間</th><th>バフ適用後</th><th>加速アイテム使用後の残り</th></tr>'
-   +(c.doR?row('上級研究',r0,r1,fT(r2)+'<br><span class="note">（研究加速 '+fT(sR)+' を使用）</span>'):'')
-   +(c.doG?row('黄金（建物の合計）',g0,g1,fT(g2)+'<br><span class="note">（建造加速 '+fT(sB)+' を使用）</span>'):'')
-   +row('合計（順番に進めた場合）',r0+g0,r1+g1,fT(t3)+'<br><span class="note">（研究・建物の残りに、一般加速 '+fT(sC)+' も使用）</span>')
-   +'</table></div><div class="note" style="margin-top:6px">加速アイテムは、研究の分は研究加速、建物の分は建造加速を先に使い、足りない分に一般加速を使う計算です。建物は、1つずつ順番に建てた場合の合計です（同時進行は考えていません）。必要な資源や素材の集まる時間は含みません。</div>';
+  $('timeBox').innerHTML='<details><summary>所要時間の内訳（基本時間・バフ・加速）</summary><div class="tw" style="margin-top:8px"><table><tr><th></th><th>基本時間</th><th>バフ適用後</th><th>加速アイテム使用後の残り</th></tr>'
+   +(c.doR?row('上級研究',r0,r1,fT(rS)):'')+(c.doG?row('黄金（建物の合計）',g0,g1,fT(gS)):'')
+   +row('合計（順番に進めた場合）',r0+g0,r1+g1,fT(tS))
+   +'</table></div><div class="note" style="margin-top:6px">研究は研究加速、建物は建造加速を先に使い、足りない分に一般加速を使う計算です。建物は、1つずつ順番に建てた場合の合計です（同時進行は考えていません）。必要な資源や素材の集まる時間は含みません。</div></details>';
 }
 function render(){
   syncDisabled();
