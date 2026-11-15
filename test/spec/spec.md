@@ -624,6 +624,8 @@ URL: https://kenta-tools.github.io/kingshot-tools/manual/
 - 内容の更新は、元のHTML（キングショット\EGGマニュアル\EGG新規加入者マニュアル.html）を直してから、manual/index.html に上書きコピーします。
 
 ## 黄金計算機（tools/gold-calculator.html）（2026-11-15追加）
+
+（テスト環境では、ツール一覧のカードと左メニュー（「その他」）から開けます。ほかのツールと同じ左メニューが付きます。URLは本番と同じ gold-calculator.html のままです。）
 上級研究（Advanced Truegold Research）と黄金（建物 黄金1〜10）に必要な量を、現在のアイテム数と実施日から逆算する単体ページ（外部通信・外部ライブラリなし）。**TOP・メニューには出さず**、URLを直接案内します。
 URL: https://kenta-tools.github.io/kingshot-tools/tools/gold-calculator.html
 - 入力: 現在のアイテム数（黄金・精製黄金・黄金微粒子）／計算の対象（両方・上級研究だけ・黄金だけ）／上級研究の現在位置と目標／黄金の現在・目標レベル／実施日（KVK開始週の月曜日。解放回・温存回が交互）。
