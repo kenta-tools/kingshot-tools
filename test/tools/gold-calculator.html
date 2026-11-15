@@ -167,6 +167,9 @@ details summary{cursor:pointer;color:var(--acc)}
 <div><label><img class="ico" data-ico="tg" alt="">黄金</label><input id="ownTG" type="number" min="0" value="0"></div>
 <div><label><img class="ico" data-ico="ttg" alt="">精製黄金</label><input id="ownTTG" type="number" min="0" value="0"></div>
 <div><label><img class="ico" data-ico="dust" alt="">黄金微粒子</label><input id="ownDust" type="number" min="0" value="0"></div>
+<div><label>共通加速（分）</label><input id="ownSpC" type="number" min="0" value="0"></div>
+<div class="rs"><label>研究加速（分）</label><input id="ownSpR" type="number" min="0" value="0"></div>
+<div class="gs"><label>建物加速（分）</label><input id="ownSpB" type="number" min="0" value="0"></div>
 </div><div class="note" style="margin-top:6px">持っていなければ 0 のままで構いません。上級研究・黄金（建物）の両方の計算に使います。入力した内容は、このブラウザにだけ自動で保存されます（サーバには送られません）。</div></div>
 
 <div class="card"><h2>1. 何を計算しますか？</h2>
@@ -187,7 +190,7 @@ details summary{cursor:pointer;color:var(--acc)}
 <div><label>上級研究の実施日（KVK開始週の月曜日）</label><select id="d1"></select></div>
 </div></div>
 
-<div class="card"><h2>スピードアップ効果（所要時間の計算用）</h2><div class="grid"><div class="rs"><label>研究スピード（%）</label><input id="spR" type="number" min="0" step="any" value="0"></div><div class="gs"><label>建設スピード（%）</label><input id="spB" type="number" min="0" step="any" value="0"></div></div><div class="note" style="margin-top:6px">0のままだと、基本時間（スピードアップなし）で表示します。短縮後の時間＝基本時間 ÷（1＋スピード％÷100）。</div></div>
+<div class="card"><h2>加速バフ値（所要時間の計算用）</h2><div class="note">チェックを入れたバフを、すべて足し算して計算します。短縮後の時間＝基本時間 ÷（1＋バフ合計％÷100）。</div><div class="grid" style="margin-top:8px"><div class="rs"><label>研究 基礎（%）</label><input id="brBase" type="number" min="0" step="any" value="0"><div class="cks"><label class="ck"><input type="checkbox" id="brRole"> 役職 +10%</label><label class="ck"><input type="checkbox" id="brKvk"> KVKボーナス +10%</label></div></div><div class="gs"><label>建物 基礎（%）</label><input id="bbBase" type="number" min="0" step="any" value="0"><div class="cks"><label class="ck"><input type="checkbox" id="bbPetOn"> ペット（建造アシスタント）</label><select id="bbPetLv" style="width:auto"><option value="5">Lv5 +15%</option><option value="4">Lv4 +12%</option><option value="3">Lv3 +9%</option><option value="2">Lv2 +7%</option><option value="1">Lv1 +5%</option></select><label class="ck"><input type="checkbox" id="bbLaw"> 法令 +20%</label><label class="ck"><input type="checkbox" id="bbRole"> 役職 +10%</label><label class="ck"><input type="checkbox" id="bbKvk"> KVKボーナス +10%</label></div></div></div><div class="note" id="buffSum" style="margin-top:6px"></div><details style="margin-top:8px"><summary>確認方法のヘルプ</summary><div style="margin-top:8px" id="buffHelp"><ul><li><b>基礎</b>：ゲーム内で今ついている研究・建設スピードの合計（％）。ペット・法令・役職・KVKボーナスを除いた分を入れてください。</li><li><b>ペット（建造アシスタント）</b>：建物のみ。レベルによって変わります（Lv1 5%／Lv2 7%／Lv3 9%／Lv4 12%／Lv5 15%）。持続は5分・クールダウン23時間なので、使う場面だけチェックしてください。</li><li><b>法令</b>：建物のみ。+20%（固定）。</li><li><b>役職</b>：研究・建物の両方。+10%（固定）。</li><li><b>KVKボーナス</b>：研究・建物の両方。+10%（固定）。</li></ul><div class="note">画面の見かた（画像）は準備中です。</div></div></details></div>
 
 <div class="card gs"><h2>3. 黄金（建物）</h2><div class="grid">
 <div><label>現在の黄金レベル</label><select id="gcur"></select><div class="cks" id="ckcur"><label class="ck"><input type="checkbox" id="cc_inf" checked> 歩兵</label><label class="ck"><input type="checkbox" id="cc_arc" checked> 弓兵</label><label class="ck"><input type="checkbox" id="cc_cav" checked> 騎兵</label><label class="ck"><input type="checkbox" id="cc_emb" checked> 大使館</label><label class="ck"><input type="checkbox" id="cc_cmd" checked> 指揮所</label></div><div class="note">チェックが付いた建物は、そのレベルまで完了しています。外すと、その建物の分は未完了として計算します。</div></div>
@@ -327,11 +330,26 @@ const IC=k=>`<img class="ico" src="${IMGS[k]}" alt="">`;
 const ICO={'黄金換算':IC('tg'),'黄金（黄金として必要）':IC('tg'),'精製黄金':IC('ttg'),'黄金微粒子':IC('dust')};
 document.querySelectorAll('img[data-ico]').forEach(e=>{e.src=IMGS[e.dataset.ico]});
 const fT=s=>{s=Math.round(s);if(s<=0)return '0分';const d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60);return (d?d+'日':'')+(h?h+'時間':'')+((!d&&m)||(!d&&!h)?m+'分':'')};
+const PETB={1:5,2:7,3:9,4:12,5:15};
+function buffs(){
+  const n=id=>Math.max(0,+$(id).value||0),on=id=>$(id).checked?1:0;
+  const R=n('brBase')+on('brRole')*10+on('brKvk')*10;
+  const B=n('bbBase')+on('bbPetOn')*(PETB[$('bbPetLv').value]||0)+on('bbLaw')*20+on('bbRole')*10+on('bbKvk')*10;
+  return {R,B};
+}
 function renderTime(c){
-  const pR=Math.max(0,+$('spR').value||0),pB=Math.max(0,+$('spB').value||0);
-  const r0=c.doR?c.R.sec:0,g0=c.doG?c.G.sec:0,r1=r0/(1+pR/100),g1=g0/(1+pB/100);
-  const row=(n,a,b)=>`<tr><td>${n}</td><td>${fT(a)}</td><td><b>${fT(b)}</b></td></tr>`;
-  $('timeBox').innerHTML='<h2>所要時間</h2><div class="tw"><table><tr><th></th><th>基本時間</th><th>短縮後</th></tr>'+(c.doR?row('上級研究（合計）',r0,r1):'')+(c.doG?row('黄金（建物の合計）',g0,g1):'')+row('合計（研究と建物を順番に進めた場合）',r0+g0,r1+g1)+(c.doR&&c.doG?row('研究と建物を同時に進めた場合（長い方）',Math.max(r0,g0),Math.max(r1,g1)):'')+'</table></div><div class="note" style="margin-top:6px">建物は、1つずつ順番に建てた場合の合計です（建設の同時進行は考えていません）。必要な資源や素材の集まる時間は含みません。</div>';
+  const bf=buffs(),mn=id=>Math.max(0,+$(id).value||0)*60;
+  $('buffSum').textContent='バフ合計：研究 +'+bf.R+'%'+(c.showG?' ／ 建物 +'+bf.B+'%':'');
+  const r0=c.doR?c.R.sec:0,g0=c.doG?c.G.sec:0,r1=r0/(1+bf.R/100),g1=g0/(1+bf.B/100);
+  const sR=mn('ownSpR'),sB=mn('ownSpB'),sC=mn('ownSpC');
+  const r2=Math.max(0,r1-sR),g2=Math.max(0,g1-sB);
+  const t3=Math.max(0,r2+g2-sC);
+  const row=(n,a,b,c2)=>`<tr><td>${n}</td><td>${fT(a)}</td><td>${fT(b)}</td><td><b>${c2}</b></td></tr>`;
+  $('timeBox').innerHTML='<h2>所要時間</h2><div class="tw"><table><tr><th></th><th>基本時間</th><th>バフ適用後</th><th>加速アイテム使用後の残り</th></tr>'
+   +(c.doR?row('上級研究',r0,r1,fT(r2)+'<br><span class="note">（研究加速 '+fT(sR)+' を使用）</span>'):'')
+   +(c.doG?row('黄金（建物の合計）',g0,g1,fT(g2)+'<br><span class="note">（建物加速 '+fT(sB)+' を使用）</span>'):'')
+   +row('合計（順番に進めた場合）',r0+g0,r1+g1,fT(t3)+'<br><span class="note">（研究・建物の残りに、共通加速 '+fT(sC)+' も使用）</span>')
+   +'</table></div><div class="note" style="margin-top:6px">加速アイテムは、研究の分は研究加速、建物の分は建物加速を先に使い、足りない分に共通加速を使う計算です。建物は、1つずつ順番に建てた場合の合計です（同時進行は考えていません）。必要な資源や素材の集まる時間は含みません。</div>';
 }
 function render(){
   syncDisabled();
@@ -391,10 +409,10 @@ function setView(s){$('kpi').classList.toggle('simple',s);$('vs').classList.togg
 $('vs').onclick=()=>setView(true);$('vd').onclick=()=>setView(false);
 $('rsel').addEventListener('change',()=>{const s=$('rsel').value;$('rlv').value=s===''?'':(s==='__csv__'?10:ADV[s].l.length);render()});
 $('rlv').value='';
-const KEY='kingshot_ogon_calc_v1',CBS=['cc_inf','cc_arc','cc_cav','cc_emb','cc_cmd','tc_inf','tc_arc','tc_cav','tc_emb','tc_cmd'],IDS=['spR','spB','ownTG','ownTTG','ownDust','mode','rcur','rsel','rlv','gcur','gtar','d1','d2'];
-function save(){try{const o={};IDS.forEach(i=>{o[i]=$(i).value});CBS.forEach(i=>{o[i]=$(i).checked?1:0});o.view=$('kpi').classList.contains('simple')?'s':'d';localStorage.setItem(KEY,JSON.stringify(o))}catch(e){}}
-function restore(){try{const o=JSON.parse(localStorage.getItem(KEY)||'null');if(!o)return false;CBS.forEach(i=>{if(o[i]===0||o[i]===1)$(i).checked=!!o[i]});IDS.forEach(i=>{if(o[i]===undefined||o[i]===null)return;const el=$(i),prev=el.value;el.value=o[i];if(String(el.value)!==String(o[i]))el.value=prev});setView(o.view!=='d');return true}catch(e){return false}}
-function resetAll(){try{localStorage.removeItem(KEY)}catch(e){}['ownTG','ownTTG','ownDust','spR','spB'].forEach(i=>{$(i).value='0'});$('mode').value='both';$('rcur').value='';$('rsel').value='';$('rlv').value='';$('gcur').value='';$('gtar').value='';CBS.forEach(i=>{$(i).checked=true});$('d1').value=firstUse(UNLOCK_R);$('d2').value=firstUse(UNLOCK_G);setView(true);render()}
+const KEY='kingshot_ogon_calc_v1',CBS=['cc_inf','cc_arc','cc_cav','cc_emb','cc_cmd','tc_inf','tc_arc','tc_cav','tc_emb','tc_cmd'],BCB=['brRole','brKvk','bbPetOn','bbLaw','bbRole','bbKvk'],IDS=['brBase','bbBase','bbPetLv','ownSpC','ownSpR','ownSpB','ownTG','ownTTG','ownDust','mode','rcur','rsel','rlv','gcur','gtar','d1','d2'];
+function save(){try{const o={};IDS.forEach(i=>{o[i]=$(i).value});CBS.concat(BCB).forEach(i=>{o[i]=$(i).checked?1:0});o.view=$('kpi').classList.contains('simple')?'s':'d';localStorage.setItem(KEY,JSON.stringify(o))}catch(e){}}
+function restore(){try{const o=JSON.parse(localStorage.getItem(KEY)||'null');if(!o)return false;CBS.concat(BCB).forEach(i=>{if(o[i]===0||o[i]===1)$(i).checked=!!o[i]});IDS.forEach(i=>{if(o[i]===undefined||o[i]===null)return;const el=$(i),prev=el.value;el.value=o[i];if(String(el.value)!==String(o[i]))el.value=prev});setView(o.view!=='d');return true}catch(e){return false}}
+function resetAll(){try{localStorage.removeItem(KEY)}catch(e){}['ownTG','ownTTG','ownDust','ownSpC','ownSpR','ownSpB','brBase','bbBase'].forEach(i=>{$(i).value='0'});BCB.forEach(i=>{$(i).checked=false});$('bbPetLv').value='5';$('mode').value='both';$('rcur').value='';$('rsel').value='';$('rlv').value='';$('gcur').value='';$('gtar').value='';CBS.forEach(i=>{$(i).checked=true});$('d1').value=firstUse(UNLOCK_R);$('d2').value=firstUse(UNLOCK_G);setView(true);render()}
 $('reset').onclick=resetAll;
 restore();
 render();setView($('kpi').classList.contains('simple'));
