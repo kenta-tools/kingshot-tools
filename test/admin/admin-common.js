@@ -1426,16 +1426,17 @@
     return svFilter === "skip" ? s.skipOn : svFilter === "unknown" ? s.unknown > 0 : s.missing > 0;
   }
 
-  // 参加者一覧ページ：確認事項（アンケート）の設問を決める欄と、参加者の答えの一覧（2026-11-15〜 イベント管理から移動。置き場所は surveySlot）
+  // 確認事項（アンケート）の欄。設問の編集＝イベント管理ページ（surveyEditSlot）、参加者の答え＝参加者一覧ページ（surveySlot）に出す
   function renderSurveyCard() {
-    if (!$("surveySlot") || !$("eventView")) return; // 参加者一覧ページだけ
+    var editPage = !!$("surveyEditSlot"), slot = $("surveyEditSlot") || $("surveySlot");
+    if (!slot || !$("eventView")) return;
     var ev = eventById(currentEventId), card = $("surveyCard");
     if (!ev) { if (card) card.style.display = "none"; return; }
     if (!card) {
       card = document.createElement("div");
       card.className = "card";
       card.id = "surveyCard";
-      $("surveySlot").appendChild(card);
+      slot.appendChild(card);
       card.addEventListener("change", function(e) {
         var el = e.target, cur = eventById(currentEventId);
         if (!el.dataset) return;
@@ -1481,14 +1482,19 @@
       });
     }
     card.style.display = "block";
-    var qs = ev.survey || [];
-    var html = '<h2>📋 参加登録のアンケート（確認事項） → <span class="event-name"></span></h2>' +
-      '<div class="hint">参加登録ページに出す確認事項（チェックリスト）です。参加する人は、設問ごとに「了解」か「内容わかりません」を押し、全部に答えると登録できます（不参加の登録は答えなくてOK）。' +
-      '「表示する人」を「集結主のみ」にすると、集結の欄（集結部隊数など）を入れた人にだけ出ます。いちばん上の固定の設問（「そもそも○○のルールがあまりわかってません」。○○はイベントの種類）は、すべてのイベントに必ず出ます。チェックした人は、ほかの設問に答えなくても登録できます（チェックしなくても登録はできます）。' +
-      '代理入力のときは、答えの代わりに設問の文（条件に合うもの）をコピーして本人に伝え、「連携します」にチェックしてもらいます。設問は最大' + SURVEY_MAX + '問・1問' + SURVEY_TEXT_MAX + '字までです。変えたら「💾 保存する」を押してください。' +
-      '設問を変えても、すでに登録された人の答えは変わりません（登録をやり直すときは、毎回答え直しです）。</div>';
-    html += surveyEditorHtml(qs, "sv", ev.type);
-    html += surveyAnswersHtml(ev);
+    var qs = ev.survey || [], html;
+    if (editPage) {
+      html = '<h2>📋 参加登録のアンケート（確認事項） → <span class="event-name"></span></h2>' +
+        '<div class="hint">参加登録ページに出す確認事項（チェックリスト）です。参加する人は、設問ごとに「了解」か「内容わかりません」を押し、全部に答えると登録できます（不参加の登録は答えなくてOK）。' +
+        '「表示する人」を「集結主のみ」にすると、集結の欄（集結部隊数など）を入れた人にだけ出ます。いちばん上の固定の設問（「そもそも○○のルールがあまりわかってません」。○○はイベントの種類）は、すべてのイベントに必ず出ます。チェックした人は、ほかの設問に答えなくても登録できます（チェックしなくても登録はできます）。' +
+        '代理入力のときは、答えの代わりに設問の文（条件に合うもの）をコピーして本人に伝え、「連携します」にチェックしてもらいます。設問は最大' + SURVEY_MAX + '問・1問' + SURVEY_TEXT_MAX + '字までです。変えたら「💾 保存する」を押してください。' +
+        '設問を変えても、すでに登録された人の答えは変わりません（登録をやり直すときは、毎回答え直しです）。参加者の答えは「参加者一覧」の画面で見られます。</div>';
+      html += surveyEditorHtml(qs, "sv", ev.type);
+    } else {
+      html = '<h2>📋 アンケート（確認事項）の答え → <span class="event-name"></span></h2>' +
+        '<div class="hint">設問を変えるときは「イベント管理」の画面で行います。設問を変えても、すでに登録された人の答えは変わりません。</div>';
+      html += surveyAnswersHtml(ev);
+    }
     card.innerHTML = html;
     card.querySelectorAll(".event-name").forEach(function(el) { el.textContent = eventLabel(ev); });
   }

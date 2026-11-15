@@ -176,7 +176,7 @@
 
 <div id="appView">
   <h1>📅 イベント管理</h1>
-  <div class="sub">イベントの作成・受付中→進行中→完了の切り替え・削除を行います。まとめて登録・アンケート（確認事項）・参加者の答えは「参加者一覧」で行います。登録・変更したら、最後に「💾 保存する」を押してください。</div>
+  <div class="sub">イベントの作成・受付中→進行中→完了の切り替え・削除を行います。アンケート（確認事項）の設問はこの画面で、まとめて登録・参加者の答えは「参加者一覧」で行います。登録・変更したら、最後に「💾 保存する」を押してください。</div>
 
   <!-- 保存 -->
   <div class="card save-card clean" id="saveCard">
@@ -208,7 +208,7 @@
   <!-- 新しいイベントを作る（「＋新規イベント」を押したときだけ出る。出ている間は登録済みイベントの表示を隠す） -->
   <div class="card create-card" id="createCard">
     <h2>🆕 新しいイベントを作成</h2>
-    <div class="hint" style="margin-bottom: 10px;">イベントの種類と開催日だけを決めます。アンケート（確認事項）などは、作成後に「参加者一覧」の画面で設定します（種類ごとの既定の設問は自動で付きます）。</div>
+    <div class="hint" style="margin-bottom: 10px;">イベントの種類と開催日だけを決めます。アンケート（確認事項）などは、作成後にこの画面で設定します（種類ごとの既定の設問は自動で付きます）。</div>
     <div class="row">
       <div class="group">
         <label class="hint">種類</label>
@@ -263,6 +263,8 @@
   <div id="noEventView" class="card no-event">まず上の「＋新規イベント」を押して、イベントの種類と開催日を選んで作成してください。</div>
 
   <div id="eventView">
+    <!-- 参加登録のアンケート（確認事項）の設問（admin-common.js が中身を作る） -->
+    <div id="surveyEditSlot"></div>
   </div>
 </div>
 
