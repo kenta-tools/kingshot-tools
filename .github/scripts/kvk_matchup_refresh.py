@@ -23,7 +23,7 @@ import html as H
 import urllib.request
 import urllib.error
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
@@ -890,7 +890,7 @@ def refresh_one(snapshot_path):
         our_kids=",".join(str(k) for k in our_kids),
         opponent_kids=",".join(str(k) for k in opponent_kids),
         our_wins=our_wins, their_wins=their_wins, matched=matched, max_rows=max_rows,
-        rows=rows, fetched_at=datetime.now().strftime("%Y-%m-%d %H:%M"), prompt_text=esc(prompt_text),
+        rows=rows, fetched_at=datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d %H:%M"), prompt_text=esc(prompt_text),
         script_block=script_block, their_ranking_rows=their_ranking_rows, their_count=len(their_people),
     )
 

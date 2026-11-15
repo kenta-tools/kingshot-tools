@@ -24,7 +24,7 @@ import html as H
 import urllib.request
 import urllib.error
 from pathlib import Path
-from datetime import date, datetime
+from datetime import date, datetime, timezone, timedelta
 
 API_KEY = os.getenv("MIGHTPULSE_API_KEY")
 BASE_URL = "https://api.mightpulse.com/v1"
@@ -516,7 +516,7 @@ def render_html(scope, kid_count, people, alliance_list, truncated, back_links_h
         people_count=len(people), alliance_count=len(alliance_list),
         table_rows=indent(table_rows, 4), mobile_rows=indent(mobile_rows, 6),
         alliance_cards=indent(alliance_cards, 6), truncate_note=truncate_note,
-        fetched_at=datetime.now().strftime("%Y-%m-%d %H:%M"), back_links=back_links_html,
+        fetched_at=datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d %H:%M"), back_links=back_links_html,
         freeze_note=freeze_note,
     )
     return head + body
