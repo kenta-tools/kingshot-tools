@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# 炎龍の覇者_攻城タイムライン計算.html の runCalculation() をPythonに忠実移植してデバッグする
+# flame-dragon-timeline.html の runCalculation() をPythonに忠実移植してデバッグする
 import sys, io
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 

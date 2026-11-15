@@ -6,7 +6,7 @@
 その部分を置き換える。
 
 フォルダ分け対応（2026-11-01）:
-- TOOLSの各エントリはリポジトリルートからの相対パス（例: "tools/周期ウェーブタイマー.html"）
+- TOOLSの各エントリはリポジトリルートからの相対パス（例: "tools/wave-timer.html"）
 - 各ページから他ページへのリンクは、そのページ自身のフォルダ位置を基準に
   相対パスを計算する（posixpath.relpathで "../" 等を自動算出）
 
@@ -20,6 +20,8 @@ import re
 from pathlib import Path
 
 FOLDER = Path(__file__).resolve().parent.parent
+if "--root" in __import__("sys").argv:  # 例: --root test … test/ 配下のコピーに注入する
+    FOLDER = FOLDER / __import__("sys").argv[__import__("sys").argv.index("--root") + 1]
 
 # tools / flame-dragon / holy-sword-league は互いに独立したカテゴリとして扱う。
 # カテゴリ間の行き来はTOP（index.html）のカード選択のみで行う。
@@ -31,18 +33,18 @@ HOME = ("index.html", "🏠", "TOP")
 # ツール内のメニュー（レフトメニュー・tools-index.htmlのカード一覧）は、イベントごとにブロック分けする。
 NAV_EVENT_GROUPS = [
     ("炎龍の覇者", [
-        ("tools/炎龍の覇者_攻城タイムライン計算.html", "🐉", "炎龍 集結タイムライン計算"),
-        ("tools/周期ウェーブタイマー.html", "🌊", "周期ウェーブタイマー"),
+        ("tools/flame-dragon-timeline.html", "🐉", "炎龍 集結タイムライン計算"),
+        ("tools/wave-timer.html", "🌊", "周期ウェーブタイマー"),
     ]),
     ("KvK", [
-        ("tools/KvK同着スタート カウントダウン表.html", "⏲️", "KvK同着スタート カウントダウン表"),
-        ("tools/KvK占領判定.html", "🏳️", "KvK占領戦 勝利判定ツール"),
-        ("tools/KvKストップウォッチ.html", "⏱️", "ストップウォッチ（メモ付き）"),
+        ("tools/kvk-countdown.html", "⏲️", "KvK同着スタート カウントダウン表"),
+        ("tools/kvk-occupation.html", "🏳️", "KvK占領戦 勝利判定ツール"),
+        ("tools/stopwatch.html", "⏱️", "ストップウォッチ（メモ付き）"),
     ]),
 ]
 # 非表示中（2026-11-01、ユーザー指示でいったん非表示。ファイルは残したまま一覧・サイドバーから外す）:
-#   tools/王城到着同期カウントアップ.html
-#   tools/音声アナウンス付きストップウォッチ.html
+#   tools/castle-sync-countup.html
+#   tools/voice-stopwatch.html
 # KvK相手突合せ（kvk-matchup/）は2026-11-02、ユーザー指示で管理画面（admin/）の中に完全に移動し、
 # 認証必須にした。公開のtools一覧・レフトメニューからは外し、admin/配下（管理画面）からのみ辿れるようにする。
 

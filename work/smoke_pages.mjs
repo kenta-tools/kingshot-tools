@@ -11,8 +11,14 @@ const ROOT = resolve(".");
 const PROD_ID = readFileSync("config.js", "utf8").match(/macros\/s\/([^/]+)\/exec/)[1];
 const PAGES = [
   "index.html", "entry/index.html", "ruins/index.html", "teams/index.html",
-  "tools/tools-index.html", "tools/KvK同着スタート カウントダウン表.html", "tools/KvKストップウォッチ.html",
+  "tools/tools-index.html", "tools/kvk-countdown.html", "tools/stopwatch.html", "tools/wave-timer.html", "tools/kvk-occupation.html", "tools/flame-dragon-timeline.html", "tools/gold-calculator.html",
   "admin/users.html", "admin/events.html", "admin/participants.html", "admin/teams.html", "admin/logs.html",
+];
+// 旧い日本語名のURL → 新しい英語名のページへ自動で移ること（2026-11-15の改名）
+const REDIRECTS = [
+  ["tools/KvK同着スタート カウントダウン表.html", "kvk-countdown.html"], ["tools/KvKストップウォッチ.html", "stopwatch.html"], ["tools/黄金計算機.html", "gold-calculator.html"],
+  ["tools/KvK占領判定.html", "kvk-occupation.html"], ["tools/周期ウェーブタイマー.html", "wave-timer.html"], ["tools/炎龍の覇者_攻城タイムライン計算.html", "flame-dragon-timeline.html"],
+  ["tools/王城到着同期カウントアップ.html", "castle-sync-countup.html"], ["tools/音声アナウンス付きストップウォッチ.html", "voice-stopwatch.html"],
 ];
 const CHROME = process.env.CHROME || "C:/Program Files/Google/Chrome/Application/chrome.exe";
 const port = 9300 + Math.floor(Math.random() * 500);
@@ -50,6 +56,15 @@ for (const p of PAGES) {
   const ok = len > 50 && !logs.length && !wrongGas.length && !writes.length;
   if (!ok) fail++;
   console.log((ok ? "OK  " : "NG  ") + p + `（本文${len}字・GAS先=${[...gasUrls].map(u => u === PROD_ID ? "本番" : "★別").join(",") || "なし"}・呼んだaction=${[...gasActions].join(",") || "なし"}）` + (logs.length ? " " + logs.slice(0, 3).join(" | ") : "") + (writes.length ? " ★読み取り以外のaction: " + writes.join(",") : ""));
+}
+for (const [oldP, newName] of REDIRECTS) {
+  await send("Page.navigate", { url: pathToFileURL(join(ROOT, oldP)).href });
+  await sleep(2500);
+  const r = await send("Runtime.evaluate", { expression: "decodeURIComponent(location.pathname)", returnByValue: true });
+  const path = r.result?.result?.value ?? "";
+  const ok = path.endsWith("/tools/" + newName);
+  if (!ok) fail++;
+  console.log((ok ? "OK  " : "NG  ") + "旧URL " + oldP + " → " + (path.split("/").pop() || "移動しなかった"));
 }
 ws.close(); chrome.kill();
 console.log(fail ? `\n失敗 ${fail} 件` : "\nすべて通りました");

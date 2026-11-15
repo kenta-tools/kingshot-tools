@@ -205,3 +205,9 @@ Kingshot関連の単体HTMLツールのうち、ゲームプレイの実務で�
 - GAS（test GAS @23。変更前: gas_clasp\members_proxy_test\backup\コード.js_20261113_pre-data-reset）: dataResetAll（confirm「全部消す」・先にDriveバックアップ・成功時のみ消す）／dataBackupList／dataRestore（confirm「復元する」・消すキーだけ戻す・戻す前もバックアップ）。
 - Actions: .github/workflows/data-reset.yml ＋ .github/scripts/data_reset.py（取り込みとは別。手動実行・確認文字列つき）。
 - 本番GAS候補: gas_clasp\work_prod_candidate_reset\コード.js（patch.diff）。実行（実際の削除）はユーザーがActionsで行う。
+
+## 2026-11-15 ツールページの英語名への改名（実装・testまで）
+- worktree: ツール作成-rename-en（ブランチ ツール作成/rename-en）。ルール：公開サイトのファイル名は英語（半角の英小文字・数字・ハイフン）。
+- tools/ と test/tools/ の8ページを改名（kvk-countdown・stopwatch・gold-calculator（本番のみ）・kvk-occupation・wave-timer・flame-dragon-timeline・castle-sync-countup・voice-stopwatch）。旧い日本語名のパスには「ページが移動しました」の転送ページ（meta refresh＋location.replace＋リンク、noindex）を残した。左メニュー・tools-index・spec・work/のスクリプト（inject_sidebar・smoke_pages・simulate_siege_calc）の名前を更新。work/rename_en.py が手順。
+- 保存キー（localStorage/sessionStorage）はファイル名に依存しない（確認済み）。GASの変更なし。
+- 確認: smoke_pages.mjs（新ページ・旧URLの転送）全OK。リンク118件が全部存在・転送ページ向きなし。
