@@ -220,3 +220,8 @@ Kingshot関連の単体HTMLツールのうち、ゲームプレイの実務で�
 ## 2026-11-15 ツール分け直し（testのみ）
 - worktree: ツール作成-useful-tools。「ツール一覧」→「イベント当日ツール」に改名（TOP・tools-index・左メニュー・spec。URL不変）。
 - 便利ツール（test/tools/useful.html）を新設。黄金計算機は便利ツール側へ（イベント当日ツール一覧からは外す）。TOP・EGG TOPにカード、左メニューに「便利ツール」グループ（work/inject_sidebar.py）。本番は未変更。
+
+## 2026-11-15 管理画面のイベント作成UI・まとめて登録/アンケートの移動（testのみ）
+- worktree: ツール作成-admin-event-create。events.html：「＋新規イベント」→作成パネル（種類・日付のみ、作成/キャンセル、作成中は登録済み表示を隠す＝body.creating）。作成時のアンケート編集は廃止（既定の設問は自動付与）。
+- participants.html：イベント作成欄を削除。「まとめて登録」カードとアンケート（設問編集・参加者の答え。surveySlot）を events.html から移動。案内文は events.html へのリンク。
+- 遺跡争奪の時間帯対象カード（renderRuinTargets）は events.html に残した。
