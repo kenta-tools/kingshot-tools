@@ -61,11 +61,19 @@ NAV_TOOLS = [HOME] + [item for _, items in NAV_EVENT_GROUPS for item in items]
 # kvk-matchup/は2026-11-02にadmin配下の認証必須機能へ移したため、公開の共通サイドバーは注入しない
 # （admin/配下のログイン画面を経由しないと辿り着けないようにする）。
 
+# メニューは、ページの種類ごとに分ける（2026-11-15、ユーザー指示）:
+#   ・イベント当日ツール（tools-index・炎龍・KvK の各ツール）→ イベント当日ツールのグループだけ
+#   ・便利ツール（useful.html・黄金計算機）→ 便利ツールのグループだけ
+EVENT_GROUPS = [g for g in NAV_EVENT_GROUPS if g[0] != "便利ツール"]
+USEFUL_GROUPS = [g for g in NAV_EVENT_GROUPS if g[0] == "便利ツール"]
 PAGE_GROUPS = [
     (
-        [rel_path for rel_path, _, _ in NAV_TOOLS if rel_path.startswith("tools/")]
-        + ["tools/tools-index.html", "tools/useful.html"],
-        NAV_EVENT_GROUPS,
+        [rel_path for _, items in EVENT_GROUPS for rel_path, _, _ in items],
+        EVENT_GROUPS,
+    ),
+    (
+        [rel_path for _, items in USEFUL_GROUPS for rel_path, _, _ in items],
+        USEFUL_GROUPS,
     ),
 ]
 
