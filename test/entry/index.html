@@ -421,6 +421,13 @@
   var GRADES = ["G8", "G7", "G6", "G5", "その他"];
   // 遺跡争奪: 登録は「どの遺跡か」ではなく「どの時間に参加できるか」（中継役の RUIN_SLOTS と同じ）
   var RUIN_TYPE = "遺跡争奪";
+  var EGG_TYPES = ["遺跡争奪", "聖剣", "三盟"]; // 同盟内（EGG）用の種類。816全体のページには出さない
+  function typeVisible(type) {
+    var m = window.ENTRY_MODE;
+    if (m === "ruins") return type === RUIN_TYPE;
+    if (m === "egg") return EGG_TYPES.indexOf(type) >= 0;
+    return EGG_TYPES.indexOf(type) < 0;
+  }
   var RUIN_SLOTS = ["12", "18", "22", "23", "25"];
   var SLOT_CHOICES = [["yes", "参加"], ["maybe", "行けるかも"], ["no", "不参加"]];
   function slotLabel(k) { return k + "時" + (k === "25" ? "（翌1時）" : ""); }
@@ -739,8 +746,8 @@
       if (res.discordInvite) document.querySelectorAll("a.join").forEach(function(a) { a.href = res.discordInvite; });
       drawJoinQr();
       // 遺跡争奪は専用ページ（ruins/）で登録する：ここ（entry/）には出さず、ruins/ には遺跡争奪だけを出す（window.ENTRY_MODE はruins/index.htmlが指定）
-      var ruinsOnly = window.ENTRY_MODE === "ruins";
-      data = { events: (res.events || []).filter(function(e) { return (e.type === RUIN_TYPE) === ruinsOnly; }), users: res.users || [], entries: res.entries || [] };
+      // 出し分け（window.ENTRY_MODE）: 指定なし＝816全体（EGG用の種類以外）／"egg"＝同盟内EGG用（遺跡争奪・聖剣・三盟）／"ruins"＝遺跡争奪だけ
+      data = { events: (res.events || []).filter(function(e) { return typeVisible(e.type); }), users: res.users || [], entries: res.entries || [] };
       $("loadingView").style.display = "none";
       if (!data.events.length) {
         $("emptyView").style.display = "block";
@@ -1319,8 +1326,8 @@
     .then(function(r) { return r.json(); })
     .then(function(res) {
       if (!res.ok) return;
-      // この登録ページは遺跡争奪以外のイベント用（遺跡争奪は専用の登録ページ ruins/ に出す）
-      teams = (res.teams || []).filter(function(t) { return !t.done && t.type !== "遺跡争奪"; });
+      // チーム分けの案内も、この登録ページに出る種類だけ（window.ENTRY_MODE による出し分けは上の typeVisible と同じ）
+      teams = (res.teams || []).filter(function(t) { return !t.done && typeVisible(t.type); });
       render();
     })
     .catch(function() {});

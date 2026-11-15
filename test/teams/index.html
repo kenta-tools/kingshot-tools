@@ -187,7 +187,9 @@
     .then(function(res) {
       if (!res.ok) throw new Error(res.error || "読み込めませんでした");
       // 終わっていないイベントを先に、新しい順
-      list = (res.teams || []).sort(function(a, b) {
+      // 出し分け（window.ENTRY_MODE）: 指定なし＝816全体（EGG用の種類以外）／"egg"＝同盟内EGG用（遺跡争奪・聖剣・三盟）。参加登録ページ（entry/）と同じ分け方
+      var EGG_TYPES = ["遺跡争奪", "聖剣", "三盟"];
+      list = (res.teams || []).filter(function(t) { return (window.ENTRY_MODE === "egg") === (EGG_TYPES.indexOf(t.type) >= 0); }).sort(function(a, b) {
         if (a.done !== b.done) return a.done ? 1 : -1;
         return String(b.date).localeCompare(String(a.date));
       });

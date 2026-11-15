@@ -41,6 +41,9 @@ NAV_EVENT_GROUPS = [
         ("tools/kvk-occupation.html", "🏳️", "KvK占領戦 勝利判定ツール"),
         ("tools/stopwatch.html", "⏱️", "ストップウォッチ（メモ付き）"),
     ]),
+    ("その他", [
+        ("tools/gold-calculator.html", "🪙", "黄金計算機"),
+    ]),
 ]
 # 非表示中（2026-11-01、ユーザー指示でいったん非表示。ファイルは残したまま一覧・サイドバーから外す）:
 #   tools/castle-sync-countup.html
