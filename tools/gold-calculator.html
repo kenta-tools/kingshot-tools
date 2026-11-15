@@ -168,7 +168,16 @@ function minN(c){
   for(let k=7;k<=100;k++){const x=cost(c,k);if(x.ok1&&x.ok2)return {n:k,found:true}}
   return {n:100,found:false};
 }
+function syncDisabled(){
+  const have=haveMap();
+  for(const o of $('rsel').options){if(!o.value)continue;o.disabled=!!ADV[o.value]&&(have[o.value]||0)>=ADV[o.value].l.length}
+  const so=$('rsel').selectedOptions[0];if(so&&so.disabled)$('rsel').value='';
+  const a=$('gcur').value;
+  for(const o of $('gtar').options){if(!o.value)continue;o.disabled=a!==''&&+o.value<=+a}
+  const go=$('gtar').selectedOptions[0];if(go&&go.disabled)$('gtar').value='';
+}
 function render(){
+  syncDisabled();
   const c=ctx();
   $('rlvbox').classList.toggle('hide',$('rsel').value===''||$('rsel').value==='__csv__');
   document.querySelectorAll('.rs').forEach(e=>e.classList.toggle('hide',!c.showR));
