@@ -357,17 +357,13 @@ function renderTime(c){
     +`<div class="row"><span>基本時間</span><span>${fT(base)}</span></div>`
     +`<div class="row em"><span>バフ適用後</span><span>${fT(buffed)}</span></div>`
     +(use>0?`<div class="row"><span>${useName}を使用</span><span>${fT(Math.min(use,buffed))}</span></div>`:'')
-    +(z(short)?`<div class="row"><span>${useName}で足りない分</span><span>${fT(short)}</span></div>`:'')
-    +(com>0?`<div class="row"><span>一般加速を使用</span><span>${fT(com)}</span></div>`:'')
-    +`<div class="row short"><span>一般加速で補ったあと</span><span class="big">${z(fin)?fT(fin):'なし'}</span></div>`
+    +(z(short)?`<div class="row"><span>${useName}の不足時間</span><span>${fT(short)}</span></div>`:'')
+    +(com>0?`<div class="row"><span>一般加速追加の不足分</span><span>${fT(com)}</span></div>`:'')
+    +`<div class="row short"><span>不足時間</span><span class="big">${z(fin)?fT(fin):'なし'}</span></div>`
     +(z(sur)?`<div class="row"><span>余剰（${surName}）</span><span>${fT(sur)}</span></div>`:'')+'</div>';
   let h='';
   if(c.doR)h+=tc('上級研究の時間',r0,r1,sR,'研究加速',rS,rX,'研究加速',cR,rF);
   if(c.doG)h+=tc('黄金（建物）の時間',g0,g1,sB,'建造加速',gS,gX,'建造加速',cG,gF);
-  if(c.doR&&c.doG)h+=`<div><div class="nm">合計（一般加速で補ったあと）</div>`
-    +`<div class="row"><span>一般加速を使用</span><span>${fT(Math.min(sC,needAll))}</span></div>`
-    +`<div class="row short"><span>不足時間</span><span class="big">${z(tS)?fT(tS):'なし'}</span></div>`
-    +(z(cX)?`<div class="row"><span>余剰（一般加速）</span><span>${fT(cX)}</span></div>`:'')+'</div>';
   $('kpi').insertAdjacentHTML('beforeend',h);
   const row=(n,a,b,c2)=>`<tr><td>${n}</td><td>${fT(a)}</td><td>${fT(b)}</td><td><b>${c2}</b></td></tr>`;
   $('timeBox').innerHTML='<details><summary>所要時間の内訳（基本時間・バフ・加速）</summary><div class="tw" style="margin-top:8px"><table><tr><th></th><th>基本時間</th><th>バフ適用後</th><th>加速アイテム使用後の残り</th></tr>'
