@@ -11,7 +11,7 @@ const ROOT = resolve(".");
 const PROD_ID = readFileSync("config.js", "utf8").match(/macros\/s\/([^/]+)\/exec/)[1];
 const PAGES = [
   "index.html", "entry/index.html", "ruins/index.html", "teams/index.html",
-  "tools/tools-index.html", "tools/kvk-countdown.html", "tools/stopwatch.html", "tools/wave-timer.html", "tools/kvk-occupation.html", "tools/flame-dragon-timeline.html", "tools/gold-calculator.html",
+  "tools/tools-index.html", "tools/kvk-countdown.html", "tools/stopwatch.html", "tools/wave-timer.html", "tools/kvk-occupation.html", "tools/flame-dragon-timeline.html", "tools/gold-calculator.html", "tools/useful.html", "egg/index.html", "egg/entry/index.html", "egg/teams/index.html",
   "admin/users.html", "admin/events.html", "admin/participants.html", "admin/teams.html", "admin/logs.html",
 ];
 // 旧い日本語名のURL → 新しい英語名のページへ自動で移ること（2026-11-15の改名）
