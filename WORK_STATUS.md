@@ -216,3 +216,7 @@ Kingshot関連の単体HTMLツールのうち、ゲームプレイの実務で�
 - worktree: ツール作成-egg-top。test/egg/（TOP・entry・teams）を追加。種類で出し分け（EGG＝遺跡争奪・聖剣・三盟／816＝それ以外）。work/make_ruins_page.py が egg/entry・egg/teams・ruins を生成。
 - test/entry・test/teams に window.ENTRY_MODE の出し分け（typeVisible）。本番(ルート)は未変更。
 - 黄金計算機を test/tools/ にコピーし、左メニュー（work/inject_sidebar.py の「その他」）・tools-index のカードを追加。URLは gold-calculator.html のまま。本番 tools/ は未変更。
+
+## 2026-11-15 ツール分け直し（testのみ）
+- worktree: ツール作成-useful-tools。「ツール一覧」→「イベント当日ツール」に改名（TOP・tools-index・左メニュー・spec。URL不変）。
+- 便利ツール（test/tools/useful.html）を新設。黄金計算機は便利ツール側へ（イベント当日ツール一覧からは外す）。TOP・EGG TOPにカード、左メニューに「便利ツール」グループ（work/inject_sidebar.py）。本番は未変更。

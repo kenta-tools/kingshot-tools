@@ -32,6 +32,9 @@ HOME = ("index.html", "🏠", "TOP")
 
 # ツール内のメニュー（レフトメニュー・tools-index.htmlのカード一覧）は、イベントごとにブロック分けする。
 NAV_EVENT_GROUPS = [
+    ("イベント当日ツール", [
+        ("tools/tools-index.html", "🛠️", "イベント当日ツール（一覧）"),
+    ]),
     ("炎龍の覇者", [
         ("tools/flame-dragon-timeline.html", "🐉", "炎龍 集結タイムライン計算"),
         ("tools/wave-timer.html", "🌊", "周期ウェーブタイマー"),
@@ -41,7 +44,8 @@ NAV_EVENT_GROUPS = [
         ("tools/kvk-occupation.html", "🏳️", "KvK占領戦 勝利判定ツール"),
         ("tools/stopwatch.html", "⏱️", "ストップウォッチ（メモ付き）"),
     ]),
-    ("その他", [
+    ("便利ツール", [
+        ("tools/useful.html", "🧰", "便利ツール（一覧）"),
         ("tools/gold-calculator.html", "🪙", "黄金計算機"),
     ]),
 ]
@@ -52,6 +56,7 @@ NAV_EVENT_GROUPS = [
 # 認証必須にした。公開のtools一覧・レフトメニューからは外し、admin/配下（管理画面）からのみ辿れるようにする。
 
 NAV_TOOLS = [HOME] + [item for _, items in NAV_EVENT_GROUPS for item in items]
+# 一覧ページ（tools-index.html・useful.html）は個別のツールではないので、PAGE_GROUPS には別に足す（下記）
 
 # kvk-matchup/は2026-11-02にadmin配下の認証必須機能へ移したため、公開の共通サイドバーは注入しない
 # （admin/配下のログイン画面を経由しないと辿り着けないようにする）。
@@ -59,7 +64,7 @@ NAV_TOOLS = [HOME] + [item for _, items in NAV_EVENT_GROUPS for item in items]
 PAGE_GROUPS = [
     (
         [rel_path for rel_path, _, _ in NAV_TOOLS if rel_path.startswith("tools/")]
-        + ["tools/tools-index.html"],
+        + ["tools/tools-index.html", "tools/useful.html"],
         NAV_EVENT_GROUPS,
     ),
 ]
