@@ -59,16 +59,12 @@ make(ROOT / "entry" / "index.html", ROOT / "ruins" / "index.html")
 if (ROOT / "test" / "entry" / "index.html").exists():
     make_egg(ROOT / "test")
     # test/ruins/ は egg/entry/ に統合した（遺跡争奪はEGG用の登録に含まれる）。旧URLは転送ページにする（本番の ruins/ は従来どおり生成）
-    stub = ('<!DOCTYPE html>
-<html lang="ja"><head><meta charset="UTF-8"><meta name="robots" content="noindex, nofollow">
-'
-            '<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>ページが移動しました</title>
-'
-            '<meta http-equiv="refresh" content="0; url=../egg/entry/">
-'
-            '<script>location.replace("../egg/entry/" + location.search + location.hash);</script></head>
-'
-            '<body><p>ページが移動しました。<a href="../egg/entry/">新しいページ（EGG イベント参加登録）へ</a></p></body></html>
-')
+    stub = "\n".join([
+        '<!DOCTYPE html>',
+        '<html lang="ja"><head><meta charset="UTF-8"><meta name="robots" content="noindex, nofollow">',
+        '<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>ページが移動しました</title>',
+        '<meta http-equiv="refresh" content="0; url=../egg/entry/">',
+        '<script>location.replace("../egg/entry/" + location.search + location.hash);</script></head>',
+        '<body><p>ページが移動しました。<a href="../egg/entry/">新しいページ（EGG イベント参加登録）へ</a></p></body></html>', ""])
     (ROOT / "test" / "ruins" / "index.html").write_text(stub, encoding="utf-8")
     print("wrote test/ruins/index.html（転送ページ）")
