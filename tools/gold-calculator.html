@@ -18,6 +18,7 @@ details summary{cursor:pointer;color:var(--acc)}
 .kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.kpi>div.eq{grid-column:1/-1;padding:12px 16px;display:flex;flex-wrap:wrap;align-items:flex-end;gap:4px 44px}.kpi>div.eq .nm{font-size:1.1rem;width:100%;margin-bottom:0}.kpi>div.eq .row{display:block;text-align:left}.kpi>div.eq .row>span{display:block}.kpi>div.eq .row>span:last-child{margin-top:0}@media(max-width:700px){.kpi{grid-template-columns:1fr}}.kpi>div{background:var(--hd);border-radius:8px;padding:10px 12px}.kpi .row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:.88rem;color:var(--mut)}.kpi .nm{font-weight:700;color:var(--ink);margin-bottom:4px}.spin{margin-top:10px;border:1px solid var(--line);border-radius:8px;padding:10px 12px}.spin .nm{font-weight:700;margin-bottom:6px}.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}.spin .big{font-size:1.4rem;font-weight:700;color:var(--acc)}.kpi .row.short,.kpi .row.short span{font-weight:700;color:var(--acc);font-size:1.3rem}.kpi .row.short .big{font-size:1.3rem}.kpi .big{font-size:1.4rem;line-height:1.3}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}.seg button{border:0;padding:8px 16px;background:var(--bg);color:var(--ink);font-size:.95rem;cursor:pointer}.seg button.on{background:var(--acc);color:#fff}
 .hide{display:none}
+.cks{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:6px}.ck{display:flex!important;align-items:center;gap:4px;font-size:.9rem;color:var(--ink)}.ck input{width:auto;padding:0}
 .btn{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:6px 12px;font-size:.85rem;cursor:pointer}
 .kpi .empty{grid-column:1/-1;background:transparent;color:var(--mut);padding:8px 0}
 .kpi.simple .row:not(.short){display:none}.kpi.simple>div.eq{align-items:center}.simplehide #tabbox{display:none}
@@ -57,8 +58,8 @@ details summary{cursor:pointer;color:var(--acc)}
 </div></div>
 
 <div class="card gs"><h2>3. 黄金（建物）</h2><div class="grid">
-<div><label>現在の黄金レベル</label><select id="gcur"></select></div>
-<div><label>目標の黄金レベル</label><select id="gtar"></select></div>
+<div><label>現在の黄金レベル</label><select id="gcur"></select><div class="cks" id="ckcur"><label class="ck"><input type="checkbox" id="cc_inf" checked> 歩兵</label><label class="ck"><input type="checkbox" id="cc_arc" checked> 弓兵</label><label class="ck"><input type="checkbox" id="cc_cav" checked> 騎兵</label><label class="ck"><input type="checkbox" id="cc_emb" checked> 大使館</label><label class="ck"><input type="checkbox" id="cc_cmd" checked> 指揮所</label></div><div class="note">チェックが付いた建物は、そのレベルまで完了しています。外すと、その建物の分は未完了として計算します。</div></div>
+<div><label>目標の黄金レベル</label><select id="gtar"></select><div class="cks" id="cktar"><label class="ck"><input type="checkbox" id="tc_inf" checked> 歩兵</label><label class="ck"><input type="checkbox" id="tc_arc" checked> 弓兵</label><label class="ck"><input type="checkbox" id="tc_cav" checked> 騎兵</label><label class="ck"><input type="checkbox" id="tc_emb" checked> 大使館</label><label class="ck"><input type="checkbox" id="tc_cmd" checked> 指揮所</label></div><div class="note">チェックが付いた建物を、そのレベルまで上げます。外すと、その建物はそのレベルを目指さない（1つ前まで）として計算します。</div></div>
 </div>
 <div class="grid" style="margin-top:10px">
 <div><label>黄金の実施日（KVK開始週の月曜日）</label><select id="d2"></select></div>
@@ -137,7 +138,14 @@ function addSt(st,s,from,to){const A=ADV[s];if(!A||to<=from)return;const b=A.b,g
 function csvNeed(have){have=have||{};let dust=0,ttg=0;const list=[],st={};
   for(const r of CSVPLAN){const [s,own0,tar]=r;if(!ADV[s])continue;const own=Math.max(own0,Math.min(have[s]||0,tar));if(tar<=own)continue;const [d,t]=rangeCost(s,own,tar);dust+=d;ttg+=t;list.push([ja2(s),(own?'Lv'+own+'→':'')+'Lv'+tar,d,t]);addSt(st,s,own,tar)}
   return {dust,ttg,list,st}}
-function goldNeed(a,b){let tg=0,tt=0;for(let t=a+1;t<=b;t++){tg+=TIERS[t][0];tt+=TIERS[t][1]}return {tg,tt}}
+const TB={"inf":{"1":[59,0],"2":[355,0],"3":[535,0],"4":[630,0],"5":[750,0],"6":[405,25],"7":[486,37],"8":[486,54],"9":[567,79],"10":[706,187]},"arc":{"1":[59,0],"2":[355,0],"3":[535,0],"4":[630,0],"5":[750,0],"6":[405,25],"7":[486,37],"8":[486,54],"9":[567,79],"10":[706,187]},"cav":{"1":[59,0],"2":[355,0],"3":[535,0],"4":[630,0],"5":[750,0],"6":[405,25],"7":[486,37],"8":[486,54],"9":[567,79],"10":[706,187]},"emb":{"1":[33,0],"2":[195,0],"3":[295,0],"4":[350,0],"5":[415,0],"6":[225,13],"7":[270,19],"8":[270,30],"9":[315,43],"10":[391,103]},"cmd":{"1":[26,0],"2":[155,0],"3":[235,0],"4":[280,0],"5":[335,0],"6":[180,12],"7":[216,18],"8":[216,24],"9":[252,36],"10":[315,84]}};
+const BK=['inf','arc','cav','emb','cmd'];
+function goldNeed(a,b){let tg=0,tt=0;for(let t=a+1;t<=b;t++){tg+=TIERS[t][0];tt+=TIERS[t][1]}
+  for(const k of BK){
+    if(a>=1&&!$('cc_'+k).checked){tg+=TB[k][a][0];tt+=TB[k][a][1]}
+    if(!$('tc_'+k).checked){tg-=TB[k][b][0];tt-=TB[k][b][1]}
+  }
+  return {tg:Math.max(0,tg),tt:Math.max(0,tt)}}
 function ctx(){
   const mode=$('mode').value,showR=mode!=='gold',showG=mode!=='research';const slug=$('rsel').value,selR=slug!=='',selG=$('gcur').value!==''&&$('gtar').value!=='';const doR=showR&&selR,doG=showG&&selG;
   const v=id=>Math.max(0,+$(id).value||0);
@@ -233,10 +241,10 @@ function setView(s){$('kpi').classList.toggle('simple',s);$('vs').classList.togg
 $('vs').onclick=()=>setView(true);$('vd').onclick=()=>setView(false);
 $('rsel').addEventListener('change',()=>{const s=$('rsel').value;$('rlv').value=s===''?'':(s==='__csv__'?10:ADV[s].l.length);render()});
 $('rlv').value='';
-const KEY='kingshot_ogon_calc_v1',IDS=['ownTG','ownTTG','ownDust','mode','rcur','rsel','rlv','gcur','gtar','d1','d2'];
-function save(){try{const o={};IDS.forEach(i=>{o[i]=$(i).value});o.view=$('kpi').classList.contains('simple')?'s':'d';localStorage.setItem(KEY,JSON.stringify(o))}catch(e){}}
-function restore(){try{const o=JSON.parse(localStorage.getItem(KEY)||'null');if(!o)return false;IDS.forEach(i=>{if(o[i]===undefined||o[i]===null)return;const el=$(i),prev=el.value;el.value=o[i];if(String(el.value)!==String(o[i]))el.value=prev});setView(o.view!=='d');return true}catch(e){return false}}
-function resetAll(){try{localStorage.removeItem(KEY)}catch(e){}['ownTG','ownTTG','ownDust'].forEach(i=>{$(i).value='0'});$('mode').value='both';$('rcur').value='';$('rsel').value='';$('rlv').value='';$('gcur').value='';$('gtar').value='';$('d1').value=firstUse(UNLOCK_R);$('d2').value=firstUse(UNLOCK_G);setView(true);render()}
+const KEY='kingshot_ogon_calc_v1',CBS=['cc_inf','cc_arc','cc_cav','cc_emb','cc_cmd','tc_inf','tc_arc','tc_cav','tc_emb','tc_cmd'],IDS=['ownTG','ownTTG','ownDust','mode','rcur','rsel','rlv','gcur','gtar','d1','d2'];
+function save(){try{const o={};IDS.forEach(i=>{o[i]=$(i).value});CBS.forEach(i=>{o[i]=$(i).checked?1:0});o.view=$('kpi').classList.contains('simple')?'s':'d';localStorage.setItem(KEY,JSON.stringify(o))}catch(e){}}
+function restore(){try{const o=JSON.parse(localStorage.getItem(KEY)||'null');if(!o)return false;CBS.forEach(i=>{if(o[i]===0||o[i]===1)$(i).checked=!!o[i]});IDS.forEach(i=>{if(o[i]===undefined||o[i]===null)return;const el=$(i),prev=el.value;el.value=o[i];if(String(el.value)!==String(o[i]))el.value=prev});setView(o.view!=='d');return true}catch(e){return false}}
+function resetAll(){try{localStorage.removeItem(KEY)}catch(e){}['ownTG','ownTTG','ownDust'].forEach(i=>{$(i).value='0'});$('mode').value='both';$('rcur').value='';$('rsel').value='';$('rlv').value='';$('gcur').value='';$('gtar').value='';CBS.forEach(i=>{$(i).checked=true});$('d1').value=firstUse(UNLOCK_R);$('d2').value=firstUse(UNLOCK_G);setView(true);render()}
 $('reset').onclick=resetAll;
 restore();
 render();setView($('kpi').classList.contains('simple'));
