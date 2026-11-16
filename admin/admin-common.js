@@ -1,3 +1,5 @@
+// ks-no-wheel-select: プルダウンは、マウスホイールで値が変わらないようにする（サイト共通ルール）
+document.addEventListener("wheel", function(e) { var t = e.target; if (t && t.tagName === "SELECT" && document.activeElement === t) t.blur(); }, { capture: true, passive: true });
 (function() {
   // ログインパスワードはこのページには持たず、中継役（GAS のスクリプトプロパティ EDIT_PASSWORD）で確認する。
   // ソースを見てもパスワードの手がかりはなく、保存も中継役が毎回パスワードを確認する。
@@ -1426,17 +1428,17 @@
     return svFilter === "skip" ? s.skipOn : svFilter === "unknown" ? s.unknown > 0 : s.missing > 0;
   }
 
-  // イベントページ：確認事項（アンケート）の設問を決める欄と、参加者の答えの一覧
+  // 確認事項（アンケート）の欄。設問の編集＝イベント管理ページ（surveyEditSlot）、参加者の答え＝参加者一覧ページ（surveySlot）に出す
   function renderSurveyCard() {
-    if (!$("newEventType") || !$("eventView")) return; // イベントページだけ
+    var editPage = !!$("surveyEditSlot"), slot = $("surveyEditSlot") || $("surveySlot");
+    if (!slot || !$("eventView")) return;
     var ev = eventById(currentEventId), card = $("surveyCard");
     if (!ev) { if (card) card.style.display = "none"; return; }
     if (!card) {
       card = document.createElement("div");
       card.className = "card";
       card.id = "surveyCard";
-      var anchor = $("ruinTargetsCard");
-      $("eventView").insertBefore(card, anchor && anchor.nextSibling ? anchor.nextSibling : $("eventView").firstChild);
+      slot.appendChild(card);
       card.addEventListener("change", function(e) {
         var el = e.target, cur = eventById(currentEventId);
         if (!el.dataset) return;
@@ -1482,19 +1484,24 @@
       });
     }
     card.style.display = "block";
-    var qs = ev.survey || [];
-    var html = '<h2>📋 参加登録のアンケート（確認事項） → <span class="event-name"></span></h2>' +
-      '<div class="hint">参加登録ページに出す確認事項（チェックリスト）です。参加する人は、設問ごとに「了解」か「内容わかりません」を押し、全部に答えると登録できます（不参加の登録は答えなくてOK）。' +
-      '「表示する人」を「集結主のみ」にすると、集結の欄（集結部隊数など）を入れた人にだけ出ます。いちばん上の固定の設問（「そもそも○○のルールがあまりわかってません」。○○はイベントの種類）は、すべてのイベントに必ず出ます。チェックした人は、ほかの設問に答えなくても登録できます（チェックしなくても登録はできます）。' +
-      '代理入力のときは、答えの代わりに設問の文（条件に合うもの）をコピーして本人に伝え、「連携します」にチェックしてもらいます。設問は最大' + SURVEY_MAX + '問・1問' + SURVEY_TEXT_MAX + '字までです。変えたら「💾 保存する」を押してください。' +
-      '設問を変えても、すでに登録された人の答えは変わりません（登録をやり直すときは、毎回答え直しです）。</div>';
-    html += surveyEditorHtml(qs, "sv", ev.type);
-    html += surveyAnswersHtml(ev);
+    var qs = ev.survey || [], html;
+    if (editPage) {
+      html = '<h2>📋 参加登録のアンケート（確認事項） → <span class="event-name"></span></h2>' +
+        '<div class="hint">参加登録ページに出す確認事項（チェックリスト）です。参加する人は、設問ごとに「了解」か「内容わかりません」を押し、全部に答えると登録できます（不参加の登録は答えなくてOK）。' +
+        '「表示する人」を「集結主のみ」にすると、集結の欄（集結部隊数など）を入れた人にだけ出ます。いちばん上の固定の設問（「そもそも○○のルールがあまりわかってません」。○○はイベントの種類）は、すべてのイベントに必ず出ます。チェックした人は、ほかの設問に答えなくても登録できます（チェックしなくても登録はできます）。' +
+        '代理入力のときは、答えの代わりに設問の文（条件に合うもの）をコピーして本人に伝え、「連携します」にチェックしてもらいます。設問は最大' + SURVEY_MAX + '問・1問' + SURVEY_TEXT_MAX + '字までです。変えたら「💾 保存する」を押してください。' +
+        '設問を変えても、すでに登録された人の答えは変わりません（登録をやり直すときは、毎回答え直しです）。参加者の答えは「参加者一覧」の画面で見られます。</div>';
+      html += surveyEditorHtml(qs, "sv", ev.type);
+    } else {
+      html = '<h2>📋 アンケート（確認事項）の答え → <span class="event-name"></span></h2>' +
+        '<div class="hint">設問を変えるときは「イベント管理」の画面で行います。設問を変えても、すでに登録された人の答えは変わりません。</div>';
+      html += surveyAnswersHtml(ev);
+    }
     card.innerHTML = html;
     card.querySelectorAll(".event-name").forEach(function(el) { el.textContent = eventLabel(ev); });
   }
 
-  // 設問を編集する欄（行・追加・既定ボタン）。p は属性の頭（"sv"＝作成後のイベントの欄、"nsv"＝新しいイベントを作る欄）
+  // 設問を編集する欄（行・追加・既定ボタン）。p は属性の頭（"sv"＝イベントの欄）
   function surveyEditorHtml(qs, p, type) {
     var html = '<div style="margin-top: 8px;"><div class="rule-fixed" style="margin-bottom: 8px; padding: 6px 8px; background: #eef0f3; color: #666; border-radius: 6px;">' +
       '🔒 <b>固定の設問</b>（すべてのイベントに必ず出ます。編集・並べ替え・削除はできません）<br>' + escapeHtml(ruleText(type)) +
@@ -1512,78 +1519,6 @@
     html += '<div style="margin-top: 6px;"><button type="button" class="small" data-' + p + '="add"' + (qs.length >= SURVEY_MAX ? " disabled" : "") + '>＋ 設問を追加</button> ' +
       (SURVEY_DEFAULTS[type] ? '<button type="button" class="small sub-btn" data-' + p + '="default">既定の設問を入れる（' + escapeHtml(type) + '）</button>' : "") + '</div>';
     return html;
-  }
-
-  // 新しいイベントを作るときの設問の下書き（作成と同時にイベントに付く）。種類がKVKなら既定の7問から始まる。
-  // 編集したあとに種類を変えても、編集した設問は上書きしない（「既定の設問を入れる」を押したときだけ入れ替える）
-  var newSurvey = [], newSurveyDirty = false;
-  function renderNewSurvey() {
-    var box = $("newSurveyBox");
-    if (!box) return;
-    box.querySelector(".nsv-body").innerHTML = surveyEditorHtml(newSurvey, "nsv", $("newEventType").value);
-    box.querySelector(".nsv-count").textContent = "（" + (newSurvey.filter(function(q) { return str(q.text); }).length || "なし") + (newSurvey.length ? "問" : "") + "）";
-  }
-  function resetNewSurvey() {
-    newSurveyDirty = false;
-    newSurvey = defaultSurvey($("newEventType").value);
-    renderNewSurvey();
-  }
-  function initNewSurvey() {
-    var row = $("createEventBtn") && ($("createEventBtn").closest(".row") || $("createEventBtn").parentNode);
-    if (!row || $("newSurveyBox")) return;
-    var box = document.createElement("details");
-    box.id = "newSurveyBox";
-    box.open = true;
-    box.style.marginTop = "8px";
-    box.innerHTML = '<summary style="cursor: pointer; font-weight: bold;">📋 参加登録のアンケート（確認事項）を作成と同時に決める <span class="hint nsv-count"></span></summary>' +
-      '<div class="hint" style="margin-top: 4px;">作ったイベントに付く設問です（KVKは既定の6問が入っています。そのまま作成しても、直してから作成してもOK。ルール未理解の固定の設問は、いつも付きます）。設問は最大' + SURVEY_MAX + '問・1問' + SURVEY_TEXT_MAX + '字まで。作成後も、イベントのページの「📋 参加登録のアンケート」欄でいつでも直せます。</div>' +
-      '<div class="nsv-body"></div>';
-    row.parentNode.insertBefore(box, row.nextSibling);
-    box.addEventListener("change", function(e) {
-      var el = e.target;
-      if (!el.dataset) return;
-      var q;
-      if (el.dataset.nsvText != null) {
-        var i = Number(el.dataset.nsvText);
-        if (!newSurvey[i]) return;
-        newSurvey[i].text = str(el.value).slice(0, SURVEY_TEXT_MAX);
-        if (!newSurvey[i].text) newSurvey.splice(i, 1); // 空にしたら設問を消す
-      } else if (el.dataset.nsvShow != null) {
-        q = newSurvey[Number(el.dataset.nsvShow)];
-        if (!q) return;
-        if (el.value === "rally") q.show = "rally"; else delete q.show;
-      } else if (el.dataset.nsvKind != null) {
-        q = newSurvey[Number(el.dataset.nsvKind)];
-        if (!q) return;
-        if (el.value === "skip") q.kind = "skip"; else delete q.kind;
-      } else return;
-      newSurveyDirty = true;
-      renderNewSurvey();
-    });
-    box.addEventListener("click", function(e) {
-      var b = e.target.closest ? e.target.closest("button") : null;
-      if (!b || !b.dataset.nsv) return;
-      var i = Number(b.dataset.i), isAdd = b.dataset.nsv === "add";
-      if (isAdd) {
-        if (newSurvey.length >= SURVEY_MAX) return;
-        newSurvey.push({ id: newId("q"), text: "" });
-      } else if (b.dataset.nsv === "default") {
-        if (newSurveyDirty && newSurvey.length && !confirm("今の設問を消して、既定の設問に置き換えます。よろしいですか？")) return;
-        resetNewSurvey();
-        return;
-      } else if (b.dataset.nsv === "up" && i > 0) { var a = newSurvey[i]; newSurvey[i] = newSurvey[i - 1]; newSurvey[i - 1] = a; }
-      else if (b.dataset.nsv === "down" && i < newSurvey.length - 1) { var c = newSurvey[i]; newSurvey[i] = newSurvey[i + 1]; newSurvey[i + 1] = c; }
-      else if (b.dataset.nsv === "del") newSurvey.splice(i, 1);
-      else return;
-      newSurveyDirty = true;
-      renderNewSurvey();
-      if (isAdd) { var ins = box.querySelectorAll("input[data-nsv-text]"); if (ins.length) ins[ins.length - 1].focus(); }
-    });
-    $("newEventType").addEventListener("change", function() {
-      if (!newSurveyDirty) newSurvey = defaultSurvey($("newEventType").value);
-      renderNewSurvey();
-    });
-    resetNewSurvey();
   }
 
   // 参加者の答え（設問ごとに、了解／内容わかりません／まだ答えていない 人の名前）。不参加の人は数えない
@@ -1970,8 +1905,20 @@
   if ($("newEventType")) { // イベント欄があるページだけ
     $("newEventType").innerHTML = EVENT_TYPES.map(function(t) { return "<option>" + t + "</option>"; }).join("");
     $("newEventDate").value = today();
-    initNewSurvey();
   }
+
+  // 「＋新規イベント」：作成パネルを出す（body.creating の間は、登録済みイベントの表示を CSS で隠す）。キャンセル・作成で通常表示へ戻る
+  function setCreating(on_) {
+    document.body.classList.toggle("creating", !!on_);
+    if (on_) {
+      if ($("newEventDate")) $("newEventDate").value = today();
+      if ($("createMsg")) $("createMsg").textContent = "";
+      if ($("eventMsg")) $("eventMsg").textContent = "";
+      window.scrollTo(0, 0);
+    }
+  }
+  on("newEventBtn", "click", function() { setCreating(true); });
+  on("cancelCreateBtn", "click", function() { setCreating(false); });
 
   on("eventSelect", "change", function() {
     currentEventId = this.value;
@@ -1986,18 +1933,18 @@
 
   on("createEventBtn", "click", function() {
     var type = $("newEventType").value, date = $("newEventDate").value;
-    if (!date) { setMsg($("eventMsg"), "開催日を選んでください", false); return; }
+    if (!date) { setMsg($("createMsg"), "開催日を選んでください", false); return; }
     var ev = state.events.find(function(e) { return e.type === type && e.date === date; });
     if (ev) {
       setMsg($("eventMsg"), "「" + eventLabel(ev) + "」はすでにあるので選択しました", true);
     } else {
       ev = { id: newId("e"), type: type, date: date };
-      var sv = normSurvey(newSurvey); // 作成フォームで決めた設問（空なら付けない）
-      if (sv) ev.survey = sv;
+      var sv = normSurvey(defaultSurvey(type)); // 種類ごとの既定の設問（無ければ付けない）。作成後の編集は「参加者一覧」でする
+      if (sv && sv.length) ev.survey = sv; else sv = null;
       state.events.push(ev);
-      setMsg($("eventMsg"), "「" + eventLabel(ev) + "」を作成しました" + (sv ? "（アンケート" + sv.length + "問つき）" : "") + "。個人登録ページに出すには「受付を始める」→「💾 保存する」を押してください", true);
-      resetNewSurvey();
+      setMsg($("eventMsg"), "「" + eventLabel(ev) + "」を作成しました" + (sv ? "（既定のアンケート" + sv.length + "問つき）" : "") + "。個人登録ページに出すには「受付を始める」→「💾 保存する」を押してください", true);
     }
+    setCreating(false);
     currentEventId = ev.id;
     resetForm(false);
     commit();

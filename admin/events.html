@@ -86,6 +86,11 @@
   .event-card .sep { width: 1px; height: 28px; background: #e0e4ea; margin: 0 6px; }
   #eventSelect { min-width: 240px; font-weight: bold; }
   .event-name { color: #2c5cc5; }
+  /* イベント作成モード（body.creating）：作成パネルだけを出し、登録済みイベントの表示は隠す */
+  .create-card { display: none; border-left: 5px solid #2c9a5c; }
+  .create-card .group { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  body.creating .create-card { display: block; }
+  body.creating .event-card, body.creating #doneCard, body.creating #eventView, body.creating #noEventView { display: none !important; }
   .no-event { text-align: center; padding: 30px; color: #777; font-size: 14px; }
 
   /* 1件登録フォーム */
@@ -171,7 +176,7 @@
 
 <div id="appView">
   <h1>📅 イベント管理</h1>
-  <div class="sub">イベントの作成・受付中→進行中→完了の切り替え・まとめて登録（取り込み）を行います。登録・変更したら、最後に「💾 保存する」を押してください。</div>
+  <div class="sub">イベントの作成・受付中→進行中→完了の切り替え・削除を行います。アンケート（確認事項）の設問はこの画面で、まとめて登録・参加者の答えは「参加者一覧」で行います。登録・変更したら、最後に「💾 保存する」を押してください。</div>
 
   <!-- 保存 -->
   <div class="card save-card clean" id="saveCard">
@@ -200,6 +205,23 @@
 
   <button type="button" class="float-save" id="floatSaveBtn"></button>
 
+  <!-- 新しいイベントを作る（「＋新規イベント」を押したときだけ出る。出ている間は登録済みイベントの表示を隠す） -->
+  <div class="card create-card" id="createCard">
+    <h2>🆕 新しいイベントを作成</h2>
+    <div class="hint" style="margin-bottom: 10px;">イベントの種類と開催日だけを決めます。アンケート（確認事項）などは、作成後にこの画面で設定します（種類ごとの既定の設問は自動で付きます）。</div>
+    <div class="row">
+      <div class="group">
+        <label class="hint">種類</label>
+        <select id="newEventType"></select>
+        <label class="hint">開催日</label>
+        <input type="date" id="newEventDate">
+        <button type="button" id="createEventBtn">作成</button>
+        <button type="button" class="sub-btn" id="cancelCreateBtn">キャンセル</button>
+      </div>
+    </div>
+    <div class="msg" id="createMsg"></div>
+  </div>
+
   <!-- イベント選択 -->
   <div class="card event-card">
     <h2>📅 イベント</h2>
@@ -218,10 +240,7 @@
       </div>
       <span class="sep"></span>
       <div class="group">
-        <span class="hint">新しいイベント:</span>
-        <select id="newEventType"></select>
-        <input type="date" id="newEventDate">
-        <button type="button" id="createEventBtn">作成</button>
+        <button type="button" id="newEventBtn">＋新規イベント</button>
       </div>
     </div>
     <div class="hint" style="margin-top: 8px;">
@@ -241,56 +260,11 @@
     </details>
   </div>
 
-  <div id="noEventView" class="card no-event">まず上の「新しいイベント」でイベントの種類と開催日を選んで作成してください。</div>
+  <div id="noEventView" class="card no-event">まず上の「＋新規イベント」を押して、イベントの種類と開催日を選んで作成してください。</div>
 
   <div id="eventView">
-    <!-- テンプレート貼り付け・ファイル取り込み -->
-    <div class="card">
-      <h2>まとめて登録 → <span class="event-name"></span></h2>
-      <div class="ai-steps">
-        <b>おすすめ：AIで変換してから登録</b>
-        <div class="hint">プロンプトには、選択中のイベント名と登録済みユーザー一覧が自動で入ります（イベントを切り替えたら、そのイベント用のプロンプトをコピーし直してください）。</div>
-        <ol>
-          <li>「AI変換用プロンプトをコピー」を押して、ChatGPT・Claude などに<b>プロンプトだけ</b>を貼り付けて送信する（AIが「準備OK」と返事します）</li>
-          <li>続けて、記入済みの募集フォーマットを<b>同盟ごとに1つずつ送信</b>する（AIは「受け取りました：同盟名 ◯人（累計 ◯人）」と返事します）</li>
-          <li>全同盟分を送り終わったら「<b>まとめて出力</b>」と送る。似た名前の人がいると、AIが登録済みユーザーと見比べて「<b>同一人物ですか？</b>」と質問してくるので、番号ごとに はい／いいえ で答える → 全員分が1つのJSONで返ってきます</li>
-          <li>そのJSON（<code>[ ... ]</code>）を下の欄に貼り付けて「読み取り結果を確認」を押す（AIが「迷った点」を書いていたら確認してください）</li>
-          <li>結果の表の「ユーザー判定」を確認する。<b>似た名前の既存ユーザーがいる行（黄色）</b>は、プルダウンで「新規ユーザー」か「〇〇と同一人物（名前を更新／名前はそのまま）」を選ぶ</li>
-          <li>「取り込み」を押す（同一人物にした名前は旧名として覚えるので、次回からは自動で同じ人になります）</li>
-        </ol>
-        <div class="row">
-          <button type="button" class="small" id="copyPromptBtn">AI変換用プロンプトをコピー</button>
-          <details><summary class="hint">プロンプトの中身を見る</summary><textarea id="promptText" readonly></textarea></details>
-        </div>
-      </div>
-      <div class="hint">
-        記入済みの募集フォーマットを直接貼り付けても読み取れます（表記ゆれが多いときはAI変換がおすすめです）。複数の同盟・「最初から参加できる」「途中参加」の見出しが混ざっていても読み取ります。<br>
-        名前の後ろの <b>◯△◇◆</b> と括弧（<b>(〜22時)</b>＝抜ける時刻、<b>(23時〜)</b>＝参加開始、<b>(T11)</b>＝3兵種T11、<b>(歩弓T11)</b>・<b>(歩弓)</b>＝兵種指定）を自動で振り分けます。それ以外の括弧は備考に入ります。<br>
-        ユーザーは<b>名前</b>で同じ人か判定します（名前が変わっていると新しいユーザーとして登録されるので、下の「ユーザー一覧」で統合してください）。このイベントに同じ人がすでにいれば上書き更新します。ファイルは .txt（このフォーマット）／.csv（CSV書き出しと同じ列）／.json に対応しています。
-      </div>
-      <div class="row" style="margin: 10px 0;">
-        <button type="button" class="sub-btn small" id="copyBlankBtn">空のフォーマットをコピー</button>
-        <button type="button" class="sub-btn small" id="sampleBtn">記入例を貼り付け</button>
-        <span class="hint">見出しがないときの同盟名:</span>
-        <input type="text" id="defaultAlliance" placeholder="例: EGG" style="width: 120px;">
-      </div>
-      <textarea id="bulkText" placeholder="AIが返したJSON、または記入済みの募集フォーマットを貼り付け&#10;&#10;EGG(最初から参加できる)&#10;◯:マンスリー持ち&#10;…&#10;G7: あんこ◯△◆(〜22時)(T11)、"></textarea>
-      <div class="row" style="margin-top: 10px;">
-        <label class="hint"><input type="radio" name="importMode" value="merge" checked> 追加・更新</label>
-        <label class="hint"><input type="radio" name="importMode" value="replace"> このイベントの参加者を全件置き換え</label>
-        <button type="button" id="previewBtn" class="sub-btn">読み取り結果を確認</button>
-        <button type="button" id="bulkBtn">取り込み</button>
-        <span class="hint">または</span>
-        <input type="file" id="fileInput" accept=".txt,.csv,.tsv,.json">
-      </div>
-      <div class="msg" id="bulkMsg"></div>
-      <div id="previewWrap" style="display:none; margin-top: 10px;">
-        <table>
-          <thead><tr><th class="nosort">同盟</th><th class="nosort">参加</th><th class="nosort">G</th><th class="nosort">名前</th><th class="nosort">印</th><th class="nosort">兵種</th><th class="nosort">時間</th><th class="nosort">部隊・ペット</th><th class="nosort">容量（計算後）</th><th class="nosort">備考</th><th class="nosort">更新日時</th><th class="nosort">ユーザー判定</th></tr></thead>
-          <tbody id="previewBody"></tbody>
-        </table>
-      </div>
-    </div>
+    <!-- 参加登録のアンケート（確認事項）の設問（admin-common.js が中身を作る） -->
+    <div id="surveyEditSlot"></div>
   </div>
 </div>
 
