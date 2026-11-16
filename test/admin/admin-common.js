@@ -751,6 +751,10 @@ document.addEventListener("wheel", function(e) { var t = e.target; if (t && t.ta
       // この画面が扱わない項目（kvkRosters など他ツールの保存分）は最新の保存内容のまま残す
       var body = Object.assign({}, res.data, { updated: new Date().toISOString(), users: merged.users, events: merged.events,
         entries: merged.entries, notSame: merged.notSame });
+      // 削除したイベントのチーム分け・個人登録の巻き戻し用記録（teams／selfUndo）も一緒に消す（2026-11-16。残り続けるのを防ぐ）
+      var liveEv = {}; merged.events.forEach(function(v) { liveEv[v.id] = true; });
+      if (Array.isArray(body.teams)) body.teams = body.teams.filter(function(t) { return liveEv[t.eventId]; });
+      if (Array.isArray(body.selfUndo)) body.selfUndo = body.selfUndo.filter(function(r) { return !r.ev || liveEv[r.ev]; });
       return remotePut(utf8ToB64(JSON.stringify(body, null, 2) + "\n"), res.sha).then(function(r) {
         if ((r.status === 409 || r.status === 422) && !isRetry) return publish(true); // 直前に他の人が保存した → 取り直してもう一度
         if (!r.ok) throw new Error(r.error && r.status >= 500 ? r.error : ghError(r.status));

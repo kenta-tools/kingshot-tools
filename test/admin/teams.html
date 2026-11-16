@@ -768,6 +768,16 @@
   }
 
   // 聖剣: 集結部隊数を入れた人は「集結主」チーム。残りを、出征容量の合計がそろうように各チームへ（大きい人から、合計の小さいチームへ）
+  // 振り分け先のチーム：容量が入っている人は「容量の合計がいちばん小さいチーム（同じなら人数の少ないチーム）」。
+  // 容量が未入力（0）の人は、容量の合計が小さいチーム1つに固まらないよう「人数の少ないチーム（同じなら容量の合計が小さいチーム）」（2026-11-16）
+  function pickGroup(groups, p) {
+    function cap(t) { return membersOf(t.id).reduce(function(s, x) { return s + (x.marchCap || 0); }, 0); }
+    function cnt(t) { return membersOf(t.id).length; }
+    return groups.slice().sort(function(a, b) {
+      return (p.marchCap || 0) > 0 ? ((cap(a) - cap(b)) || (cnt(a) - cnt(b))) : ((cnt(a) - cnt(b)) || (cap(a) - cap(b)));
+    })[0];
+  }
+
   function autoSeiken() {
     var rallyers = draft.teams.filter(function(t) { return t.kind === "rallyers"; })[0];
     var groups = draft.teams.filter(function(t) { return t.kind === "group"; });
@@ -781,7 +791,7 @@
     });
     function sum(t) { return membersOf(t.id).reduce(function(s, p) { return s + (p.marchCap || 0); }, 0); }
     pool.sort(function(a, b) { return ((b.marchCap || 0) - (a.marchCap || 0)) || strongerFirst(a, b); }).forEach(function(p) {
-      var t = groups.slice().sort(function(a, b) { return (sum(a) - sum(b)) || (membersOf(a.id).length - membersOf(b.id).length); })[0];
+      var t = pickGroup(groups, p);
       draft.assign[p.uid] = t.id;
     });
     return "振り分けました";
@@ -861,7 +871,7 @@
     people.filter(function(p) { return !placeOf(p.uid); })
       .sort(function(a, b) { return ((b.marchCap || 0) - (a.marchCap || 0)) || strongerFirst(a, b); })
       .forEach(function(p) {
-        var t = groups.slice().sort(function(a, b) { return (sum(a) - sum(b)) || (membersOf(a.id).length - membersOf(b.id).length); })[0];
+        var t = pickGroup(groups, p);
         draft.assign[p.uid] = t.id;
       });
     return "振り分けました（" + groups.map(function(t) { return teamName(t) + membersOf(t.id).length + "人"; }).join("・") + "）";
@@ -953,7 +963,7 @@
     if (!groups.length) return;
     function sum(t) { return membersOf(t.id).reduce(function(s, p) { return s + (p.marchCap || 0); }, 0); }
     pool.sort(function(a, b) { return ((b.marchCap || 0) - (a.marchCap || 0)) || strongerFirst(a, b); }).forEach(function(p) {
-      var t = groups.slice().sort(function(a, b) { return (sum(a) - sum(b)) || (membersOf(a.id).length - membersOf(b.id).length); })[0];
+      var t = pickGroup(groups, p);
       draft.assign[p.uid] = t.id;
     });
   }
@@ -1203,7 +1213,7 @@
     pool.filter(function(p) { return !P.assign[p.uid]; })
       .sort(function(a, b) { return ((b.marchCap || 0) - (a.marchCap || 0)) || strongerFirst(a, b); })
       .forEach(function(p) {
-        var t = P.teams.slice().sort(function(a, b) { return (sum(a) - sum(b)) || (skTeamMembers(ph, a).length - skTeamMembers(ph, b).length); })[0];
+        var t = P.teams.slice().sort(function(a, b) { return (p.marchCap || 0) > 0 ? ((sum(a) - sum(b)) || (skTeamMembers(ph, a).length - skTeamMembers(ph, b).length)) : ((skTeamMembers(ph, a).length - skTeamMembers(ph, b).length) || (sum(a) - sum(b))); })[0];
         P.assign[p.uid] = t.id;
       });
     return "メンバー " + pool.length + "人を4チームに分けました（チームは解放前・解放後で共通です）";
