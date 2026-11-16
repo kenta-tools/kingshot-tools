@@ -200,8 +200,9 @@ function best(cur,ownTG,ownTTG,W){
 }
 /* 手持ちの黄金と精製黄金の割合を、次のレベルに必要な比率に合わせるための精錬（週合計n回。7＝毎日1回ずつ） */
 function ratioN(cur,Lt,og,ot,W){
-  if(Lt>MAXLV||W<1)return 7;
-  const b=need(cur,Lt);if(b.t===0)return 7;const k=b.g/b.t;
+  if(W<1)return 7;
+  /* 次のレベルがない（最高の黄金に届く）ときは、最高の黄金（MAXLV）の割合に合わせる */
+  const b=Lt>MAXLV?{g:TIERS[MAXLV][0],t:TIERS[MAXLV][1]}:need(cur,Lt);if(!b.t)return 7;const k=b.g/b.t;
   for(let n=7;n<=100;n++){const [avg,r]=PLAN[n];const x=(og-k*ot)/(r+k);if(x<=0)return 7;if(W*avg>=x)return n}
   return 100;
 }
