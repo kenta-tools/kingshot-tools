@@ -47,6 +47,7 @@ NAV_EVENT_GROUPS = [
     ("便利ツール", [
         ("tools/useful.html", "🧰", "便利ツール（一覧）"),
         ("tools/gold-calculator.html", "🪙", "黄金計算機"),
+        ("tools/gold-refine-plan.html", "🧮", "黄金 精錬回数計算機（簡易版）"),
     ]),
 ]
 # 非表示中（2026-11-01、ユーザー指示でいったん非表示。ファイルは残したまま一覧・サイドバーから外す）:
