@@ -1,3 +1,5 @@
+// ks-no-wheel-select: プルダウンは、マウスホイールで値が変わらないようにする（サイト共通ルール）
+document.addEventListener("wheel", function(e) { var t = e.target; if (t && t.tagName === "SELECT" && document.activeElement === t) t.blur(); }, { capture: true, passive: true });
 (function() {
   // ログインパスワードはこのページには持たず、中継役（GAS のスクリプトプロパティ EDIT_PASSWORD）で確認する。
   // ソースを見てもパスワードの手がかりはなく、保存も中継役が毎回パスワードを確認する。

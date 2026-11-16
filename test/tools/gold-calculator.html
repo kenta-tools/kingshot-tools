@@ -437,4 +437,5 @@ function resetAll(){try{localStorage.removeItem(KEY)}catch(e){}['ownTG','ownTTG'
 $('reset').onclick=resetAll;
 restore();
 render();setView($('kpi').classList.contains('simple'));
-</script></body></html>
+</script><script>/*ks-no-wheel-select: プルダウンは、マウスホイールで値が変わらないようにする（サイト共通ルール）*/document.addEventListener("wheel",function(e){var t=e.target;if(t&&t.tagName==="SELECT"&&document.activeElement===t)t.blur()},{capture:true,passive:true});</script>
+</body></html>

@@ -1025,5 +1025,6 @@ renderPatterns();
 </script>
 
 <script src="view-edit-gate.js"></script>
+<script>/*ks-no-wheel-select: プルダウンは、マウスホイールで値が変わらないようにする（サイト共通ルール）*/document.addEventListener("wheel",function(e){var t=e.target;if(t&&t.tagName==="SELECT"&&document.activeElement===t)t.blur()},{capture:true,passive:true});</script>
 </body>
 </html>
