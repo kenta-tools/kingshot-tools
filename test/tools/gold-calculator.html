@@ -387,7 +387,7 @@ function render(){
   const x0=cost(Object.assign({},c,{own:{TG:0,TTG:0,dust:0}}),m.n);
   const card=(nm,need,short,extra,sur,cls)=>`<div${cls?' class="'+cls+'"':''}><div class="nm">${ICO[nm]||''}${nm}</div><div class="row"><span>必要個数</span><span>${f(need)}</span></div><div class="row short"><span>不足個数</span><span class="big">${Math.round(short)>0?f(short):'なし'}</span></div>${Math.round(short)>0?(extra||''):''}${Math.round(sur)>0?`<div class="row"><span>余剰個数</span><span>${f(sur)}</span></div>`:''}</div>`;
   const wks=m.n?(x.s1+x.s2)/x.avg:0;
-  $('spin').innerHTML=m.n?`<div class="nm">精製黄金を作るための精錬回数</div><div class="big">毎週月曜日に${m.n-6}回（週合計${m.n}回）</div><div class="note">火〜日は1日1回ずつ。</div>`:'<div class="nm">精製黄金を作るための精錬回数</div><div class="note">精錬は必要ありません。</div>';
+  $('spin').innerHTML=m.n?`<div class="nm">精製黄金を作るための精錬回数</div><div class="big">毎週月曜に${m.n-6}回＋火曜以降毎日1回（週合計${m.n}回）</div>`:'<div class="nm">精製黄金を作るための精錬回数</div><div class="note">精錬は必要ありません。</div>';
   const ttgNeedAll=c.R.ttg+c.G.tt,surTG=Math.max(0,c.own.TG-c.G.tg),surTTG=Math.max(0,c.own.TTG-ttgNeedAll),surD=Math.max(0,c.own.dust-c.R.dust),convNeed=x.dGold+(x.s1+x.s2)*x.r,surEq=Math.max(0,surTG-convNeed);
   $('kpi').innerHTML=card('黄金換算',x0.tot,x.tot,'',surEq,'eq')+card('黄金（黄金として必要）',c.G.tg,x.tgShort,'',surTG)+card('精製黄金',ttgNeedAll,x.s1+x.s2,`<div class="row"><span>不足分の黄金換算</span><span>${f((x.s1+x.s2)*x.r)}</span></div>`,surTTG)+card('黄金微粒子',c.R.dust,x.dShort,`<div class="row"><span>不足分の黄金換算</span><span>${f(x.dGold)}</span></div>`,surD);
   const _unused=(b,t)=>`<span class="${b?'ok':'ng'}">${b?'間に合う':'不足'}</span> (${t})`;

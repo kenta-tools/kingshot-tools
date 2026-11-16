@@ -205,14 +205,14 @@ function ratioN(cur,Lt,og,ot,W){
   for(let n=7;n<=100;n++){const [avg,r]=PLAN[n];const x=(og-k*ot)/(r+k);if(x<=0)return 7;if(W*avg>=x)return n}
   return 100;
 }
-const fmtN=(n,W)=>n<=7?'毎日1回ずつ':`毎週月曜日に${n-6}回（週合計${n}回）× ${W}週`;
+const fmtN=(n,W)=>`毎週月曜に${n-6}回＋火曜以降毎日1回（週合計${n}回）× ${W}週`;
 function blockB(k,W,cur,og,ot){
   const r=best(cur,og,ot,W),md=d=>(d.getMonth()+1)+'/'+d.getDate();
   const head=`${md(k.kvk)}のKVK向け`,sub=`実施日 ${md(k.mon)}（月）・精錬できるのは あと${W}週`;
   let h=`<div class="plan"><div class="nm">${head}</div><div class="note">${sub}</div>`;
   if(r.hit){const {L,p}=r.hit;
     h+=`<div class="big">黄金${L}まで上げられます</div>`;
-    h+=p.n?`<p class="how">精錬のやり方：毎週月曜日に${p.n-6}回（週合計${p.n}回）を${W}週。火〜日は1日1回ずつ。</p>`:`<p class="how">割合を整えるなら：${fmtN(ratioN(cur,L+1,og,ot,W),W)}</p>`;
+    h+=p.n?`<p class="how">精錬のやり方：毎週月曜に${p.n-6}回＋火曜以降毎日1回（週合計${p.n}回）× ${W}週</p>`:`<p class="how">割合を整えるなら：${fmtN(ratioN(cur,L+1,og,ot,W),W)}</p>`;
   }else{h+=`<div class="big">黄金${cur+1}にも届きません</div><p class="how">割合を整えるなら：${fmtN(ratioN(cur,cur+1,og,ot,W),W)}</p>`}
   if(r.next){const n=r.next;
     if(n.p.tooShort)h+=`<p class="note">黄金${n.L}は、この期間では精錬が間に合いません（週100回でも足りない）。</p>`;
