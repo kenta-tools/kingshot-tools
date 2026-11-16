@@ -19,6 +19,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 TEST = ROOT / "test"
 EXCLUDE_FILES = {"config.js", "index.html"}
+EXCLUDE_PATHS = {"egg/index.html"}  # EGG TOP は、本番とtestで表記（テストの帯・タイトル）が違うため、昇格しない（2026-11-16、混ざる事故があった）
 EXCLUDE_DIRS = {"spec", "flame-dragon", "holy-sword-league", "kvk-matchup"}
 # 本番に混ざってはいけないもの（test環境の設定）
 FORBIDDEN = ["AKfycbztnub9", "IS_TEST_ENV", "PROD_GAS_URL", "this is a test mirror"]
@@ -58,6 +59,8 @@ def targets():
         for f in fn:
             rel = rel_dir / f
             if len(rel.parts) == 1 and rel.name in EXCLUDE_FILES:
+                continue
+            if rel.as_posix() in EXCLUDE_PATHS:
                 continue
             out.append(rel)
     return sorted(out)
