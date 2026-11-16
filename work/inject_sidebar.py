@@ -78,6 +78,9 @@ PAGE_GROUPS = [
     ),
 ]
 
+# メニューにリンクを出さないページ（ページ自体にはメニューを付ける）。便利ツール（一覧）は2026-11-16、ユーザー指示でメニューから外した
+HIDDEN_LINKS = {"tools/useful.html"}
+
 MARK_START = "<!-- ks-sidebar:start -->"
 MARK_END = "<!-- ks-sidebar:end -->"
 
@@ -104,7 +107,7 @@ def build_sidebar(current_rel_path, event_groups):
     links = [link_html(*HOME)]
     for event_name, items in event_groups:
         links.append(f'<div class="ks-group">{event_name}</div>')
-        links.extend(link_html(*item) for item in items)
+        links.extend(link_html(*item) for item in items if item[0] not in HIDDEN_LINKS)
 
     sidebar = f'''{MARK_START}
 <style>
