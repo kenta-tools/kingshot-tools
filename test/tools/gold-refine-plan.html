@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>黄金 精錬回数計算機</title>
+<style>
+:root{--bg:#fbf8f1;--card:#fff;--ink:#2b2418;--mut:#7a6f5c;--line:#e6dcc6;--acc:#b8860b;--hd:#f3ead2;--ng:#c0392b}
+@media(prefers-color-scheme:dark){:root{--bg:#1b1812;--card:#26221a;--ink:#f1e9d6;--mut:#b3a88f;--line:#3d3626;--acc:#e0b040;--hd:#322c1e;--ng:#ff7b6b}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.7 system-ui,"Yu Gothic UI",sans-serif}
+.w{max-width:680px;margin:0 auto;padding:16px 16px 40px}
+h1{font-size:1.5rem;margin:.3em 0 .2em}h2{font-size:1.1rem;color:var(--acc);margin:0 0 .6em}
+.note{color:var(--mut);font-size:.85rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:12px 0}
+.grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+label{display:block;font-size:.9rem;color:var(--mut);margin-bottom:2px}
+input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font-size:1.05rem}
+.plan{background:var(--hd);border-radius:10px;padding:12px 14px;margin-top:12px}
+.plan:first-child{margin-top:0}
+.nm{font-weight:700;margin-bottom:2px}
+.plan .big{font-size:1.25rem;font-weight:700;color:var(--acc);margin:2px 0 6px}
+.plan p{margin:.25em 0;font-size:.95rem}.plan .how{font-weight:700;font-size:1.05rem}
+.empty{color:var(--mut)}
+.more{font-size:.95rem}.more a{color:var(--acc);font-weight:700}
+.warn{border:2px solid var(--ng);border-radius:12px;padding:8px 16px;margin-top:16px}.warn h2{color:var(--ng)}.warn ul{margin:0;padding-left:1.2em;font-size:.9rem}
+.btn{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:6px 12px;font-size:.85rem;cursor:pointer}
+@media(max-width:560px){.grid{grid-template-columns:1fr}}
+</style></head><body><div class="w">
+<h1>黄金 精錬回数計算機</h1>
+<div class="note">いまの黄金レベルと持っている数から、KVKに向けて何回精錬すればいいかを出します。</div>
+
+<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2>入力</h2><button id="reset" type="button" class="btn">入力をリセット</button></div><div class="grid">
+<div><label>現在の黄金レベル</label><select id="cur"></select></div>
+<div><label>持っている黄金</label><input id="ownTG" type="number" min="0" inputmode="numeric" value="0"></div>
+<div><label>持っている精製黄金</label><input id="ownTTG" type="number" min="0" inputmode="numeric" value="0"></div>
+</div></div>
+
+<div class="card"><h2>結果</h2><div id="out"></div></div>
+
+<div class="card more"><b>もっと詳しく計算したい人は</b><br>上級研究も含めて、くわしく計算できる「詳細版」があります。<br><a href="gold-calculator.html" target="_blank" rel="noopener">詳細版の黄金計算機を開く</a>　／　<a href="gold-calculator-guide.html" target="_blank" rel="noopener">詳細版の使い方</a></div>
+</div>
+<script>
+/* ============ 目標（ここだけ変えれば、目標が変わります） ============
+   kvk   : KVKの開始日（土曜）。実施日＝その週の月曜日
+   label : 画面に出す名前
+   黄金9・10が来たら MAXLV を 10 に変える。足りない黄金レベルの数字は TIERS に足す。 */
+const GOALS=[
+  {label:'12月のKVK',kvk:'2026-12-05'},
+  {label:'1月のKVK',kvk:'2027-01-02'},
+];
+const MAXLV=8; /* いま実装されている最高の黄金レベル */
+/* ====================================================================== */
+/* 黄金レベルごとの必要量（8建物の合計）。黄金N＝黄金(N-1)からNへ上げる分。黄金1は城30から */
+const TIERS={1:[1970,0],2:[2715,0],3:[4095,0],4:[4830,0],5:[5760,0],6:[3105,197],7:[3726,293],8:[3726,414],9:[4347,611],10:[5420,1439]};
+/* 週の精錬回数ごとの [精製黄金/週（平均）, 精製黄金1個あたりの黄金]（毎日1回目は半額・平均運） */
+const PLAN={7:[10.15,6.9],8:[11.6,7.76],9:[13.05,8.43],10:[14.5,8.97],11:[15.95,9.4],12:[17.4,9.77],13:[18.85,10.08],14:[20.3,10.34],15:[21.75,10.57],16:[23.2,10.78],17:[24.65,10.95],18:[26.1,11.11],19:[27.55,11.25],20:[29.0,11.38],21:[31.15,11.72],22:[33.3,12.01],23:[35.45,12.27],24:[37.6,12.5],25:[39.75,12.7],26:[41.9,12.89],27:[44.05,13.39],28:[46.2,13.85],29:[48.35,14.27],30:[50.5,14.65],31:[52.65,15.0],32:[54.8,15.33],33:[56.95,15.63],34:[59.1,15.91],35:[61.25,16.16],36:[63.4,16.4],37:[65.55,16.63],38:[67.7,16.84],39:[69.85,17.04],40:[72.0,17.22],41:[75.18,17.49],42:[78.36,17.74],43:[81.54,17.97],44:[84.72,18.18],45:[87.9,18.37],46:[91.08,18.56],47:[94.26,18.99],48:[97.44,19.4],49:[100.62,19.78],50:[103.8,20.13],51:[106.98,20.47],52:[110.16,20.79],53:[113.34,21.09],54:[116.52,21.37],55:[119.7,21.64],56:[122.88,21.89],57:[126.06,22.13],58:[129.24,22.36],59:[132.42,22.58],60:[135.6,22.79],61:[139.04,23.05],62:[142.47,23.3],63:[145.91,23.54],64:[149.34,23.77],65:[152.78,23.99],66:[156.21,24.2],67:[159.65,24.49],68:[163.08,24.77],69:[166.52,25.04],70:[169.95,25.3],71:[173.39,25.55],72:[176.82,25.79],73:[180.26,26.02],74:[183.69,26.24],75:[187.13,26.45],76:[190.56,26.66],77:[194.0,26.86],78:[197.43,27.05],79:[200.87,27.23],80:[204.3,27.41],81:[208.01,27.62],82:[211.72,27.82],83:[215.43,28.01],84:[219.14,28.2],85:[222.85,28.38],86:[226.56,28.56],87:[230.27,28.79],88:[233.98,29.02],89:[237.69,29.24],90:[241.4,29.45],91:[245.11,29.66],92:[248.82,29.86],93:[252.53,30.06],94:[256.24,30.25],95:[259.95,30.43],96:[263.66,30.61],97:[267.37,30.78],98:[271.08,30.95],99:[274.79,31.11],100:[278.5,31.27]};
+const $=id=>document.getElementById(id),f=x=>Math.round(x).toLocaleString('ja-JP');
+const md=d=>(d.getMonth()+1)+'/'+d.getDate();
+$('cur').innerHTML='<option value="">選択してください</option>'+Array.from({length:MAXLV},(_,i)=>`<option value="${i}">黄金${i}${i==0?'（城30・未着手）':''}</option>`).join('');
+function need(a,b){let g=0,t=0;for(let l=a+1;l<=b;l++){g+=TIERS[l][0];t+=TIERS[l][1]}return {g,t}}
+/* 週W回の期間で cur→L に届くか。届くなら、最も回数が少ない（お得な）精錬のやり方を返す */
+function planFor(cur,L,ownTG,ownTTG,W){
+  const b=need(cur,L),tn=Math.max(0,b.t-ownTTG);
+  if(tn===0)return {ok:ownTG>=b.g,n:null,spend:b.g,gold:b.g,short:Math.max(0,b.g-ownTG)};
+  for(let n=7;n<=100;n++){const [avg,r]=PLAN[n];if(W*avg>=tn){const refine=W*avg*r,total=b.g+refine;return {ok:ownTG>=total,n,spend:total,gold:b.g,refine,short:Math.max(0,total-ownTG),made:W*avg}}}
+  return {ok:false,n:null,tooShort:true};
+}
+function best(cur,og,ot,W){
+  let hit=null;for(let L=MAXLV;L>cur;L--){const p=planFor(cur,L,og,ot,W);if(p.ok){hit={L,p};break}}
+  const nl=(hit?hit.L:cur)+1;
+  return {hit,next:nl<=MAXLV?{L:nl,p:planFor(cur,nl,og,ot,W)}:null};
+}
+function block(g,today,cur,og,ot){
+  const k=new Date(g.kvk+'T00:00:00'),mon=new Date(k);mon.setDate(mon.getDate()-((mon.getDay()+6)%7));
+  const nm=`${g.label}（${md(k)}）`;
+  if(mon<today)return `<div class="plan"><div class="nm">${nm}向け</div><div class="note">この日は、もう過ぎています。</div></div>`;
+  const W=Math.floor((mon-today)/6048e5);
+  const r=best(cur,og,ot,W);
+  if(r.hit){const {L,p}=r.hit;
+    return `<div class="plan"><div class="big">${nm}に黄金${L}まで上げるなら</div>`+(p.n?`<p class="how">毎週月曜日に${p.n-6}回（週合計${p.n}回）× ${W}週</p>`:`<p class="how">毎日1回ずつ</p>`)+'</div>';
+  }
+  return `<div class="plan"><div class="nm">${nm}向け</div><div class="big">黄金${cur+1}にも届きません</div></div>`;
+}
+const KEY='kingshot_gold_refine_v1',IDS=['cur','ownTG','ownTTG'];
+function save(){try{const o={};IDS.forEach(i=>{o[i]=$(i).value});localStorage.setItem(KEY,JSON.stringify(o))}catch(e){}}
+function restore(){try{const o=JSON.parse(localStorage.getItem(KEY)||'null');if(!o)return;IDS.forEach(i=>{if(o[i]===undefined||o[i]===null)return;const el=$(i),prev=el.value;el.value=o[i];if(String(el.value)!==String(o[i]))el.value=prev})}catch(e){}}
+function render(){
+  save();
+  const cur=$('cur').value;
+  const og=Math.max(0,+$('ownTG').value||0),ot=Math.max(0,+$('ownTTG').value||0);
+  if(cur===''){$('out').innerHTML='<div class="empty">現在の黄金レベルを選ぶと、結果が出ます。</div>';return}
+  const today=new Date();today.setHours(0,0,0,0);
+  $('out').innerHTML=GOALS.map(g=>block(g,today,+cur,og,ot)).join('');
+}
+function resetAll(){try{localStorage.removeItem(KEY)}catch(e){}$('cur').value='';$('ownTG').value='0';$('ownTTG').value='0';render()}
+document.querySelectorAll('input,select').forEach(e=>{e.addEventListener('input',render);e.addEventListener('change',render)});
+$('reset').onclick=resetAll;
+restore();render();
+</script></body></html>
