@@ -205,15 +205,16 @@ function ratioN(cur,Lt,og,ot,W){
   for(let n=7;n<=100;n++){const [avg,r]=PLAN[n];const x=(og-k*ot)/(r+k);if(x<=0)return 7;if(W*avg>=x)return n}
   return 100;
 }
+const MAXN=26; /* 届かないときに出す、週合計の精錬回数の上限 */
 const fmtN=(n,W)=>`毎週月曜に${n-6}回＋火曜以降毎日1回（週合計${n}回）`;
-function blockB(k,W,cur,og,ot){
+function blockB(k,W,cur,og,ot,fb){
   const r=best(cur,og,ot,W),md=d=>(d.getMonth()+1)+'/'+d.getDate();
   const head=`${md(k.kvk)}のKVK向け`,sub=`実施日 ${md(k.mon)}（月）・精錬できるのは あと${W}週`;
   let h=`<div class="plan"><div class="nm">${head}</div><div class="note">${sub}</div>`;
   if(r.hit){const {L,p}=r.hit;
     h+=`<div class="big">黄金${L}まで上げられます</div>`;
     h+=p.n?`<p class="how">毎週月曜に${p.n-6}回＋火曜以降毎日1回（週合計${p.n}回）</p>`:`<p class="how">割合を整えるなら：${fmtN(ratioN(cur,L+1,og,ot,W),W)}</p>`;
-  }else{h+=`<div class="big">黄金${cur+1}にも届きません</div><p class="how">割合を整えるなら：${fmtN(ratioN(cur,cur+1,og,ot,W),W)}</p>`}
+  }else{h+=`<div class="big">黄金${cur+1}にも届きません</div><p class="how">${fmtN(fb,W)}</p>`}
   if(r.next){const n=r.next;
     if(n.p.tooShort)h+=`<p class="note">黄金${n.L}は、この期間では精錬が間に合いません（週100回でも足りない）。</p>`;
   }else if(r.hit)h+=`<p class="note">これが、いま実装されている最高の黄金です。</p>`;
@@ -232,7 +233,11 @@ function render(){
   else if(tar!==''){$('boxA').style.display='';$('outA').innerHTML='<div class="empty">目標の黄金レベルを、現在より大きくしてください。</div>'}
   else $('boxA').style.display='none';
   const today=new Date();today.setHours(0,0,0,0);
-  $('outB').innerHTML=upcoming(today,2).map(k=>blockB(k,Math.floor((k.mon-today)/6048e5),a,og,ot)).join('');
+  const ks=upcoming(today,2).map(k=>({k,W:Math.floor((k.mon-today)/6048e5)}));
+  ks.forEach(x=>{x.r=best(a,og,ot,x.W)});
+  /* 届かないKVKに出す回数：あとのKVKで届くなら、その回数。どれも届かないなら、週合計の上限（MAXN回） */
+  const last=ks.length?ks[ks.length-1].r.hit:null,fb=last?(last.p.n||7):MAXN;
+  $('outB').innerHTML=ks.map(x=>blockB(x.k,x.W,a,og,ot,fb)).join('');
 }
 function resetAll(){try{localStorage.removeItem(KEY)}catch(e){}$('cur').value='';$('tar').value='';$('ownTG').value='0';$('ownTTG').value='0';render()}
 document.querySelectorAll('input,select').forEach(e=>{e.addEventListener('input',render);e.addEventListener('change',render)});
