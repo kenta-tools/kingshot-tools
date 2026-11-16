@@ -25,6 +25,7 @@ input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:
 .btn{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:6px 12px;font-size:.85rem;cursor:pointer}
 @media(max-width:520px){.grid,.res{grid-template-columns:1fr}}
 .ico{width:26px;height:26px;vertical-align:middle;margin-right:6px;object-fit:contain}
+.more{font-size:.95rem}.more a{color:var(--acc);font-weight:700}
 </style></head><body>
 <!-- ks-sidebar:start -->
 <style>
@@ -114,7 +115,7 @@ input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:
     <button type="button" class="ks-menu-btn" aria-label="メニュー" aria-expanded="false">☰</button>
   </div>
   <nav>
-    <a href="../index.html" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">便利ツール</div><a href="useful.html" class="ks-link" title="便利ツール（一覧）"><span class="ks-icon">🧰</span><span class="ks-label">便利ツール（一覧）</span></a><a href="gold-calculator.html" class="ks-link" title="黄金計算機"><span class="ks-icon">🪙</span><span class="ks-label">黄金計算機</span></a><a href="gold-refine-plan.html" class="ks-link" title="黄金 精錬回数計算機（簡易版）"><span class="ks-icon">🧮</span><span class="ks-label">黄金 精錬回数計算機（簡易版）</span></a><a href="gold-calculator-simple.html" class="ks-link ks-active" title="黄金計算機（超簡単版）"><span class="ks-icon">🪙</span><span class="ks-label">黄金計算機（超簡単版）</span></a>
+    <a href="../index.html" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a><div class="ks-group">便利ツール</div><a href="useful.html" class="ks-link" title="便利ツール（一覧）"><span class="ks-icon">🧰</span><span class="ks-label">便利ツール（一覧）</span></a><a href="gold-calculator.html" class="ks-link" title="黄金計算機"><span class="ks-icon">🪙</span><span class="ks-label">黄金計算機</span></a><a href="gold-calculator-simple.html" class="ks-link ks-active" title="黄金計算機（超簡単版）"><span class="ks-icon">🪙</span><span class="ks-label">黄金計算機（超簡単版）</span></a><a href="gold-refine-plan.html" class="ks-link" title="黄金 精錬回数計算機（簡易版）"><span class="ks-icon">🧮</span><span class="ks-label">黄金 精錬回数計算機（簡易版）</span></a>
   </nav>
 </div>
 <button type="button" class="ks-open-btn" onclick="ksToggleSidebar()" aria-label="メニューを開く">☰</button>
@@ -168,11 +169,7 @@ input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:
 <div class="card" id="boxA" style="display:none"><h2>目標までに必要な数</h2><div id="outA"></div></div>
 <div class="card"><h2>手持ちでどこまで上げられる？</h2><div id="outB"></div></div>
 
-<div class="warn"><h2>注意点</h2><ul>
-<li>データは非公式の情報です。必ずしも正確とは限りません。</li>
-<li>精製黄金については期待値なので必ずしも表示回数で達成できるとは限りません。</li>
-<li>実施日は、KVK開始週の月曜日（KVKは12/5から4週ごとの想定）です。基本は解放日にあわせてアップグレードしてください。</li>
-</ul></div>
+<div class="card more"><b>もっと詳しく計算したい人は</b><br>上級研究も含めて、くわしく計算できる「詳細版」があります。<br><a href="gold-calculator.html" target="_blank" rel="noopener">詳細版の黄金計算機を開く</a>　／　<a href="gold-calculator-guide.html" target="_blank" rel="noopener">詳細版の使い方</a></div>
 </div>
 <script>
 /* 黄金レベルごとの必要量（8建物の合計）。黄金N＝黄金(N-1)からNへ上げる分。黄金1は城30から */
