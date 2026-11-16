@@ -197,6 +197,14 @@ function best(cur,og,ot,W){
   const nl=(hit?hit.L:cur)+1;
   return {hit,next:nl<=MAXLV?{L:nl,p:planFor(cur,nl,og,ot,W)}:null};
 }
+/* 手持ちの黄金と精製黄金の割合を、次のレベルに必要な比率に合わせるための精錬（週合計n回。7＝毎日1回ずつ） */
+function ratioN(cur,Lt,og,ot,W){
+  if(Lt>MAXLV||W<1)return 7;
+  const b=need(cur,Lt);if(b.t===0)return 7;const k=b.g/b.t;
+  for(let n=7;n<=100;n++){const [avg,r]=PLAN[n];const x=(og-k*ot)/(r+k);if(x<=0)return 7;if(W*avg>=x)return n}
+  return 100;
+}
+const fmtN=(n,W)=>n<=7?'毎日1回ずつ':`毎週月曜日に${n-6}回（週合計${n}回）× ${W}週`;
 function block(g,today,cur,og,ot){
   const k=new Date(g.kvk+'T00:00:00'),mon=new Date(k);mon.setDate(mon.getDate()-((mon.getDay()+6)%7));
   const nm=`${g.label}（${md(k)}）`;
@@ -204,9 +212,9 @@ function block(g,today,cur,og,ot){
   const W=Math.floor((mon-today)/6048e5);
   const r=best(cur,og,ot,W);
   if(r.hit){const {L,p}=r.hit;
-    return `<div class="plan"><div class="big">${nm}に黄金${L}まで上げるなら</div>`+(p.n?`<p class="how">毎週月曜日に${p.n-6}回（週合計${p.n}回）× ${W}週</p>`:`<p class="how">毎日1回ずつ</p>`)+'</div>';
+    return `<div class="plan"><div class="big">${nm}に黄金${L}まで上げるなら</div>`+(p.n?`<p class="how">毎週月曜日に${p.n-6}回（週合計${p.n}回）× ${W}週</p>`:`<p class="how">${fmtN(ratioN(cur,L+1,og,ot,W),W)}</p>`)+'</div>';
   }
-  return `<div class="plan"><div class="nm">${nm}向け</div><div class="big">黄金${cur+1}にも届きません</div></div>`;
+  return `<div class="plan"><div class="nm">${nm}向け</div><div class="big">黄金${cur+1}にも届きません</div><p class="how">割合を整えるなら：${fmtN(ratioN(cur,cur+1,og,ot,W),W)}</p></div>`;
 }
 const KEY='kingshot_gold_refine_v1',IDS=['cur','ownTG','ownTTG'];
 function save(){try{const o={};IDS.forEach(i=>{o[i]=$(i).value});localStorage.setItem(KEY,JSON.stringify(o))}catch(e){}}
