@@ -213,7 +213,7 @@ function blockB(k,W,cur,og,ot,fb){
   let h=`<div class="plan"><div class="nm">${head}</div><div class="note">${sub}</div>`;
   if(r.hit){const {L,p}=r.hit;
     h+=`<div class="big">黄金${L}まで上げられます</div>`;
-    h+=p.n?`<p class="how">毎週月曜に${p.n-6}回＋火曜以降毎日1回（週合計${p.n}回）</p>`:`<p class="how">割合を整えるなら：${fmtN(ratioN(cur,L+1,og,ot,W),W)}</p>`;
+    h+=p.n?`<p class="how">毎週月曜に${p.n-6}回＋火曜以降毎日1回（週合計${p.n}回）</p>`:`<p class="how">${fmtN(ratioN(cur,L+1,og,ot,W),W)}</p>`;
   }else{h+=`<div class="big">黄金${cur+1}にも届きません</div><p class="how">${fmtN(fb,W)}</p>`}
   if(r.next){const n=r.next;
     if(n.p.tooShort)h+=`<p class="note">黄金${n.L}は、この期間では精錬が間に合いません（週100回でも足りない）。</p>`;

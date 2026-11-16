@@ -8,7 +8,7 @@ const send=(method,params={})=>new Promise(r=>{const i=++id;pe[i]=r;ws.send(JSON
 await send("Runtime.enable");await send("Page.enable");
 await send("Page.navigate",{url:pathToFileURL(resolve("test/tools/gold-calculator-simple.html")).href});await sleep(1500);
 const ev=async x=>{const r=await send("Runtime.evaluate",{expression:x,returnByValue:true});return r.result?.result?.value??JSON.stringify(r.result?.exceptionDetails?.exception?.description||r)};
-for(const [lv,tg,ttg] of [[5,4000,0],[5,5500,0],[3,6000,0],[6,11000,0]]){
+for(const [lv,tg,ttg] of [[6,30000,100],[6,20000,2000],[7,30000,300],[6,60000,0]]){
  await ev(`(function(){const c=document.getElementById("cur");const o=[...c.options].find(x=>x.value==="${lv}");c.value=o?o.value:c.options[1].value;c.dispatchEvent(new Event("change",{bubbles:true}));const a=document.getElementById("ownTG");a.value=${tg};a.dispatchEvent(new Event("input",{bubbles:true}));const b=document.getElementById("ownTTG");b.value=${ttg};b.dispatchEvent(new Event("input",{bubbles:true}));})()`);await sleep(400);
  console.log("---",lv,tg,ttg);console.log(await ev("document.getElementById('outB').innerText.replace(/\s+/g,' ')"));
 }
