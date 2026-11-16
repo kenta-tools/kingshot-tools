@@ -212,12 +212,10 @@ function blockB(k,W,cur,og,ot){
   let h=`<div class="plan"><div class="nm">${head}</div><div class="note">${sub}</div>`;
   if(r.hit){const {L,p}=r.hit;
     h+=`<div class="big">黄金${L}まで上げられます</div>`;
-    h+=p.n?`<p class="how">精錬のやり方：毎週月曜日に${p.n-6}回（週合計${p.n}回）を${W}週。火〜日は1日1回ずつ。</p><p>精製黄金 約${f(p.made)}個が作れます。精錬に使う黄金 約${f(p.refine)}。</p>`:`<p class="how">割合を整えるなら：${fmtN(ratioN(cur,L+1,og,ot,W),W)}</p>`;
-    h+=`<p>使う黄金の合計 約${f(p.spend)}（建物 ${f(p.gold)}${p.n?' ＋ 精錬 '+f(p.refine):''}）。残りの黄金 約${f(og-p.spend)}。</p>`;
+    h+=p.n?`<p class="how">精錬のやり方：毎週月曜日に${p.n-6}回（週合計${p.n}回）を${W}週。火〜日は1日1回ずつ。</p>`:`<p class="how">割合を整えるなら：${fmtN(ratioN(cur,L+1,og,ot,W),W)}</p>`;
   }else{h+=`<div class="big">黄金${cur+1}にも届きません</div><p class="how">割合を整えるなら：${fmtN(ratioN(cur,cur+1,og,ot,W),W)}</p>`}
   if(r.next){const n=r.next;
     if(n.p.tooShort)h+=`<p class="note">黄金${n.L}は、この期間では精錬が間に合いません（週100回でも足りない）。</p>`;
-    else if(!n.p.ok)h+=`<p class="note">黄金${n.L}にするには、黄金があと約${f(n.p.short)}個必要です${n.p.n?'（毎週月曜日に'+(n.p.n-6)+'回・週合計'+n.p.n+'回の精錬を前提）':''}。</p>`;
   }else if(r.hit)h+=`<p class="note">これが、いま実装されている最高の黄金です。</p>`;
   return h+'</div>';
 }
