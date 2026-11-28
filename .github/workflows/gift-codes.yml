@@ -1,0 +1,60 @@
+# ギフトコードの自動投稿（Wispbyte の post_gifts.py から移行、2026-11-28）。中身は .github/scripts/gift_codes_post.py
+# 毎時7分に新しいコードを確認して Discord に投稿。日本時間の朝9時台の定時実行では「[稼働中]」も投稿する。
+name: ギフトコード投稿
+
+on:
+  schedule:
+    - cron: "7 * * * *" # 毎時7分（混雑で遅れることがある）
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "1＝試運転（Discordに送らず、内容を表示するだけ）。0＝本番"
+        default: "1"
+      first_post:
+        description: "1＝初回でも、いまあるコードを全部投稿する（Wispbyteと並べて動作確認するとき）"
+        default: "0"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gift-codes
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: ギフトコードを確認して投稿
+        env:
+          GIFT_DISCORD_TOKEN: ${{ secrets.GIFT_DISCORD_TOKEN }}
+          GIFT_CHANNEL_ID: ${{ secrets.GIFT_CHANNEL_ID }}
+          EVENT: ${{ github.event_name }}
+          DRY_IN: ${{ github.event.inputs.dry_run }}
+          FIRST_IN: ${{ github.event.inputs.first_post }}
+        run: |
+          export DRY_RUN=0 FIRST_POST=0 HEARTBEAT=0
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            [ "$DRY_IN" = "1" ] && DRY_RUN=1
+            [ "$FIRST_IN" = "1" ] && FIRST_POST=1
+          fi
+          # 日本時間の朝9時台（UTC 0時台）の定時実行で、生存通知も出す
+          if [ "$EVENT" = "schedule" ] && [ "$(date -u +%H)" = "00" ]; then HEARTBEAT=1; fi
+          python3 .github/scripts/gift_codes_post.py
+      - name: 投稿済みの記録をコミット
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/data/gift-codes
+          if git diff --cached --quiet; then
+            echo "変更なし"
+          else
+            git commit -m "ギフトコード: 投稿済みの記録を更新 ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
+            git pull --rebase -q
+            git push
+          fi
