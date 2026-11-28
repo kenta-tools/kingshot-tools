@@ -1,0 +1,2543 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>チーム分け（管理者）</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+    background: #f4f5f7;
+    color: #222;
+    margin: 24px auto;
+    padding: 0 16px 120px;
+    line-height: 1.6;
+  }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 0 0 10px; }
+  .sub { color: #666; font-size: 13px; margin-bottom: 16px; }
+  .card { background: #fff; border-radius: 12px; padding: 16px 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 14px; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
+  label.inline { font-size: 13px; display: inline-flex; align-items: center; gap: 4px; }
+  select, input[type=number], input[type=text] { font: inherit; font-size: 13px; padding: 5px 7px; border: 1px solid #ccd2db; border-radius: 6px; background: #fff; }
+  input[type=number] { width: 70px; }
+  select { max-width: 100%; }
+  label.inline { max-width: 100%; flex-wrap: wrap; }
+  button {
+    font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 6px;
+    border: 1px solid #3a4a63; background: #1a2332; color: #fff; cursor: pointer;
+  }
+  button.sub { background: #fff; color: #1a2332; }
+  button.mini { font-size: 11.5px; padding: 2px 7px; }
+  button.warn { background: #b4441c; border-color: #b4441c; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  .msg { font-size: 12.5px; min-height: 1em; }
+  .msg.ok { color: #1a7f37; }
+  .msg.err { color: #c0392b; }
+  .note { font-size: 12px; color: #777; }
+  .status-pill { display: inline-block; font-size: 11.5px; font-weight: bold; padding: 2px 10px; border-radius: 999px; }
+  .status-pill.pub { background: #e3ede6; color: #2e6b45; }
+  .status-pill.draft { background: #fbeecb; color: #8a5a10; }
+  .status-pill.stale { background: #fde2dc; color: #a2341b; }
+
+  /* タブ */
+  .tabs { display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap; }
+  .tabs button { background: #fff; color: #1a2332; border-color: #ccd2db; }
+  .tabs button.active { background: #1a2332; color: #fff; border-color: #1a2332; }
+
+  /* ボード */
+  .board { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr)); gap: 12px; }
+  .board > .team { min-width: 0; }
+  .team { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); border: 2px solid transparent; display: flex; flex-direction: column; }
+  .team.drop-ok { border-color: #2c5cc5; }
+  .team.can-drop { cursor: pointer; border-style: dashed; border-color: #8aa4d8; }
+  .team-head { padding: 10px 12px 6px; border-bottom: 1px solid #eef0f3; }
+  .team-title { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .team-title b { font-size: 15px; }
+  .team-title .tools { margin-left: auto; display: flex; gap: 3px; }
+  .team-stats { font-size: 11.5px; color: #555; margin-top: 4px; }
+  .team-stats span { margin-right: 8px; white-space: nowrap; }
+  .team-warn { font-size: 11.5px; color: #a2341b; margin-top: 3px; }
+  .team-warn div::before { content: "⚠ "; }
+  .team-body { padding: 8px 10px 12px; display: flex; flex-wrap: wrap; gap: 6px; min-height: 56px; align-content: flex-start; flex: 1; }
+  .team.special .team-head { background: #f6f7f9; border-radius: 10px 10px 0 0; }
+  .leader-row { font-size: 12px; margin-top: 4px; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+  .leader-row select { font-size: 12px; padding: 2px 4px; max-width: 200px; }
+  .cap-bar { height: 6px; background: #eef0f3; border-radius: 3px; overflow: hidden; margin-top: 5px; }
+  .cap-bar i { display: block; height: 100%; background: #4f8a5b; }
+  .cap-bar i.over { background: #c0392b; }
+
+  .chip {
+    font-size: 12px; border: 1px solid #d5dae2; background: #fbfcfd; border-radius: 8px; padding: 4px 7px;
+    cursor: grab; user-select: none; line-height: 1.35; max-width: 100%;
+  }
+  .chip b { font-size: 12.5px; }
+  .chip .m { color: #777; font-size: 11px; }
+  .chip .mk { color: #2c5cc5; }
+  .chip .tm { color: #b4441c; font-size: 11px; }
+  .chip.leader { background: #fff6dd; border-color: #e2c068; }
+  .chip.sel { outline: 3px solid #2c5cc5; }
+  .chip.unknown { background: #f1f1f1; }
+  .chip.ng { border-color: #e09a8b; }
+  .empty-hint { color: #aaa; font-size: 12px; }
+  /* 完了したイベント：保存済みの内容を見るだけ（編集できる部分は触れない） */
+  body.ks-readonly #settingsCard, body.ks-readonly #viewArea { pointer-events: none; opacity: 0.88; }
+  body.ks-readonly #viewArea [data-slot], body.ks-readonly #viewArea th[data-sort], body.ks-readonly #settingsCard [data-skph] { pointer-events: auto; } /* 見る画面の切り替え（時間帯・並べ替え）はできる */
+  body.ks-readonly #viewArea [draggable] { -webkit-user-drag: none; }
+  #roBanner { display: none; background: #fff1d6; color: #8a5600; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; font-size: 13px; }
+
+  /* 移動バー（チップを押したときに下に出る） */
+  /* 固定の保存バー（常に見える位置。完了イベントでは出さない） */
+  #saveBar { display: none; position: fixed; right: 12px; bottom: 12px; z-index: 100001; max-width: calc(100vw - 24px); box-sizing: border-box;
+    background: #1a2332; color: #fff; border-radius: 22px; padding: 5px 8px 5px 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.3); align-items: center; gap: 6px; flex-wrap: nowrap; font-size: 12px; }
+  #saveBar.show { display: flex; }
+  #saveBar button { font-size: 12px; padding: 4px 9px; margin: 0; white-space: nowrap; }
+  #saveBar button.sub { background: #3a4a63; color: #fff; border-color: #4a5a73; }
+  #saveBar .sb-state { white-space: nowrap; color: #b9c4d6; }
+  #saveBar.dirty .sb-state { color: #ffd66b; font-weight: bold; }
+  #saveBar .sb-msg { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #b9c4d6; }
+  @media (max-width: 600px) {
+    #saveBar { left: 8px; right: 8px; bottom: 8px; max-width: none; justify-content: space-between; padding: 4px 6px 4px 10px; }
+    #saveBar .sb-long { display: none; }
+    #saveBar .sb-msg { display: none; }
+  }
+  #moveBar {
+    display: none; position: fixed; left: 0; right: 0; bottom: 0; z-index: 100002; background: #1a2332; color: #fff;
+    padding: 10px 14px; box-shadow: 0 -2px 8px rgba(0,0,0,0.25); font-size: 13px;
+  }
+  #moveBar .targets { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; max-height: 30vh; overflow-y: auto; }
+  #moveBar button { background: #2a374d; border-color: #4a5a73; font-size: 12px; padding: 5px 9px; }
+  #moveBar button.here { background: #3a4a63; opacity: 0.6; }
+
+  /* 表 */
+  .tbl-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; font-size: 12.5px; width: 100%; }
+  th, td { border-bottom: 1px solid #eef0f3; padding: 5px 6px; text-align: left; white-space: nowrap; }
+  th { background: #f6f7f9; cursor: pointer; position: sticky; top: 0; }
+  td.num, th.num { text-align: right; }
+  tr.is-leader td { background: #fff9e8; }
+  td select { font-size: 12px; padding: 2px 4px; }
+
+  /* 時間帯 */
+  table.slots td, table.slots th { text-align: center; }
+  table.slots td:first-child, table.slots th:first-child { text-align: left; }
+  td.low { background: #fde2dc; color: #a2341b; font-weight: bold; }
+  td.high { background: #fff1d6; color: #8a5a10; font-weight: bold; }
+  td.zero { color: #bbb; }
+  .viv-miss { font-size: 10px; color: #a2341b; display: block; }
+
+  textarea.out { width: 100%; min-height: 220px; font-family: Consolas, "MS Gothic", monospace; font-size: 12.5px; padding: 8px; border: 1px solid #ccd2db; border-radius: 6px; }
+
+  /* ログイン画面 */
+  #loginView { max-width: 360px; margin: 80px auto; text-align: center; }
+  #loginView input { width: 100%; margin: 12px 0; padding: 7px 9px; border: 1px solid #ccd2db; border-radius: 6px; font-size: 14px; }
+  #loginView button { width: 100%; }
+  .top-link { font-size: 13px; color: #2c5cc5; text-decoration: none; }
+  #appView { display: none; }
+</style>
+</head>
+<body>
+
+<div id="loginView" class="card">
+  <h2>🔒 ログインしてください</h2>
+  <div class="sub" style="margin-bottom:0;">メンバー管理画面を開くにはパスワードを入力してください（TOPページでログイン済みの同じタブなら自動で開きます）。</div>
+  <input type="password" id="pwInput" placeholder="パスワード" autocomplete="current-password">
+  <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#555;margin:0 0 10px;cursor:pointer;"><input type="checkbox" id="pwRemember" style="width:auto;margin:0;"> パスワードを保存する（次回から入力不要。共用の端末ではチェックしない）</label>
+  <button type="button" id="loginBtn">ログイン</button>
+  <div class="msg err" id="loginMsg"></div>
+  <a href="../index.html" class="top-link" style="display: inline-block; margin-top: 8px;">← TOPページに戻る</a>
+</div>
+
+<div id="appView">
+  <h1>🧩 チーム分け</h1>
+  <div class="sub">
+    イベントの参加者（参加登録の内容）をチームに分けます。分けた結果は「📢 公開する」を押すまでは下書きで、管理者だけが見られます。
+    公開すると <a href="../teams/" target="_blank">チーム分けの閲覧ページ</a> と参加登録ページに表示されます。
+    <br><b style="color:#b4441c;">※ 「公開する」を押すと、パスワードなしで誰でも見られます。公開されるのは、名前・同盟・区分・印（◇VC・◆ビビアン）・参加時間・チーム（遺跡争奪は時間帯ごとの要塞・遺跡）だけです（◯マンスリー、部隊数・容量・ペット・ひとことは出ません）。ただしKVKでは、同盟（ひよこ・666）ごとの「マンスリー持ちの人数と合計分数」の集計は公開されます（誰が◯かは出ません）。</b>
+  </div>
+
+  <div id="roBanner">🔒 このイベントは完了しているため、保存済みのチーム分けを見るだけです（編集・保存・公開はできません）。</div>
+  <div class="card">
+    <div class="row" style="margin-top:0;">
+      <label class="inline">イベント <select id="eventSel"></select></label>
+      <!-- 分け方はイベントの種類から自動で決まる。選べる方式が1つだけなら表示だけ（#modeText）。保存済みの方式が標準と違うときだけ、標準と保存済みを切り替えるプルダウン（#modeSel）を出す -->
+      <span id="modeText" style="font-size: 13px;"></span>
+      <label class="inline" id="modeLabel" style="display: none;">分け方 <select id="modeSel"></select></label>
+      <button type="button" class="sub" id="reloadBtn">🔄 最新を読み込む</button>
+    </div>
+    <div class="row">
+      <span id="statusPill" class="status-pill draft">下書き</span>
+      <span class="note" id="statusText"></span>
+    </div>
+    <div class="msg" id="loadMsg"></div>
+  </div>
+
+  <div class="card" id="settingsCard">
+    <h2>⚙️ 設定と自動振り分け</h2>
+    <div id="settingsBody"></div>
+    <div id="carryRow" style="margin: 8px 0;"></div>
+    <div class="row" id="autoRow"></div>
+    <div class="msg" id="autoMsg"></div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <button type="button" data-tab="board" class="active">🧩 ボード</button>
+    <button type="button" data-tab="table">📋 表</button>
+    <button type="button" data-tab="slots">⏱ 時間帯</button>
+  </div>
+  <div class="note" id="tabHint" style="margin-bottom:8px;"></div>
+  <div id="viewArea"></div>
+
+  <div class="card" style="margin-top:14px;">
+    <h2>💬 Discordに貼るテキスト</h2>
+    <!-- 遺跡争奪のときだけ出す：貼る時間帯を選ぶ（出力だけが対象で、画面の割り振りは変わらない） -->
+    <div class="row" id="outSlotsRow" style="display:none; margin:0 0 8px;"></div>
+    <textarea class="out" id="outText" readonly></textarea>
+    <div class="row">
+      <button type="button" class="sub" id="copyTextBtn">📋 コピー</button>
+      <span class="msg" id="copyMsg"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>💾 保存と公開</h2>
+    <div class="note">「下書き保存」は管理者だけが見られます。「公開する」を押すと、その時点の内容が閲覧ページ・参加登録ページに出ます（公開後に直したら、もう一度「公開する」を押してください）。</div>
+    <div class="row">
+      <button type="button" id="saveBtn">💾 下書き保存</button>
+      <button type="button" id="publishBtn">📢 保存して公開する</button>
+      <button type="button" class="sub" id="unpublishBtn">🙈 非公開に戻す</button>
+      <button type="button" class="sub" id="copyUrlBtn">🔗 閲覧ページのURLをコピー</button>
+    </div>
+    <div class="msg" id="saveMsg"></div>
+  </div>
+  <div id="saveBar" role="toolbar" aria-label="保存と公開">
+    <span class="sb-state" id="sbState">保存済み</span>
+    <button type="button" id="sbSave">💾<span class="sb-long"> 下書き保存</span></button>
+    <button type="button" id="sbPublish">📢<span class="sb-long"> 保存して公開する</span></button>
+    <button type="button" class="sub" id="sbUnpublish">🙈<span class="sb-long"> 非公開に戻す</span></button>
+    <span class="sb-msg" id="sbMsg"></span>
+  </div>
+</div>
+
+<div id="moveBar">
+  <div><b id="moveName"></b> をどこへ移しますか？
+    <button type="button" id="pinBtn" style="margin-left:6px;">📌 固定</button>
+    <button type="button" id="moveCancel">✕ やめる</button>
+  </div>
+  <div class="targets" id="moveTargets"></div>
+</div>
+
+<script src="../config.js"></script>
+<script>
+(function() {
+  "use strict";
+  var PW_KEY = "ksAdminPw";
+  var PW_SAVED_KEY = "ksAdminPwSaved"; // 「パスワードを保存する」にチェックしてログインしたときだけ使う（タブを閉じても残る）
+  try { if (!sessionStorage.getItem(PW_KEY) && localStorage.getItem(PW_SAVED_KEY)) sessionStorage.setItem(PW_KEY, localStorage.getItem(PW_SAVED_KEY)); } catch (e) {}
+  // GAS_URL は config.js（このファイルの直前に読み込み）で定義
+  var TEAM_TYPES = ["KVK", "聖剣", "聖剣リーグ", "三盟", "遺跡争奪"]; // 炎龍はチーム分けの対象外
+  var MODE_BY_TYPE = { "KVK": "kvk", "聖剣": "seiken", "聖剣リーグ": "seiken", "三盟": "sanmei", "遺跡争奪": "ruins" };
+  var MODE_LABELS = {
+    kvk: "KVK方式（集結リーダー＋乗り手）", seiken: "聖剣方式（祭壇の解放前後・拠点の集結主＋4チーム＋遊撃手）",
+    sanmei: "三盟方式（上・中・下を手で決める）", ruins: "遺跡争奪方式（時間帯ごとに要塞・遺跡へ）"
+  };
+  // 遺跡争奪：時間帯（entries[].slots のキー。admin-common.js の RUIN_SLOTS と同じ）と、要塞・遺跡（events[].ruinTargets の値）
+  var RUIN_SLOTS = ["12", "18", "22", "23", "25"];
+  var RUIN_TARGETS = ["要塞1", "要塞2", "要塞3", "要塞4"].concat([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(function(n) { return "遺跡" + n; }));
+  var RUIN_CAP = 15; // 1つの要塞・遺跡の最大人数（集結主を含む）
+  function slotLabel(k) { return k + "時" + (k === "25" ? "（翌1時）" : ""); }
+  var GRADE_NUM = { "G8": 8, "G7": 7, "G6": 6, "G5": 5, "その他": 4 }; // その他はG4として計算する
+  var DRAFT_KEY = "ksTeamsDraft_"; // + eventId。保存前の編集内容をこのブラウザに残す
+  var LAST_EVENT_KEY = "ksTeamsLastEvent";
+  var $ = function(id) { return document.getElementById(id); };
+  function on(id, evt, fn) { var el = $(id); if (el) el.addEventListener(evt, fn); }
+
+  var ADMIN_NAV = [
+    ["events.html", "📅", "イベント"],
+    ["participants.html", "👥", "参加者一覧"],
+    ["teams.html", "🧩", "チーム分け"],
+    ["users.html", "🗂️", "ユーザー管理"],
+    ["user-import.html", "📥", "ユーザー取り込み"],
+    ["logs.html", "🕵️", "個人登録の記録"],
+    ["inquiries.html", "📨", "問い合わせ・質問"],
+  ];
+  var ADMIN_SIDEBAR_CSS = [
+    ".ks-sidebar { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: #1a2332; padding: 20px 14px; box-sizing: border-box; overflow-y: auto; overflow-x: hidden; font-family: 'Segoe UI','Hiragino Kaku Gothic ProN',Meiryo,sans-serif; z-index: 99999; transition: width 0.2s ease; }",
+    ".ks-title-row { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }",
+    ".ks-sidebar .ks-title { color: #fff; font-weight: bold; font-size: 14px; white-space: nowrap; flex: 1; overflow: hidden; }",
+    ".ks-toggle-btn { background: transparent; border: 1px solid #3a4a63; color: #c7d0dd; border-radius: 5px; width: 24px; height: 24px; font-size: 13px; line-height: 1; cursor: pointer; flex: 0 0 auto; padding: 0; }",
+    ".ks-toggle-btn:hover { background: #2a374d; }",
+    ".ks-sidebar nav { display: flex; flex-direction: column; }",
+    ".ks-sidebar .ks-link { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: 6px; margin-bottom: 2px; text-decoration: none; font-size: 12px; line-height: 1.35; color: #c7d0dd; }",
+    ".ks-sidebar button.ks-link { background: none; border: none; font: inherit; font-size: 12px; width: 100%; text-align: left; cursor: pointer; }",
+    ".ks-sidebar .ks-link .ks-icon { flex: 0 0 auto; width: 18px; text-align: center; margin-top: 1px; }",
+    ".ks-sidebar .ks-link .ks-label { white-space: normal; overflow-wrap: break-word; }",
+    ".ks-sidebar .ks-link.ks-active { background: #3a4a63; color: #fff; font-weight: bold; }",
+    ".ks-sidebar .ks-group { height: 1px; background: #2a374d; margin: 10px 4px; }",
+    "body.ks-collapsed .ks-sidebar .ks-group { margin: 6px 0; }",
+    ".ks-open-btn { display: none; position: fixed; top: 14px; left: 14px; z-index: 100001; width: 34px; height: 34px; border-radius: 8px; border: none; background: #1a2332; color: #fff; font-size: 16px; cursor: pointer; align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,0.25); }",
+    "body.has-admin-sidebar { margin-left: 240px !important; transition: margin-left 0.2s ease; }",
+    "body.has-admin-sidebar.ks-collapsed { margin-left: 76px !important; }",
+    "body.ks-collapsed .ks-sidebar { width: 56px; padding-left: 8px; padding-right: 8px; }",
+    "body.ks-collapsed .ks-sidebar .ks-title { display: none; }",
+    "body.ks-collapsed .ks-title-row { justify-content: center; }",
+    "body.ks-collapsed .ks-sidebar .ks-label { display: none; }",
+    "body.ks-collapsed .ks-sidebar .ks-link { justify-content: center; padding: 8px 0; }",
+    ".ks-menu-btn { display: none; }",
+    "@media (max-width: 760px) {",
+    "  .ks-sidebar, body.ks-collapsed .ks-sidebar { width: 100% !important; height: 48px; padding: 0 12px !important; overflow: visible; }",
+    "  .ks-title-row, body.ks-collapsed .ks-title-row { height: 48px; margin-bottom: 0; justify-content: flex-start; }",
+    "  .ks-sidebar .ks-title, body.ks-collapsed .ks-sidebar .ks-title { display: block; font-size: 14px; }",
+    "  .ks-toggle-btn, .ks-open-btn, body.ks-collapsed .ks-open-btn { display: none !important; }",
+    "  .ks-menu-btn { display: flex; margin-left: auto; flex: 0 0 auto; width: 40px; height: 34px; border-radius: 6px; border: 1px solid #3a4a63; background: transparent; color: #fff; font-size: 18px; line-height: 1; cursor: pointer; align-items: center; justify-content: center; }",
+    "  .ks-sidebar nav { display: none; position: absolute; top: 48px; left: 0; right: 0; max-height: calc(100vh - 48px); overflow-y: auto; background: #1a2332; padding: 6px 10px 12px; box-sizing: border-box; box-shadow: 0 8px 18px rgba(0,0,0,0.35); }",
+    "  body.ks-menu-open .ks-sidebar nav { display: flex; }",
+    "  .ks-sidebar .ks-link, body.ks-collapsed .ks-sidebar .ks-link { justify-content: flex-start; padding: 10px; font-size: 14px; }",
+    "  .ks-sidebar .ks-label, body.ks-collapsed .ks-sidebar .ks-label { display: inline; }",
+    "  .ks-sidebar .ks-group, body.ks-collapsed .ks-sidebar .ks-group { display: block; margin: 10px 4px; }",
+    "  body.has-admin-sidebar, body.has-admin-sidebar.ks-collapsed { margin-left: 0 !important; padding-top: 56px !important; }",
+    "}",
+  ].join("\n");
+
+  // スマホ幅のメニュー：☰で開閉。開いているときにメニューの外をタップしたら閉じ、そのタップは下の画面に通さない
+  function bindMobileMenu() {
+    if (window.__ksMenuBound) return;
+    window.__ksMenuBound = true;
+    function setMenuOpen(open) {
+      document.body.classList.toggle("ks-menu-open", open);
+      document.querySelectorAll(".ks-menu-btn").forEach(function(b) {
+        b.textContent = open ? "✕" : "☰";
+        b.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+    }
+    function outsideMenu(t) {
+      return document.body.classList.contains("ks-menu-open") && !(t.closest && (t.closest(".ks-sidebar nav") || t.closest(".ks-menu-btn")));
+    }
+    window.addEventListener("mousedown", function(e) { if (outsideMenu(e.target)) e.preventDefault(); }, true);
+    window.addEventListener("click", function(e) {
+      if (e.target.closest && e.target.closest(".ks-menu-btn")) { setMenuOpen(!document.body.classList.contains("ks-menu-open")); return; }
+      if (outsideMenu(e.target)) { e.preventDefault(); e.stopPropagation(); setMenuOpen(false); }
+    }, true);
+  }
+
+  function renderAdminSidebar() {
+    if ($("ksAdminSidebar")) return;
+    var here = location.pathname.split("/").pop();
+    var links = ADMIN_NAV.map(function(item) {
+      var active = item[0] === here;
+      return '<a href="' + item[0] + '" class="ks-link' + (active ? " ks-active" : "") + '" title="' + item[2] + '">' +
+        '<span class="ks-icon">' + item[1] + '</span><span class="ks-label">' + item[2] + "</span></a>";
+    }).join("");
+
+    var style = document.createElement("style");
+    style.textContent = ADMIN_SIDEBAR_CSS;
+    document.head.appendChild(style);
+
+    var wrap = document.createElement("div");
+    wrap.innerHTML =
+      '<div class="ks-sidebar" id="ksAdminSidebar">' +
+        '<div class="ks-title-row"><span class="ks-title">🔐 管理画面</span>' +
+          '<button type="button" class="ks-toggle-btn" id="ksToggleBtn">←</button>' +
+          '<button type="button" class="ks-menu-btn" aria-label="メニュー" aria-expanded="false">☰</button></div>' +
+        "<nav>" + links +
+          '<div class="ks-group"></div>' +
+          '<a href="../kvk-matchup/kvk-matchup-index.html" class="ks-link" title="KvK相手突合せ"><span class="ks-icon">⚔️</span><span class="ks-label">KvK相手突合せ</span></a>' +
+          '<a href="../index.html" class="ks-link" title="TOP"><span class="ks-icon">🏠</span><span class="ks-label">TOP</span></a>' +
+          '<button type="button" class="ks-link" id="logoutBtn" title="ログアウト"><span class="ks-icon">🚪</span><span class="ks-label">ログアウト</span></button>' +
+        "</nav>" +
+      "</div>" +
+      '<button type="button" class="ks-open-btn" id="ksOpenBtn" aria-label="メニューを開く">☰</button>';
+    while (wrap.firstChild) $("appView").insertBefore(wrap.firstChild, $("appView").firstChild);
+    document.body.classList.add("has-admin-sidebar");
+
+    var collapsed = false;
+    try { collapsed = localStorage.getItem("ksAdminSidebarCollapsed") === "1"; } catch (e) {}
+    function applyBtn() {
+      var btn = $("ksToggleBtn");
+      if (btn) btn.textContent = document.body.classList.contains("ks-collapsed") ? "→" : "←";
+    }
+    if (collapsed) document.body.classList.add("ks-collapsed");
+    applyBtn();
+    bindMobileMenu();
+    function toggle() {
+      var next = !document.body.classList.contains("ks-collapsed");
+      document.body.classList.toggle("ks-collapsed", next);
+      try { localStorage.setItem("ksAdminSidebarCollapsed", next ? "1" : "0"); } catch (e) {}
+      applyBtn();
+    }
+    on("ksToggleBtn", "click", toggle);
+    on("ksOpenBtn", "click", toggle);
+    on("logoutBtn", "click", function() {
+      try { sessionStorage.removeItem(PW_KEY); localStorage.removeItem(PW_SAVED_KEY); } catch (e) {}
+      location.reload();
+    });
+  }
+
+  function isAuthed() {
+    try { return !!sessionStorage.getItem(PW_KEY); } catch (e) { return false; }
+  }
+  function adminPassword() {
+    try { return sessionStorage.getItem(PW_KEY) || ""; } catch (e) { return ""; }
+  }
+  function gasCall(payload) {
+    payload.password = adminPassword();
+    return fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) })
+      .then(function(r) { return r.json(); });
+  }
+  function b64ToUtf8(s) {
+    var bin = atob(s), bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder("utf-8").decode(bytes);
+  }
+
+  function escapeHtml(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function(c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function formatTime(iso) {
+    if (!iso) return "";
+    var d = new Date(iso);
+    if (isNaN(d)) return "";
+    function p(n) { return (n < 10 ? "0" : "") + n; }
+    return (d.getMonth() + 1) + "/" + d.getDate() + " " + p(d.getHours()) + ":" + p(d.getMinutes());
+  }
+  function setMsg(el, text, ok) {
+    el.className = "msg" + (text ? (ok ? " ok" : " err") : "");
+    el.textContent = text || "";
+  }
+  function newId() { return "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function man(n) { return n == null ? "—" : (n / 10000).toFixed(n >= 1000000 ? 0 : 1) + "万"; }
+  // KVK：容量が未入力の人の仮置き（等級ごと）。画面は「20万（仮）」、等級もない人は「0（等級なし）」
+  var PROV_CAP = { G8: 200000, G7: 190000, G6: 180000, G5: 170000 };
+  function manP(p, key) {
+    var v = p[key], prov = key === "marchCap" ? p.marchProv : p.rallyProv;
+    if (!prov) return man(v);
+    return p.provNone ? "0（等級なし）" : man(v).replace(".0万", "万") + "（仮）";
+  }
+
+  // ---------- 時刻（30分単位の時間帯） ----------
+  // 分（0:00からの分）で扱う。戦闘の開始より12時間以上前の時刻は日をまたいだものとして24時間足す（0時30分 → 24:30）
+  function fmtMin(m) {
+    var h = Math.floor(m / 60), mm = m % 60;
+    return h + ":" + (mm < 10 ? "0" : "") + mm;
+  }
+  function parseClock(text, startMin) {
+    var t = /(\d{1,2})\s*[時:：]\s*(?:(\d{1,2})\s*分?)?/.exec(String(text || "").normalize("NFKC"));
+    if (!t) return null;
+    var m = Number(t[1]) * 60 + Number(t[2] || 0);
+    if (m + 720 < startMin) m += 1440;
+    return m;
+  }
+  function timeOptions(selected) {
+    var html = "";
+    for (var m = 18 * 60; m <= 28 * 60; m += 30) {
+      html += '<option value="' + m + '"' + (m === selected ? " selected" : "") + ">" + fmtMin(m) + (m >= 1440 ? "（翌" + fmtMin(m - 1440) + "）" : "") + "</option>";
+    }
+    return html;
+  }
+  function slotsOf(s) {
+    var out = [];
+    for (var m = s.start; m < s.end; m += 30) out.push(m);
+    return out;
+  }
+  // その人がこの時間帯（start〜start+30分）に参加しているか。時間未定の人は数えない
+  function activeIn(p, slotStart) {
+    if (p.timeUnknown) return false;
+    var s = draft.settings;
+    var from = p.joinAt ? parseClock(p.joinAt, s.start) : s.start;
+    var to = p.leaveAt ? parseClock(p.leaveAt, s.start) : s.end;
+    if (from == null) from = s.start;
+    if (to == null) to = s.end;
+    return from <= slotStart && to >= slotStart + 30;
+  }
+  function timeLabel(p) {
+    if (p.timeUnknown) return "時間未定";
+    if (!p.joinAt && !p.leaveAt) return "";
+    var s = draft.settings;
+    var a = p.joinAt ? parseClock(p.joinAt, s.start) : null, b = p.leaveAt ? parseClock(p.leaveAt, s.start) : null;
+    return (a != null ? fmtMin(a) : (p.joinAt || "")) + "〜" + (b != null ? fmtMin(b) : (p.leaveAt || ""));
+  }
+
+  // ---------- 状態 ----------
+  var data = null;        // 中継役から読んだ全データ
+  var eventId = "";
+  var record = null;      // d.teams の該当イベント分（保存済み）
+  var draft = null;       // 編集中の内容
+  var people = [];        // このイベントの参加者（不参加を除く）
+  var byUid = {};
+  var tab = "board";
+  var selectedUid = "";
+  var readOnly = false; // 完了したイベントは見るだけ（openEvent で決める）
+  var outSlots = RUIN_SLOTS.slice(); // 遺跡争奪：Discordに貼る時間帯（出力だけの設定。保存せず、イベントを開くたびに全選択）
+  var tableSort = { key: "team", dir: 1 };
+  var tableAlliance = "";
+
+  function events() {
+    return (data.events || []).filter(function(e) { return TEAM_TYPES.indexOf(e.type) >= 0; }).sort(function(a, b) {
+      if (!!a.done !== !!b.done) return a.done ? 1 : -1;
+      return String(b.date).localeCompare(String(a.date));
+    });
+  }
+  function eventById(id) { return (data.events || []).filter(function(e) { return e.id === id; })[0]; }
+  function eventLabel(ev) { return ev ? ev.type + " " + ev.date : ""; }
+
+  // 参加登録（entries）から、このイベントの参加者を作る。不参加は除く
+  // 同じ人の直近のKVKの登録（不参加を除く）。遺跡争奪の区分・容量・集結容量はここから引く
+  function latestKvkByUser() {
+    var dates = {}, out = {};
+    (data.events || []).forEach(function(e) { if (e.type === "KVK") dates[e.id] = String(e.date); });
+    (data.entries || []).forEach(function(x) {
+      if (!(x.eventId in dates) || x.entry === "absent") return;
+      var cur = out[x.userId];
+      if (!cur || dates[x.eventId] > dates[cur.eventId]) out[x.userId] = x;
+    });
+    return out;
+  }
+
+  function buildPeople() {
+    var users = {};
+    (data.users || []).forEach(function(u) { users[u.id] = u; });
+    people = [];
+    byUid = {};
+    var ruinEvent = (eventById(eventId) || {}).type === "遺跡争奪";
+    var kvk = ruinEvent ? latestKvkByUser() : {};
+    var kvkEvent = (eventById(eventId) || {}).type === "KVK";
+    (data.entries || []).forEach(function(x, i) {
+      if (x.eventId !== eventId || x.entry === "absent") return;
+      var u = users[x.userId];
+      if (!u) return;
+      var slots = x.slots || null;
+      if (ruinEvent) {
+        var k = kvk[x.userId];
+        x = Object.assign({}, k ? { grade: k.grade, marchCap: k.marchCap, rallyCap: k.rallyCap, rallyCount: k.rallyCount, vc: k.vc, vivian4: k.vivian4, monthly: k.monthly, troops: k.troops, tier: k.tier } : {},
+          { eventId: x.eventId, userId: x.userId, alliance: x.alliance, entry: x.entry, note: x.note });
+        x.fromKvk = !!k;
+      }
+      var tier11 = Number(x.tier) === 11;
+      var troops = String(x.troops || "");
+      var p = {
+        uid: u.id, name: u.name, alliance: x.alliance || u.alliance || "", order: i,
+        grade: x.grade || "その他", g: GRADE_NUM[x.grade] || 4,
+        monthly: !!x.monthly, vc: !!x.vc, vivian4: !!x.vivian4, leaveEarly: !!x.leaveEarly,
+        troops: tier11 ? troops : "", t11n: tier11 ? Math.max(troops.length, troops ? 0 : 3) : 0,
+        joinAt: x.joinAt || "", leaveAt: x.leaveAt || "", entry: x.entry,
+        marchCap: x.marchCap == null ? null : Number(x.marchCap), rallyCap: x.rallyCap == null ? null : Number(x.rallyCap),
+        rallyCount: x.rallyCount == null ? null : Number(x.rallyCount), note: x.note || ""
+      };
+      // 途中参加で開始時刻がない人・△（途中抜け）で時刻がない人は「時間未定」
+      p.timeUnknown = (p.entry === "late" && !p.joinAt) || (p.leaveEarly && !p.joinAt && !p.leaveAt);
+      p.fullTime = !p.timeUnknown && !p.joinAt && !p.leaveAt && !p.leaveEarly && p.entry === "start";
+      p.isRallyer = p.rallyCount != null && p.rallyCount > 0;
+      if (kvkEvent) {   // KVK：容量が未入力の人は等級で仮置き（G8=20万・G7=19万・G6=18万・G5=17万。等級もない人は0）。画面は「（仮）」つき
+        p.marchProv = p.marchCap == null; p.rallyProv = p.rallyCap == null;
+        if (p.marchProv) p.marchCap = PROV_CAP[p.grade] || 0;
+        if (p.rallyProv) p.rallyCap = PROV_CAP[p.grade] || 0;
+        p.provNone = !PROV_CAP[p.grade];
+      }
+      p.slots = slots || {};
+      p.fromKvk = !!x.fromKvk;
+      people.push(p);
+      byUid[p.uid] = p;
+    });
+  }
+  // T11の順位: 3種 > 2種 > 1種（1種どうしは歩兵が上）> なし
+  function t11Rank(p) { return p.t11n * 2 + (p.t11n === 1 && p.troops.indexOf("歩") >= 0 ? 1 : 0); }
+  function strongerFirst(a, b) {
+    return (b.g - a.g) || (t11Rank(b) - t11Rank(a)) || ((b.marchCap || 0) - (a.marchCap || 0)) || (a.order - b.order);
+  }
+
+  // ---------- 下書きの形 ----------
+  // { v, mode, settings, teams: [{id, kind: rally|group|rallyers, name, leaderId}], assign: {uid: teamId|"standby"|"pending"}, pins: {uid: true} }
+  function defaultSettings() {
+    return { start: 21 * 60, end: 25 * 60, minSize: 8, maxSize: 10, topRule: true, topSize: 8, spreadVivian: true, teamCount: 2 };
+  }
+  function newDraft(mode) {
+    var d = { v: 1, mode: mode, settings: defaultSettings(), teams: [], assign: {}, pins: {} };
+    if (mode === "ruins") {
+      d.ruins = { seed: Math.random().toString(36).slice(2, 10), targets: null, slots: {}, cur: "" };
+      return d;
+    }
+    if (mode === "kvk") {
+      d.settings.start = KVK_START; d.settings.end = KVK_END;
+      people.filter(function(p) { return p.isRallyer; }).sort(function(a, b) {
+        return ((b.rallyCap || 0) - (a.rallyCap || 0)) || strongerFirst(a, b);
+      }).forEach(function(p) {
+        var id = newId();
+        d.teams.push({ id: id, kind: "rally", name: "", leaderId: p.uid });
+        d.assign[p.uid] = id;
+        d.pins[p.uid] = true;
+      });
+    } else if (mode === "seiken") {
+      d.sk = { cur: "before", before: skNewPhase(), after: skNewPhase() };
+    } else {
+      ["上", "中", "下"].forEach(function(n) { d.teams.push({ id: newId(), kind: "group", name: n, leaderId: "" }); });
+    }
+    return d;
+  }
+  function teamName(t) {
+    if (t.name) return t.name;
+    var i = draft.teams.indexOf(t);
+    if (t.kind === "rally") return "第" + (i + 1) + "隊";
+    if (t.kind === "rallyers") return "集結主";
+    var gi = draft.teams.filter(function(x) { return x.kind === "group"; }).indexOf(t);
+    return gi < 26 ? String.fromCharCode(65 + gi) + "チーム" : "チーム" + (gi + 1);
+  }
+  function teamById(id) { return draft.teams.filter(function(t) { return t.id === id; })[0]; }
+  function placeName(place) {
+    if (place === "standby") return "待機";
+    if (place === "pending") return "時間未定";
+    var t = teamById(place);
+    return t ? teamName(t) : "未割り当て";
+  }
+  function placeOf(uid) {
+    var a = draft.assign[uid];
+    return a === "standby" || a === "pending" || teamById(a) ? a : "";
+  }
+  function membersOf(place) {
+    return people.filter(function(p) { return placeOf(p.uid) === place; });
+  }
+  function leaderOf(t) { return t.leaderId && byUid[t.leaderId] && placeOf(t.leaderId) === t.id ? byUid[t.leaderId] : null; }
+
+  // ---------- 下書きの保存（このブラウザ） ----------
+  function saveLocal() {
+    try { localStorage.setItem(DRAFT_KEY + eventId, JSON.stringify({ draft: draft, base: record ? record.updatedAt : "" })); } catch (e) {}
+  }
+  function clearLocal() {
+    try { localStorage.removeItem(DRAFT_KEY + eventId); } catch (e) {}
+  }
+  function readLocal() {
+    try { return JSON.parse(localStorage.getItem(DRAFT_KEY + eventId) || "null"); } catch (e) { return null; }
+  }
+  function changed() {
+    if (readOnly) return; // 完了イベントは編集不可（念のため。画面側でも触れなくしてある）
+    saveLocal();
+    renderAll();
+  }
+
+  // ---------- 読み込み ----------
+  function loadData(keepEvent) {
+    setMsg($("loadMsg"), "読み込み中…", true);
+    return gasCall({ action: "get" }).then(function(res) {
+      if (!res.ok) throw new Error(res.error || "読み込めませんでした");
+      data = JSON.parse(b64ToUtf8(res.content));
+      setMsg($("loadMsg"), "", true);
+      var evs = events();
+      if (!evs.length) {
+        $("eventSel").innerHTML = "<option>（KVK・聖剣・聖剣リーグ・三盟のイベントがありません）</option>";
+        setMsg($("loadMsg"), "イベントページで、KVK・聖剣・聖剣リーグ・三盟のイベントを作ってください", false);
+        return;
+      }
+      var last = keepEvent ? eventId : "";
+      if (!last) { try { last = localStorage.getItem(LAST_EVENT_KEY) || ""; } catch (e) {} }
+      if (!evs.some(function(e) { return e.id === last; })) last = evs[0].id;
+      $("eventSel").innerHTML = evs.map(function(e) {
+        return '<option value="' + escapeHtml(e.id) + '">' + escapeHtml(eventLabel(e)) + (e.done ? "（完了）" : e.open ? "（受付中）" : "") + "</option>";
+      }).join("");
+      $("eventSel").value = last;
+      openEvent(last);
+    }).catch(function(e) {
+      setMsg($("loadMsg"), "読み込めませんでした: " + e.message, false);
+    });
+  }
+
+  function clone(o) { return o == null ? null : JSON.parse(JSON.stringify(o)); }
+
+  function openEvent(id) {
+    eventId = id;
+    readOnly = !!(eventById(id) || {}).done;
+    outSlots = RUIN_SLOTS.slice();
+    outPhases = ["before", "after"];
+    try { localStorage.setItem(LAST_EVENT_KEY, id); } catch (e) {}
+    buildPeople();
+    record = (data.teams || []).filter(function(t) { return t.eventId === id; })[0] || null;
+    var local = readLocal();
+    var base = record ? record.updatedAt : "";
+    var info = "";
+    // 完了したイベントは、保存済みの内容だけを見せる（このブラウザに残っていた保存前の変更は使わない・消さない）
+    if (readOnly) {
+      if (local) info = "※このブラウザに、このイベントの保存前の変更が残っていますが、完了したイベントなので使っていません";
+      local = null;
+    }
+    // 保存済みの内容（record.draft）は「変更があるか」の比べる元なので、編集用には複製を使う
+    if (local && local.draft && JSON.stringify(local.draft) !== JSON.stringify(record ? record.draft : null)) {
+      if (local.base === base) {
+        draft = local.draft;
+        info = "このブラウザに残っていた保存前の変更を復元しました（まだ保存していません）";
+      } else if (confirm("このブラウザに保存前の変更がありますが、そのあとにほかの人が保存しています。\n\nOK：ほかの人が保存した最新の内容を読み込む（このブラウザの変更は消えます）\nキャンセル：このブラウザの変更を続ける（保存するとほかの人の内容を上書きします）")) {
+        draft = clone(record.draft);
+        clearLocal();
+      } else {
+        draft = local.draft;
+        info = "このブラウザの保存前の変更を続けています（保存すると、ほかの人が保存した内容を上書きします）";
+      }
+    } else {
+      draft = record ? clone(record.draft) : null;
+    }
+    if (!draft) draft = newDraft(MODE_BY_TYPE[(eventById(id) || {}).type] || "seiken");
+    draft.settings = Object.assign(defaultSettings(), draft.settings || {});
+    draft.assign = draft.assign || {};
+    draft.pins = draft.pins || {};
+    draft.teams = draft.teams || [];
+    if (draft.mode === "ruins") draft.ruins = Object.assign({ seed: "s", targets: null, slots: {}, cur: "" }, draft.ruins || {});
+    if (draft.mode === "kvk") fixKvkSettings();   // 設定欄から消した項目は既定値で固定
+    if (draft.mode === "sanmei") { draft.settings.start = defaultSettings().start; draft.settings.end = defaultSettings().end; }   // 三盟の戦闘時間は入力させず、既定値で固定
+    if (draft.mode === "seiken") skEnsure();   // 古い形式（集結主＋乗り手チーム）で保存されていたものは、新しい形で開き直す（古い内容は使わない）
+    selectedUid = "";
+    document.body.classList.toggle("ks-readonly", readOnly);
+    $("roBanner").style.display = readOnly ? "block" : "none";
+    if (readOnly && !record) info = "このイベントは完了していて、保存されたチーム分けはありません。";
+    setMsg($("loadMsg"), info, true);
+    renderAll();
+  }
+
+  // ---------- 自動振り分け ----------
+  function isPinned(uid) { return !!draft.pins[uid]; }
+
+  // KVK: リーダーの集結容量（から本人の出征容量を引いた分）に収まるように、強い人から番号の小さい隊へ詰める。あふれたら次の隊へ
+  function autoKvk() {
+    var s = draft.settings;
+    var allRally = draft.teams.filter(function(t) { return t.kind === "rally"; });
+    if (!allRally.length) return "隊がありません。「隊を作り直す」か「＋隊を追加」で隊を作ってください";
+    var noLeader = allRally.filter(function(t) { return !(t.leaderId && byUid[t.leaderId]); }).length;
+    var rally = allRally.filter(function(t) { return t.leaderId && byUid[t.leaderId]; });   // リーダーが決まっていない隊には新しい人を入れない
+    if (!rally.length) return "リーダーを決めてください（リーダーが決まっている隊がありません）";
+    var leaders = {};
+    rally.forEach(function(t) { if (t.leaderId && byUid[t.leaderId]) { leaders[t.leaderId] = true; draft.assign[t.leaderId] = t.id; } });
+    // 固定していない人を一度外す
+    people.forEach(function(p) { if (!leaders[p.uid] && !isPinned(p.uid)) delete draft.assign[p.uid]; });
+    function room(t) {
+      var l = leaderOf(t);
+      if (!l || l.rallyCap == null) return Infinity;
+      var used = membersOf(t.id).reduce(function(sum, p) { return p === l ? sum : sum + (p.marchCap || 0); }, 0);
+      return l.rallyCap - (l.marchCap || 0) - used;
+    }
+    function fits(t, p, maxCount) {
+      if (membersOf(t.id).length >= maxCount) return false;
+      return (p.marchCap || 0) <= room(t);
+    }
+    var pool = people.filter(function(p) { return !leaders[p.uid] && !placeOf(p.uid); }).sort(strongerFirst);
+    // 時間未定の人は別枠へ
+    pool = pool.filter(function(p) {
+      if (p.timeUnknown) { draft.assign[p.uid] = "pending"; return false; }
+      return true;
+    });
+    var top = s.topRule ? rally.slice(0, 3) : [];
+    // 上位隊（第1〜3隊）: 全部参加かつ◇の人を、強い順に第1隊から（リーダーを含めて topSize 人まで）
+    top.forEach(function(t) {
+      pool = pool.filter(function(p) {
+        if (!(p.fullTime && p.vc) || !fits(t, p, s.topSize)) return true;
+        draft.assign[p.uid] = t.id;
+        return false;
+      });
+    });
+    var rest = rally.filter(function(t) { return top.indexOf(t) < 0; });
+    pool.forEach(function(p) {
+      var t = rest.filter(function(x) { return fits(x, p, Infinity); })[0];
+      draft.assign[p.uid] = t ? t.id : "standby";
+    });
+    if (s.spreadVivian) spreadVivian(rally, room, top);
+    var standby = membersOf("standby").length;
+    return "振り分けました" + (standby ? "（容量に入りきらない " + standby + "人は待機にしました）" : "") + (noLeader ? "（リーダーを決めてください：リーダー未設定の " + noLeader + " 隊には入れていません）" : "");
+  }
+
+  // ◆（ビビアン星4以上）のいない隊に、◆が2人以上いる隊から入れ替えで1人回す（容量・上位隊の条件を守れるときだけ）
+  function spreadVivian(teams, room, top) {
+    function viv(t) { return membersOf(t.id).filter(function(p) { return p.vivian4 && p.uid !== t.leaderId; }); }
+    function movable(p) { return !isPinned(p.uid); }
+    teams.forEach(function(t) {
+      if (viv(t).length) return;
+      var best = null;
+      teams.forEach(function(donor) {
+        if (donor === t || viv(donor).length < 2) return;
+        viv(donor).filter(movable).forEach(function(d) {
+          membersOf(t.id).filter(function(r) { return r.uid !== t.leaderId && !r.vivian4 && movable(r); }).forEach(function(r) {
+            if (top.indexOf(t) >= 0 && !(d.fullTime && d.vc)) return;
+            if (top.indexOf(donor) >= 0 && !(r.fullTime && r.vc)) return;
+            var diff = (d.marchCap || 0) - (r.marchCap || 0);
+            if (diff > room(t) || -diff > room(donor)) return;
+            var score = Math.abs(d.g - r.g) * 1e7 + Math.abs(diff);
+            if (!best || score < best.score) best = { score: score, d: d, r: r, donor: donor };
+          });
+        });
+      });
+      if (best) { draft.assign[best.d.uid] = t.id; draft.assign[best.r.uid] = best.donor.id; }
+    });
+  }
+
+  // 聖剣: 集結部隊数を入れた人は「集結主」チーム。残りを、出征容量の合計がそろうように各チームへ（大きい人から、合計の小さいチームへ）
+  // 振り分け先のチーム：容量が入っている人は「容量の合計がいちばん小さいチーム（同じなら人数の少ないチーム）」。
+  // 容量が未入力（0）の人は、容量の合計が小さいチーム1つに固まらないよう「人数の少ないチーム（同じなら容量の合計が小さいチーム）」（2026-11-16）
+  function pickGroup(groups, p) {
+    function cap(t) { return membersOf(t.id).reduce(function(s, x) { return s + (x.marchCap || 0); }, 0); }
+    function cnt(t) { return membersOf(t.id).length; }
+    return groups.slice().sort(function(a, b) {
+      return (p.marchCap || 0) > 0 ? ((cap(a) - cap(b)) || (cnt(a) - cnt(b))) : ((cnt(a) - cnt(b)) || (cap(a) - cap(b)));
+    })[0];
+  }
+
+  function autoSeiken() {
+    var rallyers = draft.teams.filter(function(t) { return t.kind === "rallyers"; })[0];
+    var groups = draft.teams.filter(function(t) { return t.kind === "group"; });
+    if (!groups.length) return "乗り手のチームがありません。「チーム数」を1以上にしてください";
+    people.forEach(function(p) { if (!isPinned(p.uid)) delete draft.assign[p.uid]; });
+    var pool = people.filter(function(p) { return !placeOf(p.uid); });
+    if (rallyers) pool = pool.filter(function(p) {
+      if (!p.isRallyer) return true;
+      draft.assign[p.uid] = rallyers.id;
+      return false;
+    });
+    function sum(t) { return membersOf(t.id).reduce(function(s, p) { return s + (p.marchCap || 0); }, 0); }
+    pool.sort(function(a, b) { return ((b.marchCap || 0) - (a.marchCap || 0)) || strongerFirst(a, b); }).forEach(function(p) {
+      var t = pickGroup(groups, p);
+      draft.assign[p.uid] = t.id;
+    });
+    return "振り分けました";
+  }
+
+  // ---------- 前回と同じチームにする ----------
+  // 同じ種類で日付が今回より前の、いちばん新しいイベントのうち、チーム分けが保存されているもの（完了済みでもよい）
+  function prevRecord() {
+    var ev = eventById(eventId);
+    if (!ev) return null;
+    var best = null;
+    (data.teams || []).forEach(function(t) {
+      if (t.eventId === eventId || !t.draft) return;
+      var e = eventById(t.eventId);
+      if (!e || e.type !== ev.type || String(e.date) >= String(ev.date)) return;
+      if (!best || String(e.date) > String(best.ev.date)) best = { rec: t, ev: e };
+    });
+    return best;
+  }
+
+  // KVK：前回の隊のリーダーが今回いないときの代わり。まだどこにも入っていない「集結部隊数を登録した人」から、集結容量の大きい順
+  function substituteLeaders() {
+    draft.teams.filter(function(t) { return t.kind === "rally" && !t.leaderId; }).forEach(function(t) {
+      var isLeader = {};
+      draft.teams.forEach(function(x) { if (x.leaderId) isLeader[x.leaderId] = true; });
+      var c = people.filter(function(p) { return p.isRallyer && !isLeader[p.uid] && !placeOf(p.uid); })
+        .sort(function(a, b) { return ((b.rallyCap || 0) - (a.rallyCap || 0)) || strongerFirst(a, b); })[0];
+      if (!c) return;
+      t.leaderId = c.uid;
+      draft.assign[c.uid] = t.id;
+      draft.pins[c.uid] = true;
+    });
+  }
+
+  // KVK：引き継いだあとに、まだどこにも入っていない人（新しく参加した人など）だけを、今までの自動振り分けと同じ考え方で入れる。
+  // 引き継いだ人は動かさない。リーダーがいない隊には新しい人を入れない
+  function fillNewKvk() {
+    var s = draft.settings, rally = draft.teams.filter(function(t) { return t.kind === "rally"; });
+    function room(t) {
+      var l = leaderOf(t);
+      if (!l) return -1;
+      if (l.rallyCap == null) return Infinity;
+      var used = membersOf(t.id).reduce(function(sum, p) { return p === l ? sum : sum + (p.marchCap || 0); }, 0);
+      return l.rallyCap - (l.marchCap || 0) - used;
+    }
+    function fits(t, p, maxCount) {
+      if (membersOf(t.id).length >= maxCount) return false;
+      return (p.marchCap || 0) <= room(t);
+    }
+    var pool = people.filter(function(p) { return !placeOf(p.uid); }).sort(strongerFirst);
+    pool = pool.filter(function(p) {
+      if (p.timeUnknown) { draft.assign[p.uid] = "pending"; return false; }
+      return true;
+    });
+    var top = s.topRule ? rally.slice(0, 3) : [];
+    top.forEach(function(t) {
+      pool = pool.filter(function(p) {
+        if (!(p.fullTime && p.vc) || !fits(t, p, s.topSize)) return true;
+        draft.assign[p.uid] = t.id;
+        return false;
+      });
+    });
+    var rest = rally.filter(function(t) { return top.indexOf(t) < 0; });
+    pool.forEach(function(p) {
+      var t = rest.filter(function(x) { return fits(x, p, Infinity); })[0];
+      draft.assign[p.uid] = t ? t.id : "standby";
+    });
+  }
+
+  // 三盟：参加者（不参加を除く）を上・中・下へ。出征容量の大きい人から順に、合計がいちばん小さいチーム（同じなら人数の少ないチーム）へ入れる
+  // （聖剣の4チーム均等分けと同じ考え方）。📌固定の人は動かさない。同盟や登録順の偏りは出ない
+  function autoSanmei() {
+    var groups = draft.teams.filter(function(t) { return t.kind === "group"; });
+    if (!groups.length) return "チームがありません。「＋チームを追加」で作ってください";
+    people.forEach(function(p) { if (!isPinned(p.uid)) delete draft.assign[p.uid]; });
+    function sum(t) { return membersOf(t.id).reduce(function(s, p) { return s + (p.marchCap || 0); }, 0); }
+    people.filter(function(p) { return !placeOf(p.uid); })
+      .sort(function(a, b) { return ((b.marchCap || 0) - (a.marchCap || 0)) || strongerFirst(a, b); })
+      .forEach(function(p) {
+        var t = pickGroup(groups, p);
+        draft.assign[p.uid] = t.id;
+      });
+    return "振り分けました（" + groups.map(function(t) { return teamName(t) + membersOf(t.id).length + "人"; }).join("・") + "）";
+  }
+
+  // ---------- KVK：隊の数（全体で1つ） ----------
+  // 最大作成できる隊数（容量から計算）：リーダー候補（集結部隊数を登録した人）を集結容量の大きい順に1人ずつリーダーにしていき、
+  // 「各隊の乗り手で埋める量＝リーダーの集結容量−リーダー自身の出征容量」の合計が、リーダー以外の全員の出征容量の合計
+  // ＋（1隊あたり乗り手1人分＝リーダー以外の平均の出征容量）以内なら、その数の隊は作れるとみなす。作れる最大の数が「最大」
+  function kvkMaxInfo() {
+    var cands = people.filter(function(p) { return p.isRallyer; }).sort(function(x, y) { return ((y.rallyCap || 0) - (x.rallyCap || 0)) || strongerFirst(x, y); });
+    var total = people.reduce(function(s, p) { return s + (p.marchCap || 0); }, 0);
+    var best = 0, need = 0, leadersMarch = 0;
+    var info = { max: 0, cands: cands.length, total: total, prov: people.filter(function(p) { return p.marchProv || p.rallyProv; }).length, none: people.filter(function(p) { return (p.marchProv || p.rallyProv) && p.provNone; }).length };
+    for (var k = 1; k <= cands.length; k++) {
+      var l = cands[k - 1];
+      need += Math.max(0, (l.rallyCap || 0) - (l.marchCap || 0));
+      leadersMarch += (l.marchCap || 0);
+      var restN = people.length - k, have = total - leadersMarch, avg = restN > 0 ? have / restN : 0;
+      if (have + k * avg >= need) best = k; else break;
+    }
+    info.max = best;
+    return info;
+  }
+  function kvkMaxTeams() { return kvkMaxInfo().max; }
+  function kvkTeamCountHtml() {
+    var cur = draft.teams.filter(function(t) { return t.kind === "rally"; }).length, mi = kvkMaxInfo();
+    var prov = mi.prov ? "容量が未入力の " + mi.prov + " 人は等級で仮置き（G8=20万・G7=19万・G6=18万・G5=17万。画面は「20万（仮）」）" + (mi.none ? "。等級もない " + mi.none + " 人は0で計算（表示は「0（等級なし）」）" : "") + "。" : "";
+    return '<div class="row" style="margin-top:0;"><label class="inline"><b style="font-size:13px;">隊の数</b> <input type="number" min="0" max="' + Math.max(mi.max, cur) + '" data-tc="all" value="' + cur + '"> 隊 <span class="note">最大 ' + mi.max + ' 隊</span></label>' +
+      '<button type="button" id="tcBtn">隊数を反映</button><button type="button" class="sub" id="leaderFillBtn">リーダー候補を自動で入れる</button></div>' +
+      '<div class="note" style="margin:2px 0 6px;">最大の計算：集結部隊数を登録した人を集結容量の大きい順にリーダーにして、「リーダーの集結容量−本人の出征容量」の合計を、リーダー以外の出征容量の合計（1隊あたり乗り手1人分の不足まで）で埋められる隊の数です（人数ではなく容量で決めます）。' + prov +
+      '「隊数を反映」はリーダー未設定の空の隊を作ります（リーダーは隊ごとのプルダウンで選びます。「リーダー候補を自動で入れる」で、集結容量の大きい順に空の隊へ入れることもできます）。減らすときは後ろの隊から消します（確認は出ません）。リーダーを決めてから「自動で振り分ける」を押してください。</div>';
+  }
+  // 「リーダー候補を自動で入れる」：リーダー未設定の隊へ、まだリーダーでない集結部隊数ありの人を集結容量の大きい順に入れる（あとから手で直せる）
+  function fillKvkLeaders() {
+    var empty = draft.teams.filter(function(t) { return t.kind === "rally" && !t.leaderId; });
+    if (!empty.length) return "リーダー未設定の隊はありません";
+    var isLeader = {};
+    draft.teams.forEach(function(x) { if (x.leaderId) isLeader[x.leaderId] = true; });
+    var cands = people.filter(function(p) { return p.isRallyer && !isLeader[p.uid]; })
+      .sort(function(x, y) { return ((y.rallyCap || 0) - (x.rallyCap || 0)) || strongerFirst(x, y); });
+    var n = 0;
+    empty.forEach(function(t) {
+      var p = cands.shift(); if (!p) return;
+      t.leaderId = p.uid; draft.assign[p.uid] = t.id; draft.pins[p.uid] = true; n++;
+    });
+    return "リーダー候補を" + n + "隊に入れました" + (n < empty.length ? "（リーダーにできる人が足りず " + (empty.length - n) + " 隊は未設定です）" : "");
+  }
+  function applyKvkTeamCounts() {
+    var input = document.querySelector('[data-tc="all"]');
+    if (!input) return "";
+    var rally = draft.teams.filter(function(t) { return t.kind === "rally"; });
+    var cur = rally.length, limit = Math.max(kvkMaxTeams(), cur);
+    var n = Math.max(0, Math.min(limit, Math.floor(Number(input.value)) || 0));
+    if (n > cur) {
+      for (var a = 0; a < n - cur; a++) draft.teams.push({ id: newId(), kind: "rally", name: "", leaderId: "", ally: "" });   // リーダー未設定の空の隊
+      return "隊数を反映しました：" + cur + "→" + n + "隊（リーダー未設定の空の隊です。リーダーを選んでください）";
+    }
+    if (n < cur) {
+      rally.slice(n).forEach(function(t) {      // 後ろの隊から消す（確認なし）。入っていた人は未割り当てに戻る
+        membersOf(t.id).forEach(function(p) { delete draft.assign[p.uid]; delete draft.pins[p.uid]; });
+        if (t.leaderId) delete draft.pins[t.leaderId];
+        draft.teams.splice(draft.teams.indexOf(t), 1);
+      });
+      return "隊数を反映しました：" + cur + "→" + n + "隊（" + (cur - n) + "隊を削除）";
+    }
+    return "隊数は変わりません";
+  }
+  // KVKは、設定欄から消した項目（戦闘時間・人数の目安・上位隊ルール・◆を散らす）を既定値で固定する（保存済みの値は使わない）
+  // 戦闘時間はKVKだけ 21:00〜26:00（26:00＝翌2:00）。三盟・聖剣などの既定値（21:00〜25:00）は変えない
+  var KVK_START = 21 * 60, KVK_END = 26 * 60;
+  function fixKvkSettings() {
+    var d = defaultSettings();
+    ["start", "end", "minSize", "maxSize", "topRule", "topSize", "spreadVivian"].forEach(function(k) { draft.settings[k] = d[k]; });
+    draft.settings.start = KVK_START;
+    draft.settings.end = KVK_END;
+  }
+
+  // 聖剣：引き継いだあとに、まだどこにも入っていない人だけを入れる（集結部隊数の人は集結主チーム、残りは出征容量の合計が小さいチームへ）
+  function fillNewSeiken() {
+    var rallyers = draft.teams.filter(function(t) { return t.kind === "rallyers"; })[0];
+    var groups = draft.teams.filter(function(t) { return t.kind === "group"; });
+    var pool = people.filter(function(p) { return !placeOf(p.uid); });
+    if (rallyers) pool = pool.filter(function(p) {
+      if (!p.isRallyer) return true;
+      draft.assign[p.uid] = rallyers.id;
+      return false;
+    });
+    if (!groups.length) return;
+    function sum(t) { return membersOf(t.id).reduce(function(s, p) { return s + (p.marchCap || 0); }, 0); }
+    pool.sort(function(a, b) { return ((b.marchCap || 0) - (a.marchCap || 0)) || strongerFirst(a, b); }).forEach(function(p) {
+      var t = pickGroup(groups, p);
+      draft.assign[p.uid] = t.id;
+    });
+  }
+
+  // KVK・聖剣・三盟：前回の隊（チーム）・リーダー・所属・📌をそのまま引き継ぐ。戻り値は件数
+  function carryGeneric(pd, info) {
+    var map = {};
+    var teams = (pd.teams || []).map(function(t) {
+      var id = newId();
+      map[t.id] = id;
+      return { id: id, kind: t.kind, name: t.name || "", leaderId: "", ally: t.ally || "" };
+    });
+    draft.teams = teams;
+    draft.settings = Object.assign(defaultSettings(), pd.settings || {});
+    if (draft.mode === "kvk") fixKvkSettings();
+    draft.assign = {};
+    draft.pins = {};
+    Object.keys(pd.assign || {}).forEach(function(uid) {
+      var p = byUid[uid], a = pd.assign[uid];
+      if (!p) { info.gone++; return; }                      // 前回いたが今回は参加しない（不参加・未登録）
+      if (a === "pending") { if (p.timeUnknown) draft.assign[uid] = "pending"; return; } // 今も時間未定なら別枠のまま
+      if (map[a]) {                                         // 前回と同じチーム（待機は引き継がず、空きがあれば入れ直す）
+        draft.assign[uid] = map[a];
+        info.same++;
+        if (pd.pins && pd.pins[uid]) draft.pins[uid] = true;
+      }
+    });
+    (pd.teams || []).forEach(function(t, i) {
+      if (t.leaderId && byUid[t.leaderId] && draft.assign[t.leaderId] === map[t.id]) {
+        teams[i].leaderId = t.leaderId;
+        draft.pins[t.leaderId] = true;
+      }
+    });
+    if (draft.mode === "kvk") substituteLeaders();
+    var before = Object.keys(draft.assign).length;
+    if (draft.mode === "kvk") fillNewKvk();
+    else if (draft.mode === "seiken") fillNewSeiken();
+    info.added = Object.keys(draft.assign).length - before;
+  }
+
+  // 遺跡争奪：時間帯ごとに、同じ時間帯・同じ名前の要塞／遺跡があるときだけ前回の所属を引き継ぐ。残り（新しい人・場所が変わった人）は
+  // 時間帯の順に今までの自動振り分けで入れる（前回と同じを優先してから要塞の回数をそろえる）
+  function carryRuins(pd, info) {
+    var pr = (pd.ruins && pd.ruins.slots) || {};
+    draft.ruins.slots = {};
+    draft.ruins.seed = Math.random().toString(36).slice(2, 10);
+    var carried = {};
+    RUIN_SLOTS.forEach(function(k) {
+      var ps = pr[k];
+      if (!ps) return;
+      var T = targetsFor(k), st = ruinState(k);
+      carried[k] = 0;
+      Object.keys(ps.assign || {}).forEach(function(uid) {
+        var p = byUid[uid], a = ps.assign[uid];
+        if (!p || !slotStatus(p, k)) { info.gone++; return; }   // 前回いたが、今回その時間には参加しない
+        if (T.indexOf(a) >= 0) {                                 // 今回も同じ名前の拠点がある
+          st.assign[uid] = a;
+          carried[k]++;
+          info.same++;
+          if (ps.pins && ps.pins[uid]) st.pins[uid] = true;
+        }
+      });
+      Object.keys(ps.leaders || {}).forEach(function(t) {
+        var uid = ps.leaders[t];
+        if (T.indexOf(t) >= 0 && st.assign[uid] === t) st.leaders[t] = uid;
+      });
+    });
+    RUIN_SLOTS.filter(function(k) { return targetsFor(k).length; }).forEach(function(k) {
+      var st = ruinState(k), tmp = [];
+      // 引き継いだ人（集結主を含む）を一時的に固定して、まだ決まっていない人だけを振り分ける
+      Object.keys(st.assign).forEach(function(uid) { if (!st.pins[uid]) { st.pins[uid] = true; tmp.push(uid); } });
+      autoRuins(k);
+      tmp.forEach(function(uid) { delete st.pins[uid]; });
+      // 集結主がいなくなった拠点（前回の集結主が今回いない）は、その拠点のメンバーから集結容量の大きい順に
+      targetsFor(k).forEach(function(t) {
+        if (ruinLeader(k, t)) return;
+        var c = ruinMembers(k, t).filter(function(p) { return slotStatus(p, k) === "yes"; }).sort(leaderOrder)[0];
+        if (c) st.leaders[t] = c.uid;
+      });
+      info.added += Math.max(0, inSlot(k).length - (carried[k] || 0));
+    });
+  }
+
+  // 引き継げる前回か：分け方が同じ。聖剣は、新しい形（祭壇の解放前後）で保存されたものだけ
+  function canCarry(pd) { return pd.mode === draft.mode && (draft.mode !== "seiken" || !!pd.sk); }
+
+  function carryOver() {
+    var pv = prevRecord();
+    if (!pv) return "前回の同じ種類のイベントのチーム分けが見つかりません";
+    var pd = pv.rec.draft;
+    if (!canCarry(pd)) return "前回は別の分け方（または古い形式）で保存されているため、引き継げません";
+    var info = { same: 0, gone: 0, added: 0 };
+    if (draft.mode === "ruins") carryRuins(pd, info);
+    else if (draft.mode === "seiken") carrySeiken(pd, info);
+    else carryGeneric(pd, info);
+    draft.carriedFrom = { eventId: pv.ev.id, label: eventLabel(pv.ev), at: new Date().toISOString() };
+    return "前回（" + eventLabel(pv.ev) + "）から引き継ぎました：同じチームの人 " + info.same + "人／前回いたが今回は参加しない（または場所が無い）人 " + info.gone + "人は外しました／新しく入った人・場所が決まっていない人 " + info.added + "人は自動で振り分けました。容量オーバーや集結主なしの注意は、各チームの表示で確認してください。";
+  }
+
+  function renderCarry() {
+    var el = $("carryRow");
+    if (!el) return;
+    if (readOnly) { el.innerHTML = ""; return; }
+    var pv = prevRecord(), html = "";
+    if (!pv) {
+      html = '<div class="note">📋 前回の同じ種類のイベントのチーム分けは保存されていません（今までどおり、下の「自動で振り分ける」を使います）。</div>';
+    } else if (!canCarry(pv.rec.draft)) {
+      html = '<div class="note">📋 前回（' + escapeHtml(eventLabel(pv.ev)) + '）は別の分け方（または古い形式）で保存されているため、引き継げません。</div>';
+    } else {
+      html = '<div class="row" style="margin-top:0;"><button type="button" id="carryBtn">📋 前回と同じチームにする</button>' +
+        '<span class="note">前回：' + escapeHtml(eventLabel(pv.ev)) + '（保存 ' + escapeHtml(formatTime(pv.rec.updatedAt)) + '）。同じ人は前回と同じチームに、新しい人だけ自動で振り分けます</span></div>';
+    }
+    if (draft.carriedFrom) html += '<div class="note" style="margin-top:4px;">🔁 引き継ぎ元：' + escapeHtml(draft.carriedFrom.label) + '（' + escapeHtml(formatTime(draft.carriedFrom.at)) + '）</div>';
+    el.innerHTML = html;
+    on("carryBtn", "click", function() {
+      if (!confirm("前回（" + eventLabel(pv.ev) + "）のチーム分けを引き継ぎます。\n今の割り当て（📌も含む）は置き換わります。よろしいですか？")) return;
+      var msg = carryOver();
+      setMsg($("autoMsg"), msg, msg.indexOf("引き継ぎました") === 0);
+      changed();
+    });
+  }
+
+  // ---------- 聖剣（祭壇解放前／解放後） ----------
+  // 下書き：draft.sk = { cur: "before"|"after", before: P, after: P }、P（1つの段階）=
+  //   { teams: [{id,name}]×4,                  メンバーを均等に分ける4チーム（拠点とは別。軍は付けない）
+  //     assign: {uid: teamId},  pins: {uid:true},
+  //     raiders: {uid:true},                   遊撃手（どの拠点・チームにも属さない）
+  //     rally: {拠点名: [{uid, army}]} }       拠点の集結主。「人＋〇軍」の組を1つの単位にして、1つの拠点に複数置ける
+  // 決まり：同じ拠点に同じ人は1軍分だけ（別の軍で重ねて入れない）／別の拠点には入れる／同じ「人＋〇軍」は複数の拠点に置けない
+  // KVKの同盟ラベル（隊に付ける）と、マンスリー人数の数え方（2026-11-08 ユーザー回答：ひよこ＝同盟名EGG、参加できる人＝全部参加＋一部参加）。変えるときはここだけ直す
+  var KVK_ALLIANCES = [{ label: "ひよこ", name: "EGG" }, { label: "666", name: "666" }];
+  var MONTHLY_MIN = 3;            // マンスリー持ち1人あたりの分数（「1人×3分」）
+  var MONTHLY_SCOPE_PARTIAL = true;  // 「参加できる人」に一部参加（途中参加・途中抜け。時刻が未定の人も）を含める。false にすると全部参加の人だけ
+  // 参加できる人のうち、同盟ごとのマンスリー持ちの人数と、人数×3分の合計（◯が誰かは出さない。人数だけ）
+  function kvkMonthly() {
+    return KVK_ALLIANCES.map(function(a) {
+      var n = people.filter(function(p) {
+        return p.alliance === a.name && p.monthly && (MONTHLY_SCOPE_PARTIAL || p.fullTime);   // people は不参加の人を含まない
+      }).length;
+      return { label: a.label, name: a.name, count: n, minutes: n * MONTHLY_MIN };
+    });
+  }
+  function kvkMonthlyHtml() {
+    return '<div class="note" style="margin-top:6px;">👥 マンスリー持ち（参加できる人＝' + (MONTHLY_SCOPE_PARTIAL ? "全部参加＋一部参加" : "全部参加") + '）：' + kvkMonthly().map(function(m) {
+      return "<b>" + escapeHtml(m.label) + "</b>（同盟 " + escapeHtml(m.name) + "）" + m.count + "人（1人×" + MONTHLY_MIN + "分＝" + m.minutes + "分）";
+    }).join("　／　") + "</div>";
+  }
+
+  var SK_BASE = ["西北聖域", "東南聖域", "修道院 第一", "修道院 第二", "修道院 第三", "修道院 第四", "厩舎", "鐘楼"];
+  var SK_ALTAR = ["祭壇", "教化の間", "傭兵駐屯地"];   // 祭壇が解放されるまでは出さない（解放後だけ）
+  var SK_ARMIES = 6;                                    // 1人が出せる軍の数（1〜6軍）
+  var SK_TEAMS = ["Aチーム", "Bチーム", "Cチーム", "Dチーム"];
+  var SK_PHASES = [["before", "祭壇解放前"], ["after", "祭壇解放後"]];
+  var outPhases = ["before", "after"];                  // Discordに貼る段階（出力だけの設定。保存しない）
+  var skFacError = null;                                // 集結主を追加できなかった理由 {ph, f, msg}。その拠点のカードの中に赤字で出す
+  function skNewPhase() {
+    return { teams: SK_TEAMS.map(function(n) { return { id: newId(), name: n }; }), assign: {}, pins: {}, raiders: {}, rally: {} };
+  }
+  function skEnsure() {
+    var sk = draft.sk = draft.sk || {};
+    if (sk.cur !== "before" && sk.cur !== "after") sk.cur = "before";
+    ["before", "after"].forEach(function(ph) {
+      var P = sk[ph] = sk[ph] || skNewPhase();
+      P.teams = P.teams && P.teams.length ? P.teams : skNewPhase().teams;
+      P.assign = P.assign || {}; P.pins = P.pins || {}; P.raiders = P.raiders || {}; P.rally = P.rally || {};
+    });
+    // ②チーム・③遊撃手（メンバーの4チーム・割り当て・📌・遊撃手）は、解放前と解放後で共通の1つ。解放前の内容を正として、解放後は同じものを指す
+    // （保存済みの古いデータで解放後だけ別のチームだったものは、読み込むときに解放前のものへ置き換わる。①拠点と集結主だけが段階ごと）
+    ["teams", "assign", "pins", "raiders"].forEach(function(k) { sk.after[k] = sk.before[k]; });
+  }
+  function skP(ph) { return draft.sk[ph]; }
+  var SK_ALL = SK_ALTAR.concat(SK_BASE);                // 画面に出す順（祭壇・教化の間・傭兵駐屯地が先頭）
+  function skFacilities(ph) { return ph === "after" ? SK_ALL : SK_BASE; }   // その段階で使える拠点（解放前は祭壇などを含めない）
+  function skRallyList(ph, f) { return (skP(ph).rally[f] || []).filter(function(e) { return byUid[e.uid]; }); }
+  // その段階で集結主として拠点に入っている人（メンバーの4チームには入れない）
+  function skRallySet(ph) {
+    var set = {};
+    skFacilities(ph).forEach(function(f) { skRallyList(ph, f).forEach(function(e) { set[e.uid] = true; }); });
+    return set;
+  }
+  function skMemberPool(ph) {
+    var P = skP(ph), rs = skRallySet(ph);
+    return people.filter(function(p) { return !P.raiders[p.uid] && !rs[p.uid]; });
+  }
+  function skTeamOf(ph, uid) {
+    var P = skP(ph), id = P.assign[uid];
+    return P.teams.filter(function(t) { return t.id === id; })[0] || null;
+  }
+  function skTeamMembers(ph, t) { return skMemberPool(ph).filter(function(p) { return skP(ph).assign[p.uid] === t.id; }); }
+  function skUsedArmies(ph, uid, exceptFacility) {
+    var used = {};
+    skFacilities(ph).forEach(function(f) {
+      if (f === exceptFacility) return;
+      skRallyList(ph, f).forEach(function(e) { if (e.uid === uid) used[e.army] = f; });
+    });
+    return used;
+  }
+  // 集結主として「人＋〇軍」を拠点に入れる。入れられないときは理由の文を返す（入れたら ""）
+  function skAddRally(ph, f, uid, army) {
+    var P = skP(ph), p = byUid[uid];
+    if (!p) return "人を選んでください";
+    if (skFacilities(ph).indexOf(f) < 0) return "⚠ 「" + f + "」は祭壇が解放されたあと（「祭壇解放後」のタブ）に使えます";
+    army = Number(army);
+    if (!(army >= 1 && army <= SK_ARMIES)) return "軍は1〜" + SK_ARMIES + "軍から選んでください";
+    if (P.raiders[uid]) return p.name + "は遊撃手です（遊撃手は解放前・解放後で共通です）。先に遊撃手から外してください";
+    var list = P.rally[f] = P.rally[f] || [];
+    var here = list.filter(function(e) { return e.uid === uid; })[0];
+    if (here) return "⚠ " + p.name + "は、この拠点に（" + here.army + "軍で）すでに入っています。1つの拠点には同じ人を1軍分だけしか入れられません。別の軍で重ねて入れることはできないので、入れ替えるなら先に外してください";
+    var used = skUsedArmies(ph, uid, f);
+    if (used[army]) return "⚠ " + p.name + "（" + army + "軍）はすでに「" + used[army] + "」に入っています。同じ人の同じ軍は複数の拠点に入れません。別の軍を選ぶか、先に「" + used[army] + "」から外してください";
+    list.push({ uid: uid, army: army });                 // 集結主になった人は、その段階のメンバーの4チームの一覧からは外れる（チームの割り当ては共通なので消さず、もう片方の段階ではメンバーのまま）
+    return "";
+  }
+  function skRemoveRally(ph, f, uid) {
+    var P = skP(ph);
+    P.rally[f] = (P.rally[f] || []).filter(function(e) { return e.uid !== uid; });
+  }
+  function skAddRaider(ph, uid) {
+    var P = skP(ph), p = byUid[uid];
+    if (!p) return "人が選ばれていません";
+    if (skRallySet("before")[uid] || skRallySet("after")[uid]) return p.name + "は集結主として拠点に入っています（遊撃手は解放前・解放後で共通なので、どちらの段階でも集結主でない人だけが遊撃手になれます）。先に拠点から外してください";
+    P.raiders[uid] = true;
+    delete P.assign[uid]; delete P.pins[uid];
+    return "";
+  }
+
+  // 集結主を自動で置く：まだ集結主のいない拠点に、「集結部隊数を登録した人」を集結容量の大きい順に1軍で1人ずつ（拠点の順番）。すでにいる拠点は触らない
+  function skAutoRally(ph) {
+    var P = skP(ph), rs = skRallySet(ph);
+    var cands = people.filter(function(p) { return p.isRallyer && !P.raiders[p.uid] && !rs[p.uid]; }).sort(leaderOrder);
+    var put = 0, empty = 0;
+    skFacilities(ph).forEach(function(f) {
+      if (skRallyList(ph, f).length) return;
+      empty++;
+      var c = cands.shift();
+      if (!c) return;
+      if (!skAddRally(ph, f, c.uid, 1)) put++;
+    });
+    return "集結主を " + put + "拠点に置きました（空きの拠点 " + empty + "、集結部隊数の人が足りない拠点 " + (empty - put) + "）";
+  }
+  // メンバーを4チームに均等に分ける：集結主・遊撃手を除いた人を、出征容量の大きい順に、合計がいちばん小さいチームへ（📌の人は動かさない）
+  function skAutoTeams(ph) {
+    var P = skP(ph), pool = skMemberPool(ph);
+    pool.forEach(function(p) { if (!P.pins[p.uid]) delete P.assign[p.uid]; });
+    Object.keys(P.assign).forEach(function(u) { if (P.raiders[u]) delete P.assign[u]; });
+    function sum(t) { return skTeamMembers(ph, t).reduce(function(s, p) { return s + (p.marchCap || 0); }, 0); }
+    pool.filter(function(p) { return !P.assign[p.uid]; })
+      .sort(function(a, b) { return ((b.marchCap || 0) - (a.marchCap || 0)) || strongerFirst(a, b); })
+      .forEach(function(p) {
+        var t = P.teams.slice().sort(function(a, b) { return (p.marchCap || 0) > 0 ? ((sum(a) - sum(b)) || (skTeamMembers(ph, a).length - skTeamMembers(ph, b).length)) : ((skTeamMembers(ph, a).length - skTeamMembers(ph, b).length) || (sum(a) - sum(b))); })[0];
+        P.assign[p.uid] = t.id;
+      });
+    return "メンバー " + pool.length + "人を4チームに分けました（チームは解放前・解放後で共通です）";
+  }
+  // 解放前を土台に解放後を作る：①拠点と集結主（人＋〇軍）だけをコピーする（②チーム・③遊撃手は解放前と解放後で共通なのでコピー不要）。解放後の今の集結主は置き換わる
+  function skCopyBeforeToAfter() {
+    var B = skP("before"), A = skP("after");
+    A.rally = {};
+    SK_BASE.forEach(function(f) { A.rally[f] = (B.rally[f] || []).map(function(e) { return { uid: e.uid, army: e.army }; }); });
+  }
+  function skWarns(ph, f) {
+    var list = skRallyList(ph, f), w = [];
+    if (!list.length) w.push("集結主がいません");
+    list.forEach(function(e) { if (byUid[e.uid].rallyCap == null) w.push(byUid[e.uid].name + "の集結容量が分かりません"); });
+    return w;
+  }
+  function skLabel(e) { return byUid[e.uid].name + "（" + e.army + "軍）"; }
+
+  function skChip(p, ph, extra) {
+    var P = skP(ph), cls = "chip" + (p.uid === selectedUid ? " sel" : "");
+    return '<div class="' + cls + '" draggable="true" data-uid="' + escapeHtml(p.uid) + '" title="' + escapeHtml(p.note) + '">' +
+      (P.pins[p.uid] ? "📌" : "") + "<b>" + escapeHtml(p.name) + "</b><br>" +
+      '<span class="m">' + escapeHtml(p.alliance) + "・出征" + man(p.marchCap) + (extra || "") + "</span></div>";
+  }
+
+  function renderSeiken() {
+    skEnsure();
+    var sk = draft.sk, ph = sk.cur, P = skP(ph), F = skFacilities(ph);
+    // 設定欄：段階の切り替えと説明
+    $("settingsBody").innerHTML = '<div class="tabs" style="margin-bottom:6px;">' + SK_PHASES.map(function(x) {
+      return '<button type="button" data-skph="' + x[0] + '"' + (x[0] === ph ? ' class="active"' : "") + ">" + (x[0] === "before" ? "🏰 " : "⛩️ ") + x[1] + "</button>";
+    }).join("") + "</div>" +
+      '<div class="note">' + (ph === "before"
+        ? "祭壇が解放されるまでのチームです。拠点：" + SK_BASE.join("・") + "。祭壇・教化の間・傭兵駐屯地は、解放前は灰色で見るだけです（「祭壇解放後」のタブで使えます）。"
+        : "祭壇が解放されたあとのチームです（祭壇・教化の間・傭兵駐屯地が先頭に並び、使えるようになります）。「解放前の集結主を土台に解放後を作る」で、解放前の拠点と集結主をコピーしてから直せます。②チームと③遊撃手は、解放前と解放後で共通の1つです（どちらのタブで直しても両方に反映）。") + "</div>" +
+      '<div class="note" style="margin-top:4px;">集結主は拠点に「人＋〇軍（1〜' + SK_ARMIES + '軍）」で置きます（1つの拠点に複数、同じ人が複数の拠点にも入れます。ただし同じ拠点に同じ人は1軍分だけ、同じ「人＋〇軍」は複数の拠点に置けません）。メンバー（集結主・遊撃手以外）は、拠点とは関係なく4チームに均等に分けます。遊撃手はどこにも属さず、試合中に空いた拠点へ動く人です。</div>';
+    $("autoRow").innerHTML =
+      '<button type="button" id="skAutoRallyBtn">🤖 集結主を各拠点に置く（空の拠点だけ）</button>' +
+      '<button type="button" id="skAutoTeamsBtn">🤖 メンバーを4チームに均等に分ける（📌以外）</button>' +
+      (ph === "after" ? '<button type="button" class="sub" id="skCopyBtn">📋 解放前の集結主を土台に解放後を作る</button>' : "") +
+      '<button type="button" class="sub" id="skClearBtn">↩ ' + SK_PHASES.filter(function(x) { return x[0] === ph; })[0][1] + 'の割り当てを外す（📌以外）</button>';
+    // fn が返す文：isErr=true のときは「入れられない理由」（赤字）、false のときは結果の案内（緑）。空なら何も出さない
+    function act(fn, isErr) { if (readOnly) return; skFacError = null; var msg = fn(); setMsg($("autoMsg"), msg || "", !isErr); changed(); }
+    Array.prototype.forEach.call($("settingsBody").querySelectorAll("[data-skph]"), function(b) {
+      b.addEventListener("click", function() { sk.cur = b.dataset.skph; selectedUid = ""; skFacError = null; if (!readOnly) saveLocal(); renderAll(); });
+    });
+    on("skAutoRallyBtn", "click", function() { act(function() { return skAutoRally(ph); }); });
+    on("skAutoTeamsBtn", "click", function() { act(function() { return skAutoTeams(ph); }); });
+    on("skCopyBtn", "click", function() {
+      if (readOnly) return;
+      if (!confirm("解放前の拠点と集結主（人＋〇軍）を土台に、解放後の拠点と集結主を作ります。\n解放後の今の集結主はすべて置き換わります（チーム・遊撃手は解放前と解放後で共通なので変わりません）。よろしいですか？")) return;
+      act(function() { skCopyBeforeToAfter(); return "解放前の集結主を土台に、解放後を作りました（祭壇・教化の間・傭兵駐屯地の集結主を決めてください）"; });
+    });
+    on("skClearBtn", "click", function() {
+      if (readOnly) return;
+      if (!confirm("この段階の集結主と、📌（固定）以外のチームの割り当て・遊撃手を外します。\n※チームの割り当てと遊撃手は解放前・解放後で共通なので、もう片方の段階からも外れます。よろしいですか？")) return;
+      act(function() {
+        Object.keys(P.assign).forEach(function(u) { if (!P.pins[u]) delete P.assign[u]; });
+        P.rally = {}; Object.keys(P.raiders).forEach(function(u) { delete P.raiders[u]; });
+        return "";
+      });
+    });
+
+    // 画面：①拠点と集結主 ②4チーム ③遊撃手
+    var rs = skRallySet(ph), v = '<h3 style="margin:6px 0;">① 拠点と集結主（人＋〇軍）</h3><div class="board">';
+    var candList = people.slice().sort(function(a, b) { return (b.isRallyer - a.isRallyer) || leaderOrder(a, b); });
+    SK_ALL.forEach(function(f) {
+      if (F.indexOf(f) < 0) {
+        // 祭壇解放前の祭壇・教化の間・傭兵駐屯地：表示だけ（編集不可）。データは持たず、自動配置・出力・公開の対象にもしない
+        v += '<div class="team" data-fac-off="' + escapeHtml(f) + '" style="opacity:0.5; background:#eef0f3; pointer-events:none;"><div class="team-head"><div class="team-title"><b>' + escapeHtml(f) + '</b><span class="note">（解放後）</span></div>' +
+          '<div class="team-stats">🔒 ' + escapeHtml(f) + "は祭壇が解放されたあとに使えます（「祭壇解放後」のタブで集結主を入れられます）</div></div>" +
+          '<div class="team-body"><span class="empty-hint">解放前は編集できません</span></div></div>';
+        return;
+      }
+      var list = skRallyList(ph, f), w = skWarns(ph, f);
+      var cap = list.reduce(function(s, e) { return s + (byUid[e.uid].rallyCap || 0); }, 0);
+      v += '<div class="team" data-fac="' + escapeHtml(f) + '"><div class="team-head"><div class="team-title"><b>' + escapeHtml(f) + '</b>' + (SK_ALTAR.indexOf(f) >= 0 ? '<span class="note">（解放後）</span>' : "") +
+        '<span class="note">集結主 ' + list.length + '</span></div>' +
+        '<div class="team-stats"><span>集結容量の合計 ' + man(cap) + "</span></div>" +
+        (w.length ? '<div class="team-warn">' + w.map(function(x) { return "<div>" + escapeHtml(x) + "</div>"; }).join("") + "</div>" : "") + "</div>" +
+        '<div class="team-body">' + (list.length ? list.map(function(e) {
+          return '<div class="chip leader"><b>' + escapeHtml(skLabel(e)) + "</b>" + (byUid[e.uid].rallyCap != null ? ' <span class="m">集結' + man(byUid[e.uid].rallyCap) + "</span>" : "") +
+            ' <button type="button" class="sub mini" data-skdel="' + escapeHtml(f) + "|" + escapeHtml(e.uid) + '" title="外す">✕</button></div>';
+        }).join("") : '<span class="empty-hint">集結主を入れる</span>') + "</div>" +
+        '<div class="leader-row" style="padding:0 10px 10px;"><select data-skadd-p="' + escapeHtml(f) + '"><option value="">（人を選ぶ）</option>' + candList.filter(function(p) { return !P.raiders[p.uid]; }).map(function(p) {
+          var inHere = list.filter(function(e) { return e.uid === p.uid; })[0];
+          return '<option value="' + escapeHtml(p.uid) + '">' + escapeHtml(p.name) + (p.rallyCap != null ? "（集結" + man(p.rallyCap) + "）" : "") + (inHere ? "【この拠点に" + inHere.army + "軍で入っています】" : "") + "</option>";
+        }).join("") + '</select><select data-skadd-a="' + escapeHtml(f) + '">' + Array.apply(null, Array(SK_ARMIES)).map(function(_, i) { return '<option value="' + (i + 1) + '">' + (i + 1) + "軍</option>"; }).join("") + '</select>' +
+        '<button type="button" class="mini" data-skadd="' + escapeHtml(f) + '">＋追加</button></div>' +
+        '<div class="msg err" style="padding:0 10px 8px;" data-skerr="' + escapeHtml(f) + '">' + (skFacError && skFacError.ph === ph && skFacError.f === f ? escapeHtml(skFacError.msg) : "") + "</div></div>";
+    });
+    v += "</div>";
+
+    v += '<h3 style="margin:14px 0 6px;">② チーム（メンバーを4つに均等に・解放前と解放後で共通）</h3><div class="board">';
+    P.teams.forEach(function(t) {
+      var ms = skTeamMembers(ph, t).sort(function(a, b) { return ((b.marchCap || 0) - (a.marchCap || 0)) || (a.order - b.order); });
+      var cap = ms.reduce(function(s, p) { return s + (p.marchCap || 0); }, 0);
+      v += '<div class="team" data-drop="' + t.id + '"><div class="team-head"><div class="team-title"><b>' + escapeHtml(t.name) + '</b><span class="note">' + ms.length + '人</span></div>' +
+        '<div class="team-stats"><span>出征容量の合計 ' + man(cap) + "</span></div></div>" +
+        '<div class="team-body">' + (ms.length ? ms.map(function(p) { return skChip(p, ph); }).join("") : '<span class="empty-hint">ここに入れる</span>') + "</div></div>";
+    });
+    var un = skMemberPool(ph).filter(function(p) { return !skTeamOf(ph, p.uid); });
+    v += '<div class="team special" data-drop="none"><div class="team-head"><div class="team-title"><b>📥 未割り当て</b><span class="note">' + un.length + '人</span></div><div class="team-stats">まだどのチームにも入っていないメンバー</div></div>' +
+      '<div class="team-body">' + (un.length ? un.map(function(p) { return skChip(p, ph); }).join("") : '<span class="empty-hint">（なし）</span>') + "</div></div></div>";
+
+    var rd = people.filter(function(p) { return P.raiders[p.uid]; });
+    v += '<h3 style="margin:14px 0 6px;">③ 遊撃手（どの拠点にも属さない・解放前と解放後で共通）</h3><div class="board"><div class="team special" data-drop="raider"><div class="team-head"><div class="team-title"><b>🏃 遊撃手</b><span class="note">' + rd.length + '人（拠点の人数には数えません）</span></div></div>' +
+      '<div class="team-body">' + (rd.length ? rd.map(function(p) {
+        return '<div class="chip"><b>' + escapeHtml(p.name) + '</b> <span class="m">' + escapeHtml(p.alliance) + '</span> <button type="button" class="sub mini" data-skraiderdel="' + escapeHtml(p.uid) + '" title="外す">✕</button></div>';
+      }).join("") : '<span class="empty-hint">遊撃手を入れる</span>') + "</div>" +
+      '<div class="leader-row" style="padding:0 10px 10px;"><select id="skRaiderSel"><option value="">（人を選ぶ）</option>' + people.filter(function(p) { return !P.raiders[p.uid] && !rs[p.uid]; }).map(function(p) {
+        return '<option value="' + escapeHtml(p.uid) + '">' + escapeHtml(p.name) + "</option>";
+      }).join("") + '</select><button type="button" class="mini" id="skRaiderAdd">＋遊撃手にする</button></div></div></div>';
+    $("tabHint").textContent = "拠点の集結主は「人を選ぶ→軍を選ぶ→＋追加」。メンバーは名前を押す（またはドラッグ）で4チームへ移せます。📌は「固定」：自動で動かしません。";
+    $("viewArea").innerHTML = v;
+
+    // 操作
+    Array.prototype.forEach.call($("viewArea").querySelectorAll("[data-skadd]"), function(b) {
+      var f = b.dataset.skadd;
+      var ps = $("viewArea").querySelector('[data-skadd-p="' + f + '"]'), as = $("viewArea").querySelector('[data-skadd-a="' + f + '"]');
+      // 軍の選択肢：その人が別の拠点で使っている軍には「（〇〇で使用中）」と出す（選べるが、追加しようとすると断る）。人を選んだら、使っていない軍のうち先頭を選んでおく
+      ps.addEventListener("change", function() {
+        var used = ps.value ? skUsedArmies(ph, ps.value, f) : {}, first = 0;
+        Array.prototype.forEach.call(as.options, function(o) { o.textContent = o.value + "軍" + (used[o.value] ? "（" + used[o.value] + "で使用中）" : ""); if (!used[o.value] && !first) first = o.value; });
+        if (first) as.value = first;
+      });
+      b.addEventListener("click", function() {
+        if (readOnly) return;
+        var msg = skAddRally(ph, f, ps.value, as.value);
+        skFacError = msg ? { ph: ph, f: f, msg: msg } : null;     // 断ったときは、その拠点のカードの中に赤字で理由を出す
+        setMsg($("autoMsg"), msg || "", !msg);
+        changed();
+      });
+    });
+    Array.prototype.forEach.call($("viewArea").querySelectorAll("[data-skdel]"), function(b) {
+      b.addEventListener("click", function() { var a = b.dataset.skdel.split("|"); act(function() { skRemoveRally(ph, a[0], a[1]); return ""; }); });
+    });
+    on("skRaiderAdd", "click", function() { act(function() { return skAddRaider(ph, $("skRaiderSel").value); }, true); });
+    Array.prototype.forEach.call($("viewArea").querySelectorAll("[data-skraiderdel]"), function(b) {
+      b.addEventListener("click", function() { act(function() { delete P.raiders[b.dataset.skraiderdel]; return ""; }); });
+    });
+    Array.prototype.forEach.call($("viewArea").querySelectorAll(".chip[data-uid]"), function(c) {
+      c.addEventListener("click", function(e) { e.stopPropagation(); if (readOnly) return; selectedUid = selectedUid === c.dataset.uid ? "" : c.dataset.uid; renderAll(); });
+      c.addEventListener("dragstart", function(e) { e.dataTransfer.setData("text/plain", c.dataset.uid); });
+    });
+    Array.prototype.forEach.call($("viewArea").querySelectorAll("[data-drop]"), function(box) {
+      box.addEventListener("dragover", function(e) { e.preventDefault(); box.classList.add("drop-ok"); });
+      box.addEventListener("dragleave", function() { box.classList.remove("drop-ok"); });
+      box.addEventListener("drop", function(e) {
+        e.preventDefault();
+        var uid = e.dataTransfer.getData("text/plain");
+        if (uid) { selectedUid = ""; act(function() { return skMove(ph, uid, box.dataset.drop); }, true); }
+      });
+    });
+    renderSkOut();
+
+    // 名前を押したときの移動バー（メンバーだけ）
+    var bar = $("moveBar"), p = byUid[selectedUid];
+    if (readOnly || !p || !skMemberPool(ph).some(function(x) { return x.uid === p.uid; })) { bar.style.display = "none"; return; }
+    bar.style.display = "block";
+    $("moveName").textContent = p.name;
+    $("pinBtn").textContent = P.pins[p.uid] ? "📌 固定を外す" : "📌 固定する";
+    var here = (skTeamOf(ph, p.uid) || { id: "none" }).id;
+    $("moveTargets").innerHTML = P.teams.map(function(t) { return [t.id, t.name + "（" + skTeamMembers(ph, t).length + "人）"]; }).concat([["none", "📥 未割り当て"], ["raider", "🏃 遊撃手にする"]]).map(function(x) {
+      return '<button type="button" data-to="' + x[0] + '"' + (x[0] === here ? ' class="here"' : "") + ">" + escapeHtml(x[1]) + (x[0] === here ? "（今ここ）" : "") + "</button>";
+    }).join("");
+    Array.prototype.forEach.call($("moveTargets").querySelectorAll("[data-to]"), function(b) {
+      b.addEventListener("click", function() { var uid = selectedUid; selectedUid = ""; act(function() { return skMove(ph, uid, b.dataset.to); }, true); });
+    });
+  }
+  // メンバーの移動（4チーム／未割り当て／遊撃手）
+  function skMove(ph, uid, to) {
+    var P = skP(ph), p = byUid[uid];
+    if (!p) return "";
+    if (skRallySet(ph)[uid]) return p.name + "は集結主として拠点に入っているので、チームには移せません";
+    if (to === "raider") return skAddRaider(ph, uid);
+    delete P.raiders[uid];
+    if (to === "none") delete P.assign[uid];
+    else if (P.teams.some(function(t) { return t.id === to; })) P.assign[uid] = to;
+    return "";
+  }
+
+  // ---------- 聖剣のDiscord用テキストと公開用データ ----------
+  function skPhaseText(ph) {
+    var lines = [], blocks = [];
+    function flush() { if (lines.length) { blocks.push("```\n" + lines.join("\n") + "\n```"); lines = []; } }
+    function push(group) {
+      if (lines.length && lines.length + 1 + group.length > 10) flush();
+      if (lines.length) lines.push("");
+      lines = lines.concat(group);
+    }
+    // 拠点は1拠点1行（拠点の間に空行は入れず、10行ずつコードブロックを分ける）
+    skFacilities(ph).forEach(function(f) {
+      var list = skRallyList(ph, f);
+      var line = f + (list.length ? "（集結主" + list.length + "）" : "") + " 集結主:" + (list.length ? list.map(skLabel).join("、") : "未定");
+      if (lines.length >= 10) flush();
+      lines.push(line);
+    });
+    flush();
+    skP(ph).teams.forEach(function(t) {
+      var ms = skTeamMembers(ph, t).sort(function(a, b) { return ((b.marchCap || 0) - (a.marchCap || 0)) || (a.order - b.order); });
+      push([t.name + "（" + ms.length + "人）", ms.length ? ms.map(function(p) { return p.name; }).join("、") : "（なし）"]);
+    });
+    var rd = people.filter(function(p) { return skP(ph).raiders[p.uid]; });
+    if (rd.length) push(["遊撃手（" + rd.length + "人）", rd.map(function(p) { return p.name; }).join("、")]);
+    flush();
+    return blocks.join("\n");
+  }
+  function buildSeikenText(sel) {
+    sel = sel || ["before", "after"];
+    if (!draft.sk) return "";
+    skEnsure();
+    if (!sel.length) return "段階を選んでください";
+    var parts = ["■ " + eventLabel(eventById(eventId)) + " チーム分け"];
+    SK_PHASES.forEach(function(x) {
+      if (sel.indexOf(x[0]) < 0) return;
+      parts.push("", "【" + x[1] + "】", skPhaseText(x[0]));
+    });
+    return parts.join("\n");
+  }
+  function buildSeikenView() {
+    skEnsure();
+    function person(p) { return { name: p.name, alliance: p.alliance }; }
+    return {
+      mode: "seiken", title: eventLabel(eventById(eventId)),
+      phases: SK_PHASES.map(function(x) {
+        var ph = x[0], P = skP(ph);
+        return {
+          key: ph, label: x[1],
+          facilities: skFacilities(ph).map(function(f) {
+            return { name: f, leaders: skRallyList(ph, f).map(function(e) { return { name: byUid[e.uid].name, alliance: byUid[e.uid].alliance, army: e.army }; }) };
+          }),
+          teams: P.teams.map(function(t) { return { name: t.name, members: skTeamMembers(ph, t).sort(function(a, b) { return ((b.marchCap || 0) - (a.marchCap || 0)) || (a.order - b.order); }).map(person) }; }),
+          raiders: people.filter(function(p) { return P.raiders[p.uid]; }).map(person)
+        };
+      }),
+      text: buildSeikenText()
+    };
+  }
+  // Discord出力の段階チェック（解放前／解放後）。切り替えたら出力欄だけ即更新する
+  function renderSkOut() {
+    var row = $("outSlotsRow");
+    row.style.display = "flex";
+    row.innerHTML = '<span class="note">貼る段階：</span>' + SK_PHASES.map(function(x) {
+      return '<label class="inline"><input type="checkbox" data-outph="' + x[0] + '"' + (outPhases.indexOf(x[0]) >= 0 ? " checked" : "") + "> " + x[1] + "</label>";
+    }).join("");
+    Array.prototype.forEach.call(row.querySelectorAll("[data-outph]"), function(cb) {
+      cb.addEventListener("change", function() {
+        outPhases = SK_PHASES.map(function(x) { return x[0]; }).filter(function(k) { var c = row.querySelector('[data-outph="' + k + '"]'); return c && c.checked; });
+        $("outText").value = buildSeikenText(outPhases);
+      });
+    });
+    $("outText").value = buildSeikenText(outPhases);
+  }
+
+  // 聖剣の引き継ぎ：前回のチーム（4つ）・メンバーの所属・遊撃手・📌は、解放前と解放後で共通の1つ（前回の解放前を正とする。前回が古い形で解放後だけ別だった場合も解放前のものを使う）。
+  // 集結主（人＋〇軍）だけ、解放前・解放後それぞれ前回のものをそのまま。今回いない人は外す。集結主のいなくなった拠点は、
+  // まだどこにも入っていない「集結部隊数を登録した人」を集結容量の大きい順に置き、今回新しく参加したメンバーだけを4チームへ均等に入れる（引き継いだ人は動かさない）
+  function carrySeiken(pd, info) {
+    skEnsure();
+    var base = pd.sk && (pd.sk.before || pd.sk.after);
+    if (!base) return;
+    var N = skNewPhase(), idMap = {};
+    (base.teams || []).forEach(function(t, i) { if (N.teams[i]) { N.teams[i].name = t.name; idMap[t.id] = N.teams[i].id; } });
+    Object.keys(base.assign || {}).forEach(function(u) {
+      if (!byUid[u]) { info.gone++; return; }
+      if (idMap[base.assign[u]]) { N.assign[u] = idMap[base.assign[u]]; info.same++; if (base.pins && base.pins[u]) N.pins[u] = true; }
+    });
+    Object.keys(base.raiders || {}).forEach(function(u) { if (byUid[u]) { N.raiders[u] = true; info.same++; } else info.gone++; });
+    ["before", "after"].forEach(function(ph) {
+      var S = pd.sk && pd.sk[ph], R = {};
+      if (S) Object.keys(S.rally || {}).forEach(function(f) {
+        if (skFacilities(ph).indexOf(f) < 0) return;
+        R[f] = (S.rally[f] || []).filter(function(e) { if (byUid[e.uid]) { info.same++; return true; } info.gone++; return false; })
+          .map(function(e) { return { uid: e.uid, army: e.army }; });
+      });
+      draft.sk[ph] = { teams: N.teams, assign: N.assign, pins: N.pins, raiders: N.raiders, rally: R };
+    });
+    ["before", "after"].forEach(function(ph) { if (pd.sk && pd.sk[ph]) skAutoRally(ph); });
+    var P = skP("before"), tmp = [], before = Object.keys(P.assign).length;
+    Object.keys(P.assign).forEach(function(u) { if (!P.pins[u]) { P.pins[u] = true; tmp.push(u); } });
+    skAutoTeams("before");
+    skAutoTeams("after");
+    tmp.forEach(function(u) { delete P.pins[u]; });
+    info.added += Object.keys(P.assign).length - before;
+  }
+
+  // ---------- 集計と注意 ----------
+  function teamStats(t, index) {
+    var s = draft.settings;
+    var ms = membersOf(t.id);
+    var leader = leaderOf(t);
+    var riders = ms.filter(function(p) { return p !== leader; });
+    var st = {
+      count: ms.length, leader: leader,
+      riderCap: riders.reduce(function(sum, p) { return sum + (p.marchCap || 0); }, 0),
+      capMissing: riders.filter(function(p) { return p.marchCap == null; }).length,
+      provN: ms.filter(function(p) { return p.marchProv || (p === leader && p.rallyProv); }).length,
+      capLimit: leader && leader.rallyCap != null ? leader.rallyCap - (leader.marchCap || 0) : null,
+      avgG: ms.length ? ms.reduce(function(sum, p) { return sum + p.g; }, 0) / ms.length : 0,
+      vc: ms.filter(function(p) { return p.vc; }).length,
+      viv: riders.filter(function(p) { return p.vivian4; }).length,
+      monthly: ms.filter(function(p) { return p.monthly; }).length,
+      t11: ms.filter(function(p) { return p.t11n > 0; }).length,
+      unknown: ms.filter(function(p) { return p.timeUnknown; }).length,
+      warns: []
+    };
+    var slots = slotsOf(s);
+    st.slots = slots.map(function(m) {
+      var act = ms.filter(function(p) { return activeIn(p, m); });
+      return { start: m, count: act.length, viv: act.filter(function(p) { return p.vivian4 && p !== leader; }).length, monthly: act.filter(function(p) { return p.monthly; }).length };
+    });
+    if (draft.mode === "kvk" && t.kind === "rally") {
+      if (!leader) st.warns.push("リーダーが決まっていません");
+      else if (leader.rallyProv) st.warns.push("リーダーの集結容量は未入力のため" + (leader.provNone ? "0（等級なし）" : manP(leader, "rallyCap")) + "で計算しています");
+      else if (leader.rallyCap == null) st.warns.push("リーダーの集結容量が未入力です");
+      if (st.capLimit != null && st.riderCap > st.capLimit) st.warns.push("容量オーバー（" + man(st.riderCap - st.capLimit) + "多い）");
+      if (st.count && st.count < s.minSize) st.warns.push("人数が少なめ（" + st.count + "人／目安" + s.minSize + "〜" + s.maxSize + "人）");
+      if (st.count > s.maxSize) st.warns.push("人数が多め（" + st.count + "人／目安" + s.minSize + "〜" + s.maxSize + "人）");
+      var low = st.slots.filter(function(x) { return st.count && x.count < s.minSize; });
+      if (low.length && low.length < slots.length) st.warns.push(s.minSize + "人未満の時間帯: " + low.map(function(x) { return fmtMin(x.start); }).join("・"));
+      if (st.count && !st.viv) st.warns.push("◆（ビビアン星4以上）がいません");
+      if (s.topRule && index < 3) {
+        var ng = riders.filter(function(p) { return !(p.fullTime && p.vc); });
+        if (ng.length) st.warns.push("上位隊の条件（全部参加＋◇）に合わない人: " + ng.map(function(p) { return p.name; }).join("、"));
+      }
+    }
+    if (st.capMissing && draft.mode !== "sanmei") st.warns.push("出征容量が未入力の人が" + st.capMissing + "人");
+    if (st.unknown) st.warns.push("時間未定の人が" + st.unknown + "人");
+    return st;
+  }
+  function allStats() {
+    var stats = {};
+    draft.teams.forEach(function(t, i) { stats[t.id] = teamStats(t, i); });
+    // 上位隊の平均G: 第1隊 > 第2隊 > 第3隊 ≧ 第4隊
+    if (draft.mode === "kvk" && draft.settings.topRule) {
+      var rally = draft.teams.filter(function(t) { return t.kind === "rally"; });
+      for (var i = 1; i < Math.min(4, rally.length); i++) {
+        var a = stats[rally[i - 1].id], b = stats[rally[i].id];
+        if (!a.count || !b.count) continue;
+        if (i < 3 ? a.avgG <= b.avgG : a.avgG < b.avgG) b.warns.push("平均Gが" + teamName(rally[i - 1]) + "より高い（または同じ）");
+      }
+    }
+    return stats;
+  }
+
+  // ---------- 描画 ----------
+  // 分け方の表示：イベントの種類の標準の方式が基本。保存済みの方式が標準と違うとき（古いデータなど）だけ、
+  // その方式も選べるようにして、保存済みを壊さない。選べる方式が1つだけならプルダウンは出さず表示だけ
+  function renderMode() {
+    var std = MODE_BY_TYPE[(eventById(eventId) || {}).type] || "seiken";
+    var list = [std];
+    if (draft.mode && draft.mode !== std && MODE_LABELS[draft.mode]) list.push(draft.mode);
+    if (list.length === 1) {
+      $("modeLabel").style.display = "none";
+      $("modeText").textContent = "分け方：" + MODE_LABELS[list[0]];
+      return;
+    }
+    $("modeText").textContent = "";
+    $("modeSel").innerHTML = list.map(function(m) {
+      return '<option value="' + m + '">' + MODE_LABELS[m] + (m === std ? "（標準）" : "（保存済み）") + "</option>";
+    }).join("");
+    $("modeSel").value = draft.mode;
+    $("modeLabel").style.display = "";
+  }
+
+  function renderAll() {
+    if (!draft) return;
+    renderMode();
+    $("tabs").style.display = draft.mode === "ruins" || draft.mode === "seiken" ? "none" : "";
+    if (draft.mode === "ruins") { renderStatus(); renderRuins(); renderCarry(); return; }
+    if (draft.mode === "seiken") { renderStatus(); renderSeiken(); renderCarry(); return; }
+    renderStatus();
+    renderSettings();
+    renderCarry();
+    var stats = allStats();
+    var hints = {
+      board: "名前を押すと移動先を選べます（PCではドラッグ＆ドロップでも移せます）。📌は「固定」：自動振り分けで動かしません。",
+      table: "「チーム」の列で移動先を選べます。見出しを押すと並べ替えできます。",
+      slots: "30分ごとに、各チームで参加している人数です（リーダーを含む）。" + (draft.mode === "kvk" ? "色付きは目安の人数（" + draft.settings.minSize + "〜" + draft.settings.maxSize + "人）から外れている時間帯です。" : "")
+    };
+    $("tabHint").textContent = hints[tab];
+    Array.prototype.forEach.call(document.querySelectorAll("#tabs button"), function(b) { b.classList.toggle("active", b.dataset.tab === tab); });
+    if (tab === "board") renderBoard(stats);
+    else if (tab === "table") renderTable();
+    else renderSlots(stats);
+    $("outSlotsRow").style.display = "none";
+    $("outText").value = buildText();
+    renderMoveBar();
+  }
+
+  function renderStatus() {
+    var pill = $("statusPill"), txt = [];
+    var local = readOnly ? null : readLocal(); // 完了イベントは保存前の変更を持たない
+    var unsaved = local && JSON.stringify(local.draft) !== JSON.stringify(record ? record.draft : null);
+    if (record && record.published) {
+      var same = JSON.stringify(buildView()) === JSON.stringify(record.published);
+      pill.className = "status-pill " + (same && !unsaved ? "pub" : "stale");
+      pill.textContent = same && !unsaved ? "公開中" : "公開中（今の内容と違います）";
+      txt.push("公開: " + formatTime(record.publishedAt));
+    } else {
+      pill.className = "status-pill draft";
+      pill.textContent = "未公開";
+    }
+    if (record) txt.push("保存: " + formatTime(record.updatedAt));
+    if (unsaved) txt.push("※まだ保存していない変更があります");
+    if (readOnly) txt.push("🔒 完了したイベント（見るだけ）");
+    txt.push("参加者 " + people.length + "人（不参加を除く）");
+    $("statusText").textContent = txt.join("　");
+    // 固定の保存バー：完了イベントでは出さない。未保存のときは「まだ保存していない変更があります」
+    var bar = $("saveBar");
+    bar.className = readOnly || !draft ? "" : "show" + (unsaved ? " dirty" : "");
+    $("sbState").textContent = unsaved ? "● まだ保存していない変更があります" : "保存済み";
+    adjustSaveBar();
+  }
+  // 名前を押したときの移動バー（画面の下に出る）が出ているあいだは、その上に重ねる
+  function adjustSaveBar() {
+    var mb = $("moveBar"), bar = $("saveBar");
+    var h = mb && mb.style.display === "block" ? mb.offsetHeight : 0;
+    bar.style.bottom = (h + (window.innerWidth <= 600 ? 8 : 12)) + "px";
+  }
+
+  function renderSettings() {
+    var s = draft.settings, html = "";
+    var row = "";
+    // 戦闘時間：KVK・三盟では出さない（KVKは21:00〜26:00、三盟は21:00〜25:00で固定）
+    if (draft.mode !== "sanmei" && draft.mode !== "kvk") {
+      row += '<label class="inline">戦闘時間 <select data-set="start">' + timeOptions(s.start) + '</select> 〜 <select data-set="end">' + timeOptions(s.end) + "</select></label>";
+    }
+    if (draft.mode === "seiken") {
+      row += '<label class="inline">乗り手のチーム数 <input type="number" min="0" max="20" data-set="teamCount" value="' + draft.teams.filter(function(t) { return t.kind === "group"; }).length + '"></label>';
+    }
+    if (row) html += '<div class="row" style="margin-top:0;">' + row + "</div>";
+    if (draft.mode === "kvk") {
+      html += kvkTeamCountHtml() +
+        '<div class="note">自動振り分け：リーダーの集結容量（から本人の出征容量を引いた分）に収まるように、強い人（G→T11→出征容量の順）から番号の小さい隊へ詰め、あふれたら次の隊へ入れます。第1〜3隊は、リーダーを含めて8人まで、全部参加＋◇の人を強い順に入れます。◆（ビビアン星4以上）のいない隊には、◆が2人以上いる隊から1人回します。どこにも入らない人は「待機」、時間未定の人は「時間未定」に置きます。人数は8〜10人が目安で、外れたら注意を出すだけです（これらの決まりは固定です）。隊ごとの「同盟」（ひよこ／666）は、隊に付けるラベルです（自動振り分けでは使いません）。</div>' + kvkMonthlyHtml();
+    } else if (draft.mode === "seiken") {
+      html += '<div class="note">自動振り分け：集結部隊数を登録した人は「集結主」チームにまとめ、残りの人を、各チームの出征容量の合計がそろうように分けます。</div>';
+    } else {
+      html += '<div class="note">自動振り分け：参加者（不参加を除く）を、出征容量の合計がそろうように、上・中・下へ均等に分けます（📌固定の人は動かしません）。あとからボードか表で手で直せます（チーム名は変えられます）。前回の同じ種類のイベントがあれば、下の「前回と同じチームにする」も使えます。</div>';
+    }
+    $("settingsBody").innerHTML = html;
+    on("leaderFillBtn", "click", function() {
+      if (readOnly) return;
+      setMsg($("autoMsg"), fillKvkLeaders(), true);
+      changed();
+    });
+    on("tcBtn", "click", function() {
+      if (readOnly) return;
+      var msg = applyKvkTeamCounts();
+      setMsg($("autoMsg"), msg, true);
+      changed();
+    });
+    Array.prototype.forEach.call($("settingsBody").querySelectorAll("[data-set]"), function(el) {
+      el.addEventListener("change", function() {
+        var k = el.dataset.set;
+        if (el.type === "checkbox") s[k] = el.checked;
+        else if (k === "teamCount") return setGroupCount(Number(el.value));
+        else s[k] = Number(el.value);
+        if (s.end <= s.start) s.end = s.start + 30;
+        changed();
+      });
+    });
+
+    var auto = "";
+    if (draft.mode === "kvk") {
+      auto += '<button type="button" id="autoBtn">🤖 自動で振り分ける</button>' +
+        '<button type="button" class="sub" id="rebuildBtn">👑 隊を作り直す（集結容量の大きい順）</button>';
+    } else if (draft.mode === "sanmei") {
+      auto += '<button type="button" id="autoBtn">🤖 自動で上・中・下に分ける</button>';
+    } else if (draft.mode === "seiken") {
+      auto += '<button type="button" id="autoBtn">🤖 自動で振り分ける</button>';
+    }
+    auto += '<button type="button" class="sub" id="addTeamBtn">＋ ' + (draft.mode === "kvk" ? "隊" : "チーム") + "を追加</button>" +
+      '<button type="button" class="sub" id="clearBtn">↩ 割り当てを外す（📌以外）</button>';
+    $("autoRow").innerHTML = auto;
+    on("autoBtn", "click", function() {
+      var msg = draft.mode === "kvk" ? autoKvk() : draft.mode === "sanmei" ? autoSanmei() : autoSeiken();
+      setMsg($("autoMsg"), msg, msg.indexOf("振り分けました") === 0);
+      changed();
+    });
+    on("rebuildBtn", "click", function() {
+      if (!confirm("集結部隊数を登録した人をリーダーにして、隊を作り直します。今の割り当て（📌も含む）はすべて外れます。よろしいですか？")) return;
+      var s0 = draft.settings;
+      draft = newDraft("kvk");
+      draft.settings = s0;
+      setMsg($("autoMsg"), draft.teams.length + "隊を作りました。「自動で振り分ける」で乗り手を入れられます", true);
+      changed();
+    });
+    on("addTeamBtn", "click", function() {
+      draft.teams.push({ id: newId(), kind: draft.mode === "kvk" ? "rally" : "group", name: draft.mode === "sanmei" ? "新しいチーム" : "", leaderId: "" });
+      changed();
+    });
+    on("clearBtn", "click", function() {
+      if (!confirm("📌（固定）とリーダー以外の割り当てを外します。よろしいですか？")) return;
+      var leaders = {};
+      draft.teams.forEach(function(t) { if (t.leaderId) leaders[t.leaderId] = true; });
+      people.forEach(function(p) { if (!isPinned(p.uid) && !leaders[p.uid]) delete draft.assign[p.uid]; });
+      changed();
+    });
+  }
+
+  function setGroupCount(n) {
+    n = Math.max(0, Math.min(20, Math.floor(n) || 0));
+    var groups = draft.teams.filter(function(t) { return t.kind === "group"; });
+    while (groups.length < n) { var t = { id: newId(), kind: "group", name: "", leaderId: "" }; draft.teams.push(t); groups.push(t); }
+    while (groups.length > n) {
+      var last = groups.pop();
+      membersOf(last.id).forEach(function(p) { delete draft.assign[p.uid]; });
+      draft.teams.splice(draft.teams.indexOf(last), 1);
+    }
+    draft.settings.teamCount = n;
+    changed();
+  }
+
+  function marks(p) { return (p.monthly ? "◯" : "") + (p.vc ? "◇" : "") + (p.vivian4 ? "◆" : ""); }
+  function chipHtml(p, t) {
+    var isLeader = t && t.leaderId === p.uid;
+    var cap = isLeader ? "集結" + manP(p, "rallyCap") : draft.mode === "sanmei" ? "" : manP(p, "marchCap");
+    var tl = timeLabel(p);
+    var cls = "chip" + (isLeader ? " leader" : "") + (p.uid === selectedUid ? " sel" : "") + (p.timeUnknown ? " unknown" : "");
+    return '<div class="' + cls + '" draggable="true" data-uid="' + escapeHtml(p.uid) + '" title="' + escapeHtml(p.note) + '">' +
+      (isLeader ? "👑" : "") + (isPinned(p.uid) ? "📌" : "") + "<b>" + escapeHtml(p.name) + "</b> " +
+      '<span class="mk">' + marks(p) + "</span><br>" +
+      '<span class="m">' + escapeHtml(p.alliance) + "・" + escapeHtml(p.grade) + (p.t11n ? "・T11" + escapeHtml(p.troops) : "") + (cap ? "・" + cap : "") + (p.isRallyer && !isLeader && draft.mode === "kvk" ? "・集結可" : "") + "</span>" +
+      (tl ? ' <span class="tm">' + escapeHtml(tl) + "</span>" : "") +
+      "</div>";
+  }
+  function sortForTeam(list, t) {
+    return list.slice().sort(function(a, b) {
+      if (t && a.uid === t.leaderId) return -1;
+      if (t && b.uid === t.leaderId) return 1;
+      function both(p) { return p.vc && p.vivian4 ? 0 : p.vc || p.vivian4 ? 1 : 2; }
+      return (both(a) - both(b)) || (b.g - a.g) || (a.order - b.order);
+    });
+  }
+
+  function renderBoard(stats) {
+    var html = '<div class="board">';
+    draft.teams.forEach(function(t, i) {
+      var st = stats[t.id];
+      html += '<div class="team" data-drop="' + t.id + '">' +
+        '<div class="team-head"><div class="team-title"><b>' + escapeHtml(teamName(t)) + "</b>" + (t.ally ? '<span class="status-pill pub">' + escapeHtml(t.ally) + "</span>" : "") +
+        '<span class="note">' + st.count + "人</span>" +
+        '<span class="tools">' +
+          '<button type="button" class="sub mini" data-act="up" data-id="' + t.id + '"' + (i === 0 ? " disabled" : "") + ">↑</button>" +
+          '<button type="button" class="sub mini" data-act="down" data-id="' + t.id + '"' + (i === draft.teams.length - 1 ? " disabled" : "") + ">↓</button>" +
+          '<button type="button" class="sub mini" data-act="rename" data-id="' + t.id + '">✏️</button>' +
+          '<button type="button" class="sub mini" data-act="del" data-id="' + t.id + '">✕</button>' +
+        "</span></div>";
+      if (t.kind === "rally") {
+        html += '<div class="leader-row">リーダー <select data-leader="' + t.id + '"><option value="">（選ぶ）</option>' +
+          people.slice().sort(function(a, b) { return (b.isRallyer - a.isRallyer) || ((b.rallyCap || 0) - (a.rallyCap || 0)) || strongerFirst(a, b); }).map(function(p) {
+            return '<option value="' + escapeHtml(p.uid) + '"' + (p.uid === t.leaderId ? " selected" : "") + ">" + escapeHtml(p.name) + (p.rallyCap != null ? "（集結" + manP(p, "rallyCap") + "）" : "") + "</option>";
+          }).join("") + "</select>" +
+          ' 同盟 <select data-ally="' + t.id + '"><option value="">（未設定）</option>' + KVK_ALLIANCES.map(function(a) {
+            return '<option value="' + escapeHtml(a.label) + '"' + (t.ally === a.label ? " selected" : "") + ">" + escapeHtml(a.label) + "</option>";
+          }).join("") + "</select></div>";
+      }
+      var line = [];
+      if (draft.mode !== "sanmei") {
+        var provMark = st.provN ? "（仮置き" + st.provN + "人を含む）" : "";
+        if (st.capLimit != null) line.push("容量 " + man(st.riderCap) + "／" + man(st.capLimit) + provMark);
+        else line.push("出征容量 計" + man(st.riderCap) + provMark);
+      }
+      line.push("平均G " + (st.count ? st.avgG.toFixed(2) : "—"), "◇" + st.vc, "◆" + st.viv, "◯" + st.monthly, "T11 " + st.t11);
+      html += '<div class="team-stats">' + line.map(function(x) { return "<span>" + x + "</span>"; }).join("") + "</div>";
+      if (st.capLimit != null) {
+        var pct = st.capLimit > 0 ? Math.min(100, st.riderCap / st.capLimit * 100) : 100;
+        html += '<div class="cap-bar"><i class="' + (st.riderCap > st.capLimit ? "over" : "") + '" style="width:' + pct.toFixed(1) + '%"></i></div>';
+      }
+      if (st.warns.length) html += '<div class="team-warn">' + st.warns.map(function(w) { return "<div>" + escapeHtml(w) + "</div>"; }).join("") + "</div>";
+      html += "</div>" + teamBody(membersOf(t.id), t) + "</div>";
+    });
+    html += specialBox("", "📥 未割り当て", "まだどのチームにも入っていない人です");
+    if (draft.mode === "kvk") {
+      html += specialBox("standby", "🪑 待機", "容量に入りきらなかった人など");
+      html += specialBox("pending", "❔ 時間未定", "参加時間が決まっていない人（途中参加で時刻なし など）");
+    } else {
+      html += specialBox("standby", "🪑 待機", "どのチームにも入れない人");
+    }
+    html += "</div>";
+    $("viewArea").innerHTML = html;
+    bindBoard();
+  }
+  function teamBody(list, t) {
+    var ms = sortForTeam(list, t);
+    return '<div class="team-body">' + (ms.length ? ms.map(function(p) { return chipHtml(p, t); }).join("") : '<span class="empty-hint">ここに入れる</span>') + "</div>";
+  }
+  function specialBox(place, title, hint) {
+    var ms = membersOf(place);
+    if (place === "pending" && !ms.length && draft.mode !== "kvk") return "";
+    return '<div class="team special" data-drop="' + (place || "none") + '"><div class="team-head"><div class="team-title"><b>' + title + '</b><span class="note">' + ms.length + "人</span></div>" +
+      '<div class="team-stats">' + escapeHtml(hint) + "</div></div>" + teamBody(ms.sort(strongerFirst), null) + "</div>";
+  }
+
+  function moveTo(uid, place) {
+    var p = byUid[uid];
+    if (!p) return;
+    var target = place === "none" ? "" : place;
+    draft.teams.forEach(function(t) { if (t.leaderId === uid && t.id !== target) t.leaderId = ""; });
+    if (target) draft.assign[uid] = target;
+    else delete draft.assign[uid];
+  }
+
+  function bindBoard() {
+    var area = $("viewArea");
+    Array.prototype.forEach.call(area.querySelectorAll(".chip"), function(c) {
+      c.addEventListener("click", function(e) {
+        e.stopPropagation();
+        if (readOnly) return;
+        selectedUid = selectedUid === c.dataset.uid ? "" : c.dataset.uid;
+        renderAll();
+      });
+      c.addEventListener("dragstart", function(e) { e.dataTransfer.setData("text/plain", c.dataset.uid); });
+    });
+    Array.prototype.forEach.call(area.querySelectorAll("[data-drop]"), function(box) {
+      box.addEventListener("dragover", function(e) { e.preventDefault(); box.classList.add("drop-ok"); });
+      box.addEventListener("dragleave", function() { box.classList.remove("drop-ok"); });
+      box.addEventListener("drop", function(e) {
+        e.preventDefault();
+        var uid = e.dataTransfer.getData("text/plain");
+        if (!uid) return;
+        moveTo(uid, box.dataset.drop);
+        selectedUid = "";
+        changed();
+      });
+    });
+    Array.prototype.forEach.call(area.querySelectorAll("[data-act]"), function(b) {
+      b.addEventListener("click", function() { teamAction(b.dataset.act, b.dataset.id); });
+    });
+    Array.prototype.forEach.call(area.querySelectorAll("[data-ally]"), function(sel) {
+      sel.addEventListener("change", function() {
+        if (readOnly) return;
+        var t = teamById(sel.dataset.ally);
+        if (!t) return;
+        t.ally = sel.value;     // 隊に付ける同盟ラベル（自動振り分けでは使わない。表示・集計のためのラベル）
+        changed();
+      });
+    });
+    Array.prototype.forEach.call(area.querySelectorAll("[data-leader]"), function(sel) {
+      sel.addEventListener("change", function() { setLeader(sel.dataset.leader, sel.value); });
+    });
+  }
+
+  function setLeader(teamId, uid) {
+    var t = teamById(teamId);
+    if (!t) return;
+    if (uid) {
+      draft.teams.forEach(function(x) { if (x !== t && x.leaderId === uid) x.leaderId = ""; });
+      draft.assign[uid] = t.id;
+      draft.pins[uid] = true;
+    }
+    t.leaderId = uid;
+    changed();
+  }
+
+  function teamAction(act, id) {
+    var t = teamById(id);
+    if (!t) return;
+    var i = draft.teams.indexOf(t);
+    if (act === "up" && i > 0) { draft.teams.splice(i, 1); draft.teams.splice(i - 1, 0, t); }
+    if (act === "down" && i < draft.teams.length - 1) { draft.teams.splice(i, 1); draft.teams.splice(i + 1, 0, t); }
+    if (act === "rename") {
+      var n = prompt("チーム名（空欄にすると自動の名前「" + (t.kind === "rally" ? "第" + (i + 1) + "隊" : "Aチーム など") + "」に戻ります）", t.name || teamName(t));
+      if (n === null) return;
+      t.name = n.trim().slice(0, 20);
+    }
+    if (act === "del") {
+      membersOf(t.id).forEach(function(p) { delete draft.assign[p.uid]; });   // 確認なしで消す。入っていた人は未割り当てに戻る
+      draft.teams.splice(i, 1);
+      if (t.kind === "group") draft.settings.teamCount = draft.teams.filter(function(x) { return x.kind === "group"; }).length;
+    }
+    changed();
+  }
+
+  // 名前を押したときに下に出る移動先のボタン（スマホ向け）
+  function renderMoveBar() {
+    var bar = $("moveBar");
+    var p = byUid[selectedUid];
+    if (readOnly || !p || tab !== "board") { bar.style.display = "none"; return; }
+    bar.style.display = "block";
+    $("moveName").textContent = p.name;
+    $("pinBtn").textContent = isPinned(p.uid) ? "📌 固定を外す" : "📌 固定する";
+    var here = placeOf(p.uid);
+    var targets = draft.teams.map(function(t) { return [t.id, teamName(t)]; }).concat([["standby", "🪑 待機"]]);
+    if (draft.mode === "kvk") targets.push(["pending", "❔ 時間未定"]);
+    targets.push(["none", "📥 未割り当て"]);
+    $("moveTargets").innerHTML = targets.map(function(x) {
+      var cur = x[0] === here || (x[0] === "none" && !here);
+      return '<button type="button" data-to="' + x[0] + '"' + (cur ? ' class="here"' : "") + ">" + escapeHtml(x[1]) + (cur ? "（今ここ）" : "") + "</button>";
+    }).join("");
+    Array.prototype.forEach.call($("moveTargets").querySelectorAll("[data-to]"), function(b) {
+      b.addEventListener("click", function() {
+        moveTo(selectedUid, b.dataset.to);
+        selectedUid = "";
+        changed();
+      });
+    });
+  }
+
+  function renderTable() {
+    var alliances = {};
+    people.forEach(function(p) { alliances[p.alliance] = true; });
+    var rows = people.filter(function(p) { return !tableAlliance || p.alliance === tableAlliance; });
+    var order = {};
+    draft.teams.forEach(function(t, i) { order[t.id] = i; });
+    order.standby = 900; order.pending = 901; order[""] = 999;
+    var keyFn = {
+      team: function(p) { return order[placeOf(p.uid)]; },
+      name: function(p) { return p.name; },
+      alliance: function(p) { return p.alliance; },
+      g: function(p) { return -p.g; },
+      t11: function(p) { return -t11Rank(p); },
+      march: function(p) { return -(p.marchCap || 0); },
+      rally: function(p) { return -(p.rallyCap || 0); },
+      time: function(p) { return p.timeUnknown ? 2 : p.fullTime ? 0 : 1; }
+    }[tableSort.key];
+    rows.sort(function(a, b) {
+      var x = keyFn(a), y = keyFn(b);
+      var c = typeof x === "string" ? x.localeCompare(y) : x - y;
+      return c * tableSort.dir || strongerFirst(a, b);
+    });
+    var leaders = {};
+    draft.teams.forEach(function(t) { if (t.leaderId) leaders[t.leaderId] = t; });
+    var opts = draft.teams.map(function(t) { return [t.id, teamName(t)]; }).concat([["standby", "待機"]]);
+    if (draft.mode === "kvk") opts.push(["pending", "時間未定"]);
+    opts.push(["", "（未割り当て）"]);
+    function th(key, label, num) {
+      return '<th data-sort="' + key + '"' + (num ? ' class="num"' : "") + ">" + label + (tableSort.key === key ? (tableSort.dir > 0 ? " ▲" : " ▼") : "") + "</th>";
+    }
+    var html = '<div class="card"><div class="row" style="margin-top:0;margin-bottom:8px;"><label class="inline">同盟 <select id="tblAlliance"><option value="">すべて</option>' +
+      Object.keys(alliances).sort().map(function(a) { return '<option value="' + escapeHtml(a) + '"' + (a === tableAlliance ? " selected" : "") + ">" + escapeHtml(a) + "</option>"; }).join("") +
+      '</select></label><span class="note">' + rows.length + "人</span></div>" +
+      '<div class="tbl-wrap"><table><thead><tr>' + th("team", "チーム") + "<th>📌</th>" + th("alliance", "同盟") + th("name", "名前") + th("g", "区分") +
+      "<th>印</th>" + th("t11", "T11") + th("time", "時間") + th("march", "出征容量", true) + th("rally", "集結容量", true) + "</tr></thead><tbody>";
+    rows.forEach(function(p) {
+      var here = placeOf(p.uid);
+      html += "<tr" + (leaders[p.uid] ? ' class="is-leader"' : "") + "><td><select data-assign=\"" + escapeHtml(p.uid) + '">' +
+        opts.map(function(o) { return '<option value="' + o[0] + '"' + (o[0] === here ? " selected" : "") + ">" + escapeHtml(o[1]) + "</option>"; }).join("") + "</select>" +
+        (leaders[p.uid] ? " 👑" : "") + "</td>" +
+        '<td><input type="checkbox" data-pin="' + escapeHtml(p.uid) + '"' + (isPinned(p.uid) ? " checked" : "") + "></td>" +
+        "<td>" + escapeHtml(p.alliance) + "</td><td>" + escapeHtml(p.name) + "</td><td>" + escapeHtml(p.grade) + "</td><td>" + marks(p) + "</td>" +
+        "<td>" + (p.t11n ? escapeHtml(p.troops) : "") + "</td><td>" + escapeHtml(timeLabel(p) || "全部") + "</td>" +
+        '<td class="num">' + manP(p, "marchCap") + '</td><td class="num">' + (p.rallyCap != null ? manP(p, "rallyCap") : "") + "</td></tr>";
+    });
+    html += "</tbody></table></div></div>";
+    $("viewArea").innerHTML = html;
+    on("tblAlliance", "change", function() { tableAlliance = $("tblAlliance").value; renderAll(); });
+    Array.prototype.forEach.call($("viewArea").querySelectorAll("[data-sort]"), function(h) {
+      h.addEventListener("click", function() {
+        tableSort = { key: h.dataset.sort, dir: tableSort.key === h.dataset.sort ? -tableSort.dir : 1 };
+        renderAll();
+      });
+    });
+    Array.prototype.forEach.call($("viewArea").querySelectorAll("[data-assign]"), function(sel) {
+      sel.addEventListener("change", function() { moveTo(sel.dataset.assign, sel.value || "none"); changed(); });
+    });
+    Array.prototype.forEach.call($("viewArea").querySelectorAll("[data-pin]"), function(cb) {
+      cb.addEventListener("change", function() {
+        if (cb.checked) draft.pins[cb.dataset.pin] = true;
+        else delete draft.pins[cb.dataset.pin];
+        changed();
+      });
+    });
+  }
+
+  function renderSlots(stats) {
+    var s = draft.settings, slots = slotsOf(s), kvk = draft.mode === "kvk";
+    var html = '<div class="card"><div class="tbl-wrap"><table class="slots"><thead><tr><th>チーム</th>' +
+      slots.map(function(m) { return "<th>" + fmtMin(m) + "〜</th>"; }).join("") + "</tr></thead><tbody>";
+    draft.teams.forEach(function(t) {
+      var st = stats[t.id];
+      html += "<tr><td><b>" + escapeHtml(teamName(t)) + "</b>（" + st.count + "人）</td>" + st.slots.map(function(x) {
+        var cls = !x.count ? "zero" : kvk && t.kind === "rally" && x.count < s.minSize ? "low" : kvk && t.kind === "rally" && x.count > s.maxSize ? "high" : "";
+        return '<td class="' + cls + '">' + x.count + (kvk && t.kind === "rally" && x.count && !x.viv ? '<span class="viv-miss">◆なし</span>' : "") + "</td>";
+      }).join("") + "</tr>";
+    });
+    var all = people.filter(function(p) { var pl = placeOf(p.uid); return pl && pl !== "standby" && pl !== "pending"; });
+    html += '<tr><td class="note">チームに入っている人の合計</td>' + slots.map(function(m) { return "<td>" + all.filter(function(p) { return activeIn(p, m); }).length + "</td>"; }).join("") + "</tr>";
+    html += '<tr><td class="note">参加者全員（時間未定を除く）</td>' + slots.map(function(m) { return "<td>" + people.filter(function(p) { return activeIn(p, m); }).length + "</td>"; }).join("") + "</tr>";
+    html += "</tbody></table></div>";
+    var unknown = people.filter(function(p) { return p.timeUnknown; });
+    if (unknown.length) html += '<div class="note" style="margin-top:8px;">時間未定（この表には数えていません）: ' + unknown.map(function(p) { return escapeHtml(p.name); }).join("、") + "</div>";
+    var partial = people.filter(function(p) { return !p.fullTime && !p.timeUnknown; });
+    if (partial.length) html += '<div class="note" style="margin-top:4px;">一部参加: ' + partial.map(function(p) { return escapeHtml(p.name) + "（" + escapeHtml(timeLabel(p)) + "）"; }).join("、") + "</div>";
+    html += "</div>";
+    $("viewArea").innerHTML = html;
+  }
+
+  // ---------- Discord用テキストと公開用データ ----------
+  function memberLabel(p) {
+    var tl = timeLabel(p);
+    return p.name + (p.vc ? "◇" : "") + (p.vivian4 ? "◆" : "") + (tl ? "(" + tl + ")" : "");
+  }
+  // 公開用（閲覧ページ・参加登録ページ）。ユーザーIDではなく表示に使う値を埋め込む
+  function buildView() {
+    if (draft.mode === "ruins") return buildRuinsView();
+    if (draft.mode === "seiken") return buildSeikenView();
+    // 公開用の印は◇（VC）◆（ビビアン）だけ。◯（マンスリー＝課金の状況）は公開しない
+    function person(p, leader) {
+      return { name: p.name, alliance: p.alliance, grade: p.grade, marks: (p.vc ? "◇" : "") + (p.vivian4 ? "◆" : ""), time: timeLabel(p), leader: !!leader };
+    }
+    var ev = eventById(eventId);
+    return {
+      mode: draft.mode,
+      title: eventLabel(ev),
+      battle: draft.mode === "sanmei" ? "" : fmtMin(draft.settings.start) + "〜" + fmtMin(draft.settings.end) + (draft.settings.end >= 1440 ? "（翌" + fmtMin(draft.settings.end - 1440) + "）" : ""),
+      teams: draft.teams.map(function(t) {
+        var l = leaderOf(t);
+        return {
+          name: teamName(t), kind: t.kind, leader: l ? l.name : "", ally: t.ally || "",
+          members: sortForTeam(membersOf(t.id), t).map(function(p) { return person(p, p === l); })
+        };
+      }),
+      // 同盟ごとのマンスリー持ちの人数と合計分数だけ（誰が◯かは出さない）
+      monthly: draft.mode === "kvk" ? kvkMonthly().map(function(m) { return { label: m.label, count: m.count, minutes: m.minutes, per: MONTHLY_MIN }; }) : [],
+      standby: membersOf("standby").sort(strongerFirst).map(function(p) { return person(p); }),
+      pending: membersOf("pending").sort(strongerFirst).map(function(p) { return person(p); }),
+      text: buildText()
+    };
+  }
+
+  function buildText() {
+    if (draft.mode === "ruins") return buildRuinsText();
+    if (draft.mode === "seiken") return buildSeikenText();
+    var lines = [], blocks = [];
+    var ev = eventById(eventId);
+    function flush() { if (lines.length) { blocks.push("```\n" + lines.join("\n") + "\n```"); lines = []; } }
+    function push(group) {
+      // 1つのコードブロックは10行まで（チームの途中で切らない）
+      if (lines.length && lines.length + group.length > 10) flush();
+      lines = lines.concat(group);
+    }
+    draft.teams.forEach(function(t) {
+      var l = leaderOf(t);
+      var ms = sortForTeam(membersOf(t.id), t).filter(function(p) { return p !== l; });
+      var head = draft.mode === "kvk" && t.kind === "rally"
+        ? teamName(t) + (t.ally ? "（" + t.ally + "）" : "") + " リーダー:" + (l ? memberLabel(l) : "未定") + "（" + (ms.length + (l ? 1 : 0)) + "人）"
+        : "【" + teamName(t) + "】（" + ms.length + "人）";
+      push([head, ms.length ? ms.map(memberLabel).join("、") : "（なし）"]);
+    });
+    var standby = membersOf("standby").sort(strongerFirst), pending = membersOf("pending").sort(strongerFirst);
+    if (standby.length) push(["待機（" + standby.length + "人）", standby.map(memberLabel).join("、")]);
+    if (pending.length) push(["時間未定（" + pending.length + "人）", pending.map(memberLabel).join("、")]);
+    flush();
+    return "■ " + eventLabel(ev) + " チーム分け\n" + blocks.join("\n") + "\n※括弧内は参加時間。記載なしは全時間。◇=VC参加OK ◆=ビビアン星4以上";
+  }
+
+  // ---------- 遺跡争奪 ----------
+  // 時間帯（12・18・22・23・25時）ごとに、その時間に参加する人（slots が yes／maybe）だけで要塞・遺跡に分ける。
+  // 対象の要塞・遺跡はイベントの ruinTargets（イベント作成画面で設定）。1か所 RUIN_CAP 人まで、集結主を含む。
+  // 下書きは draft.ruins.slots[時間] = { assign: {uid: "要塞1"|…|"standby"}, leaders: {"要塞1": uid}, pins: {uid: true} }
+  function curSlot() {
+    var withT = RUIN_SLOTS.filter(function(k) { return targetsFor(k).length; });
+    if (RUIN_SLOTS.indexOf(draft.ruins.cur) < 0) draft.ruins.cur = withT[0] || RUIN_SLOTS[0];
+    return draft.ruins.cur;
+  }
+  function ruinTargetsSource() {
+    var t = (eventById(eventId) || {}).ruinTargets;
+    if (t && RUIN_SLOTS.some(function(k) { return (t[k] || []).length; })) return { from: "event", map: t };
+    return { from: "draft", map: draft.ruins.targets || {} };
+  }
+  function targetsFor(k) {
+    var list = ruinTargetsSource().map[k] || [];
+    return RUIN_TARGETS.filter(function(x) { return list.indexOf(x) >= 0; });
+  }
+  function ruinState(k) {
+    var s = draft.ruins.slots[k] = draft.ruins.slots[k] || {};
+    s.assign = s.assign || {}; s.leaders = s.leaders || {}; s.pins = s.pins || {};
+    return s;
+  }
+  function slotStatus(p, k) { var v = p.slots[k]; return v === "yes" || v === "maybe" ? v : ""; }
+  function inSlot(k) { return people.filter(function(p) { return slotStatus(p, k); }); }
+  // 参加する時間帯の数（対象のある時間帯だけで数える）。少ない人ほど優先して入れる
+  function partCount(p) {
+    var keys = RUIN_SLOTS.filter(function(k) { return targetsFor(k).length; });
+    if (!keys.length) keys = RUIN_SLOTS;
+    return keys.filter(function(k) { return slotStatus(p, k); }).length;
+  }
+  // シャッフル用の決まった乱数（同じ seed なら毎回同じ並び。「🎲 シャッフルし直す」で seed を変える）
+  function rnd(key) {
+    var h = 2166136261, s = draft.ruins.seed + "|" + key;
+    for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return ((h >>> 0) % 1000003) / 1000003;
+  }
+  function ruinPlaceOf(k, uid) {
+    var a = ruinState(k).assign[uid];
+    return a === "standby" || targetsFor(k).indexOf(a) >= 0 ? a : "";
+  }
+  function ruinMembers(k, place) { return inSlot(k).filter(function(p) { return ruinPlaceOf(k, p.uid) === place; }); }
+  function ruinLeader(k, target) {
+    var uid = ruinState(k).leaders[target];
+    return uid && byUid[uid] && ruinPlaceOf(k, uid) === target ? byUid[uid] : null;
+  }
+  // 集結主の候補の並び：直近のKVKの集結容量の大きい順 → 区分 → 出征容量
+  function leaderOrder(a, b) {
+    return ((b.rallyCap == null ? -1 : b.rallyCap) - (a.rallyCap == null ? -1 : a.rallyCap)) || (b.g - a.g) ||
+      ((b.marchCap || 0) - (a.marchCap || 0)) || (a.order - b.order);
+  }
+  // 要塞に均等に入れてから、余りを遺跡に均等（1か所 RUIN_CAP 人まで）
+  function desiredCounts(T, n) {
+    var forts = T.filter(function(x) { return x.indexOf("要塞") === 0; }), ruins = T.filter(function(x) { return x.indexOf("遺跡") === 0; });
+    var out = {};
+    function spread(list, total) {
+      list.forEach(function(x, i) { out[x] = Math.floor(total / list.length) + (i < total % list.length ? 1 : 0); });
+    }
+    var toForts = Math.min(n, RUIN_CAP * forts.length);
+    if (forts.length) spread(forts, toForts);
+    if (ruins.length) spread(ruins, Math.min(n - toForts, RUIN_CAP * ruins.length));
+    return out;
+  }
+
+  // その人が、ほかの時間帯（k以外）で要塞に入っている回数（今の割り当てから数える。時間帯の割り当てを作るときの目安）
+  function fortCountOf(uid, k) {
+    var n = 0;
+    RUIN_SLOTS.forEach(function(s) {
+      if (s === k) return;
+      var st = draft.ruins.slots[s], a = st && st.assign && st.assign[uid];
+      if (a && a.indexOf("要塞") === 0 && targetsFor(s).indexOf(a) >= 0) n++;
+    });
+    return n;
+  }
+
+  // 時間帯kの割り当てを外す（📌固定した人の場所と、固定した集結主は残す。その時間に参加しなくなった人の分は消す）
+  function clearSlot(k) {
+    var T = targetsFor(k), st = ruinState(k), P = inSlot(k), inP = {};
+    P.forEach(function(p) { inP[p.uid] = true; });
+    Object.keys(st.assign).forEach(function(u) { if (!inP[u]) { delete st.assign[u]; delete st.pins[u]; } });
+    P.forEach(function(p) { if (!st.pins[p.uid]) delete st.assign[p.uid]; });
+    Object.keys(st.leaders).forEach(function(t) {
+      var uid = st.leaders[t];
+      if (T.indexOf(t) < 0 || !st.pins[uid] || ruinPlaceOf(k, uid) !== t) delete st.leaders[t];
+    });
+  }
+
+  // 全部の時間帯：先に全部の割り当てを外してから、時間帯の順（12→18→22…）に振り分ける。
+  // あとの時間帯ほど、前の時間帯で要塞に入った回数が反映される
+  function autoRuinsAll() {
+    var slots = RUIN_SLOTS.filter(function(s) { return targetsFor(s).length; });
+    slots.forEach(clearSlot);
+    return slots.map(autoRuins);
+  }
+
+  function autoRuins(k) {
+    var T = targetsFor(k);
+    if (!T.length) return slotLabel(k) + "は対象の要塞・遺跡がありません";
+    clearSlot(k);
+    var st = ruinState(k), P = inSlot(k);
+    var want = desiredCounts(T, Math.min(P.length, RUIN_CAP * T.length));
+    function count(t) { return P.filter(function(p) { return st.assign[p.uid] === t; }).length; }
+    // 1) 集結主を先に決める（人が入る場所だけ。「参加」の人から、集結容量の大きい順）
+    T.forEach(function(t) {
+      if (!want[t] || ruinLeader(k, t)) return;
+      var c = P.filter(function(p) { return slotStatus(p, k) === "yes" && !st.assign[p.uid]; }).sort(leaderOrder)[0];
+      if (!c) return;
+      st.leaders[t] = c.uid;
+      st.assign[c.uid] = t;
+    });
+    // 2) 残りの人を優先度順に並べる：参加 → 行けるかも、それぞれ参加する時間帯の少ない人から（同じならランダム）
+    var pool = P.filter(function(p) { return !st.assign[p.uid]; }).sort(function(a, b) {
+      return ((slotStatus(a, k) === "maybe") - (slotStatus(b, k) === "maybe")) || (partCount(a) - partCount(b)) || (rnd(k + a.uid) - rnd(k + b.uid));
+    });
+    // 3) 空いている席（場所ごとの目標人数 − 今いる人数）を、要塞の席・遺跡の席に分けて、それぞれ場所はランダムな順に並べる。
+    //    固定した人が多い場所があって目標どおりに入りきらないときは、15人に空きがある場所で補う（要塞→遺跡の順）
+    var fortSeats = [], ruinSeats = [], spareF = [], spareR = [];
+    function byR(a, b) { return a.r - b.r; }
+    T.forEach(function(t) {
+      var c = count(t), fort = t.indexOf("要塞") === 0;
+      for (var i = c; i < (want[t] || 0); i++) (fort ? fortSeats : ruinSeats).push({ t: t, r: rnd(k + t + i) });
+      for (var j = Math.max(c, want[t] || 0); j < RUIN_CAP; j++) (fort ? spareF : spareR).push({ t: t, r: j + rnd(k + t + "x" + j) });
+    });
+    var seats = fortSeats.sort(byR).concat(ruinSeats.sort(byR), spareF.sort(byR), spareR.sort(byR));
+    var chosen = pool.slice(0, seats.length), extra = pool.slice(seats.length);
+    // 要塞の席には、ほかの時間帯で要塞に入った回数が少ない人から。同じなら参加する時間帯の数が少ない人から。
+    // それも同じなら「参加」の人を先に、最後はランダム（同順位のときだけ）。入りきらない人は遺跡の席へ回る
+    var fc = {};
+    chosen.forEach(function(p) { fc[p.uid] = fortCountOf(p.uid, k); });
+    chosen.sort(function(a, b) {
+      return (fc[a.uid] - fc[b.uid]) || (partCount(a) - partCount(b)) ||
+        ((slotStatus(a, k) === "maybe") - (slotStatus(b, k) === "maybe")) || (rnd(k + "deal" + a.uid) - rnd(k + "deal" + b.uid));
+    }).forEach(function(p, i) { st.assign[p.uid] = seats[i].t; });
+    extra.forEach(function(p) { st.assign[p.uid] = "standby"; });
+    return slotLabel(k) + "を振り分けました（" + (P.length - extra.length) + "人" + (extra.length ? "、入りきらない " + extra.length + "人は待機" : "") + "）";
+  }
+
+  function ruinWarns(k, t) {
+    var ms = ruinMembers(k, t), l = ruinLeader(k, t), w = [];
+    if (ms.length > RUIN_CAP) w.push(RUIN_CAP + "人を超えています（" + ms.length + "人）");
+    if (ms.length && !l) w.push("集結主が決まっていません");
+    if (l && slotStatus(l, k) === "maybe") w.push("集結主が「行けるかも（△）」です");
+    if (l && l.rallyCap == null) w.push("集結主の集結容量が分かりません（直近のKVKで集結の登録なし）");
+    return w;
+  }
+
+  function ruinChip(p, k, isLeader) {
+    var st = ruinState(k), maybe = slotStatus(p, k) === "maybe";
+    var cls = "chip" + (isLeader ? " leader" : "") + (p.uid === selectedUid ? " sel" : "") + (maybe ? " unknown" : "");
+    var info = [escapeHtml(p.alliance)];
+    if (p.fromKvk) info.push(escapeHtml(p.grade));
+    if (isLeader || p.rallyCap != null) info.push(p.rallyCap != null ? "集結" + man(p.rallyCap) : "集結—");
+    info.push("参加" + partCount(p) + "回");
+    return '<div class="' + cls + '" draggable="true" data-uid="' + escapeHtml(p.uid) + '" title="' + escapeHtml(p.note) + '">' +
+      (isLeader ? "👑" : "") + (st.pins[p.uid] ? "📌" : "") + "<b>" + escapeHtml(p.name) + "</b>" + (maybe ? ' <span class="tm">△</span>' : "") + "<br>" +
+      '<span class="m">' + info.join("・") + "</span></div>";
+  }
+
+  function renderRuins() {
+    var k = curSlot(), T = targetsFor(k), st = ruinState(k), src = ruinTargetsSource();
+    // 設定欄：時間帯ごとの対象（イベント作成画面で設定。未設定ならここで仮に設定できる）
+    var html = "";
+    if (src.from === "event") {
+      html += '<div class="note">時間帯ごとの対象（イベント作成画面で設定したもの）：</div><div class="row" style="margin-top:2px;">' +
+        RUIN_SLOTS.map(function(s) { return "<span><b>" + slotLabel(s) + "</b>：" + (targetsFor(s).join("・") || "なし") + "</span>"; }).join("　") + "</div>";
+    } else {
+      html += '<div class="msg err">このイベントには、時間帯ごとの対象（要塞・遺跡）がまだ設定されていません。管理画面の「イベント」で設定してください。下で仮に選ぶこともできます（このチーム分けの下書きにだけ保存）。</div>' +
+        '<div class="tbl-wrap"><table><thead><tr><th>時間帯</th>' + RUIN_TARGETS.map(function(t) { return "<th>" + t.replace("要塞", "要").replace("遺跡", "遺") + "</th>"; }).join("") + "</tr></thead><tbody>" +
+        RUIN_SLOTS.map(function(s) {
+          return "<tr><td>" + slotLabel(s) + "</td>" + RUIN_TARGETS.map(function(t) {
+            return '<td><input type="checkbox" data-rt="' + s + "|" + t + '"' + (targetsFor(s).indexOf(t) >= 0 ? " checked" : "") + "></td>";
+          }).join("") + "</tr>";
+        }).join("") + "</tbody></table></div>";
+    }
+    html += '<div class="note" style="margin-top:6px;">自動振り分け：その時間に参加する人だけで分けます。1か所' + RUIN_CAP + '人まで（集結主を含む）。①集結主を先に決める（「参加」の人から、直近のKVKの集結容量の大きい順に、要塞1→…→遺跡の順）②残りの人を、要塞に均等に入れてから余りを遺跡に均等（どこに入るかはランダム）。要塞の席には、ほかの時間帯で要塞に入った回数が少ない人から（同じなら参加する時間帯の数が少ない人から）入れて、要塞の回数がなるべくそろうようにします（「全部の時間帯」は12時→18時…の順に振り分けます）。入りきらないときは、参加する時間帯の数が少ない人を優先し、「行けるかも（△）」の人は「参加」の人のあと、余った人は待機です。</div>';
+    $("settingsBody").innerHTML = html;
+    Array.prototype.forEach.call($("settingsBody").querySelectorAll("[data-rt]"), function(cb) {
+      cb.addEventListener("change", function() {
+        var a = cb.dataset.rt.split("|"), m = draft.ruins.targets = draft.ruins.targets || {};
+        var list = (m[a[0]] || []).filter(function(x) { return x !== a[1]; });
+        if (cb.checked) list.push(a[1]);
+        m[a[0]] = RUIN_TARGETS.filter(function(x) { return list.indexOf(x) >= 0; });
+        changed();
+      });
+    });
+    $("autoRow").innerHTML =
+      '<button type="button" id="ruinAutoBtn">🤖 ' + slotLabel(k) + 'を自動で振り分ける</button>' +
+      '<button type="button" class="sub" id="ruinAutoAllBtn">🤖 全部の時間帯を自動で振り分ける</button>' +
+      '<button type="button" class="sub" id="ruinShuffleBtn">🎲 シャッフルし直す（' + slotLabel(k) + '）</button>' +
+      '<button type="button" class="sub" id="ruinClearBtn">↩ ' + slotLabel(k) + 'の割り当てを外す（📌以外）</button>';
+    on("ruinAutoBtn", "click", function() { setMsg($("autoMsg"), autoRuins(k), true); changed(); });
+    on("ruinAutoAllBtn", "click", function() {
+      var msgs = autoRuinsAll();
+      setMsg($("autoMsg"), msgs.join("／") || "対象のある時間帯がありません", msgs.length > 0);
+      changed();
+    });
+    on("ruinShuffleBtn", "click", function() {
+      draft.ruins.seed = Math.random().toString(36).slice(2, 10);
+      setMsg($("autoMsg"), autoRuins(k), true);
+      changed();
+    });
+    on("ruinClearBtn", "click", function() {
+      if (!confirm(slotLabel(k) + "の、📌（固定）以外の割り当てと集結主を外します。よろしいですか？")) return;
+      inSlot(k).forEach(function(p) { if (!st.pins[p.uid]) delete st.assign[p.uid]; });
+      Object.keys(st.leaders).forEach(function(t) { if (!st.pins[st.leaders[t]]) delete st.leaders[t]; });
+      changed();
+    });
+
+    // 時間帯のタブ
+    var v = '<div class="tabs" style="margin-bottom:8px;">' + RUIN_SLOTS.map(function(s) {
+      var ps = inSlot(s), mb = ps.filter(function(p) { return slotStatus(p, s) === "maybe"; }).length;
+      return '<button type="button" data-slot="' + s + '"' + (s === k ? ' class="active"' : "") + ">" + slotLabel(s) + "（" + (ps.length - mb) + "人" + (mb ? "＋△" + mb : "") + "）" + (targetsFor(s).length ? "" : " 対象なし") + "</button>";
+    }).join("") + "</div>";
+    $("tabHint").textContent = "名前を押すと移動先を選べます（PCではドラッグ＆ドロップでも移せます）。📌は「固定」：自動振り分けで動かしません。△は「行けるかも」。区分・容量は直近のKVKの登録から出しています。";
+    if (!T.length) {
+      v += '<div class="card empty-hint">' + slotLabel(k) + "は対象の要塞・遺跡がありません。</div>";
+    } else {
+      v += '<div class="board">';
+      T.forEach(function(t) {
+        var ms = ruinMembers(k, t), l = ruinLeader(k, t), w = ruinWarns(k, t);
+        var cands = inSlot(k).slice().sort(function(a, b) { return ((slotStatus(a, k) === "maybe") - (slotStatus(b, k) === "maybe")) || leaderOrder(a, b); });
+        v += '<div class="team" data-drop="' + t + '"><div class="team-head"><div class="team-title"><b>' + t + '</b><span class="note">' + ms.length + "／" + RUIN_CAP + "人</span></div>" +
+          '<div class="leader-row">集結主 <select data-rleader="' + t + '"><option value="">（選ぶ）</option>' + cands.map(function(p) {
+            return '<option value="' + escapeHtml(p.uid) + '"' + (l === p ? " selected" : "") + ">" + escapeHtml(p.name) + (slotStatus(p, k) === "maybe" ? "△" : "") + (p.rallyCap != null ? "（集結" + man(p.rallyCap) + "）" : "") + "</option>";
+          }).join("") + "</select></div>" +
+          '<div class="cap-bar"><i class="' + (ms.length > RUIN_CAP ? "over" : "") + '" style="width:' + Math.min(100, ms.length / RUIN_CAP * 100).toFixed(1) + '%"></i></div>' +
+          (w.length ? '<div class="team-warn">' + w.map(function(x) { return "<div>" + escapeHtml(x) + "</div>"; }).join("") + "</div>" : "") +
+          '</div><div class="team-body">' + (ms.length ? ms.sort(function(a, b) { return ((b === l) - (a === l)) || leaderOrder(a, b); }).map(function(p) { return ruinChip(p, k, p === l); }).join("") : '<span class="empty-hint">ここに入れる</span>') + "</div></div>";
+      });
+      [["standby", "🪑 待機", "入りきらなかった人"], ["none", "📥 未割り当て", "まだどこにも入っていない人"]].forEach(function(b) {
+        var ms = inSlot(k).filter(function(p) { return (ruinPlaceOf(k, p.uid) || "none") === b[0]; });
+        v += '<div class="team special" data-drop="' + b[0] + '"><div class="team-head"><div class="team-title"><b>' + b[1] + '</b><span class="note">' + ms.length + '人</span></div><div class="team-stats">' + b[2] + "</div></div>" +
+          '<div class="team-body">' + (ms.length ? ms.map(function(p) { return ruinChip(p, k, false); }).join("") : '<span class="empty-hint">（なし）</span>') + "</div></div>";
+      });
+      v += "</div>";
+    }
+    $("viewArea").innerHTML = v;
+    Array.prototype.forEach.call($("viewArea").querySelectorAll("[data-slot]"), function(b) {
+      b.addEventListener("click", function() { draft.ruins.cur = b.dataset.slot; selectedUid = ""; if (!readOnly) saveLocal(); renderAll(); });
+    });
+    Array.prototype.forEach.call($("viewArea").querySelectorAll("[data-rleader]"), function(sel) {
+      sel.addEventListener("change", function() { setRuinLeader(k, sel.dataset.rleader, sel.value); changed(); });
+    });
+    Array.prototype.forEach.call($("viewArea").querySelectorAll(".chip"), function(c) {
+      c.addEventListener("click", function(e) { e.stopPropagation(); if (readOnly) return; selectedUid = selectedUid === c.dataset.uid ? "" : c.dataset.uid; renderAll(); });
+      c.addEventListener("dragstart", function(e) { e.dataTransfer.setData("text/plain", c.dataset.uid); });
+    });
+    Array.prototype.forEach.call($("viewArea").querySelectorAll("[data-drop]"), function(box) {
+      box.addEventListener("dragover", function(e) { e.preventDefault(); box.classList.add("drop-ok"); });
+      box.addEventListener("dragleave", function() { box.classList.remove("drop-ok"); });
+      box.addEventListener("drop", function(e) {
+        e.preventDefault();
+        var uid = e.dataTransfer.getData("text/plain");
+        if (uid) { ruinMove(k, uid, box.dataset.drop); selectedUid = ""; changed(); }
+      });
+    });
+    renderOutSlots();
+    // 名前を押したときの移動バー
+    var bar = $("moveBar"), p = byUid[selectedUid];
+    if (readOnly || !p || !slotStatus(p, k)) { bar.style.display = "none"; return; }
+    bar.style.display = "block";
+    $("moveName").textContent = p.name + "（" + slotLabel(k) + "）";
+    $("pinBtn").textContent = st.pins[p.uid] ? "📌 固定を外す" : "📌 固定する";
+    var here = ruinPlaceOf(k, p.uid) || "none";
+    $("moveTargets").innerHTML = T.map(function(t) { return [t, t + "（" + ruinMembers(k, t).length + "人）"]; }).concat([["standby", "🪑 待機"], ["none", "📥 未割り当て"]]).map(function(x) {
+      return '<button type="button" data-to="' + x[0] + '"' + (x[0] === here ? ' class="here"' : "") + ">" + escapeHtml(x[1]) + (x[0] === here ? "（今ここ）" : "") + "</button>";
+    }).join("");
+    Array.prototype.forEach.call($("moveTargets").querySelectorAll("[data-to]"), function(b) {
+      b.addEventListener("click", function() { ruinMove(k, selectedUid, b.dataset.to); selectedUid = ""; changed(); });
+    });
+  }
+
+  function ruinMove(k, uid, place) {
+    var st = ruinState(k);
+    Object.keys(st.leaders).forEach(function(t) { if (st.leaders[t] === uid && t !== place) delete st.leaders[t]; });
+    if (place === "none" || !place) delete st.assign[uid];
+    else st.assign[uid] = place;
+  }
+  function setRuinLeader(k, t, uid) {
+    var st = ruinState(k);
+    if (!uid) { delete st.leaders[t]; return; }
+    Object.keys(st.leaders).forEach(function(x) { if (st.leaders[x] === uid) delete st.leaders[x]; });
+    st.leaders[t] = uid;
+    st.assign[uid] = t;
+    st.pins[uid] = true;
+  }
+
+  // Discord出力の時間帯チェックボックス。切り替えたら出力欄だけ即更新する（画面の割り振りは変えない）
+  function renderOutSlots() {
+    var row = $("outSlotsRow");
+    row.style.display = "flex";
+    row.innerHTML = '<span class="note">貼る時間帯：</span>' + RUIN_SLOTS.map(function(s) {
+      return '<label class="inline"><input type="checkbox" data-outslot="' + s + '"' + (outSlots.indexOf(s) >= 0 ? " checked" : "") + "> " + slotLabel(s) + (targetsFor(s).length ? "" : '<span class="note">（対象なし）</span>') + "</label>";
+    }).join("");
+    Array.prototype.forEach.call(row.querySelectorAll("[data-outslot]"), function(cb) {
+      cb.addEventListener("change", function() {
+        outSlots = RUIN_SLOTS.filter(function(s) {
+          var c = row.querySelector('[data-outslot="' + s + '"]');
+          return c && c.checked;
+        });
+        $("outText").value = buildRuinsText(outSlots);
+      });
+    });
+    $("outText").value = buildRuinsText(outSlots);
+  }
+
+  // sel：出力する時間帯（省略なら全部。公開用データの text は常に全部）
+  function buildRuinsText(sel) {
+    sel = sel || RUIN_SLOTS;
+    if (!sel.length) return "時間帯を選んでください";
+    var ev = eventById(eventId), blocks = [], lines = [];
+    function flush() { if (lines.length) { blocks.push("```\n" + lines.join("\n") + "\n```"); lines = []; } }
+    // 要塞・遺跡の間には空行を1行入れる（コードブロックの中も同じ）。1つのコードブロックは10行まで（空行も数える）で、拠点の途中では切らない
+    function push(group) {
+      if (lines.length && lines.length + 1 + group.length > 10) flush();
+      if (lines.length) lines.push("");
+      lines = lines.concat(group);
+    }
+    function label(p, k) { return p.name + (slotStatus(p, k) === "maybe" ? "△" : ""); }
+    RUIN_SLOTS.forEach(function(k) {
+      var T = targetsFor(k);
+      if (!T.length || sel.indexOf(k) < 0) return;
+      flush();
+      blocks.push((blocks.length ? "\n" : "") + "【" + slotLabel(k) + "】"); // 2つ目以降の時間帯は前に空行
+      T.forEach(function(t) {
+        var l = ruinLeader(k, t), ms = ruinMembers(k, t).filter(function(p) { return p !== l; });
+        push([t + "（" + (ms.length + (l ? 1 : 0)) + "人）集結主:" + (l ? label(l, k) : "未定"), ms.length ? ms.map(function(p) { return label(p, k); }).join("、") : "（なし）"]);
+      });
+      var sb = ruinMembers(k, "standby");
+      if (sb.length) push(["待機（" + sb.length + "人）", sb.map(function(p) { return label(p, k); }).join("、")]);
+      flush();
+    });
+    if (!blocks.length) return sel.length === RUIN_SLOTS.length ? "（対象のある時間帯がありません）" : "（選んだ時間帯には対象の要塞・遺跡がありません）";
+    return "■ " + eventLabel(ev) + " チーム分け\n\n" + blocks.join("\n") + "\n\n※△＝行けるかも";
+  }
+  function buildRuinsView() {
+    function person(p, k, leader) { return { name: p.name, alliance: p.alliance, maybe: slotStatus(p, k) === "maybe", leader: !!leader }; }
+    return {
+      mode: "ruins", title: eventLabel(eventById(eventId)),
+      slots: RUIN_SLOTS.filter(function(k) { return targetsFor(k).length; }).map(function(k) {
+        return {
+          slot: k, label: slotLabel(k),
+          targets: targetsFor(k).map(function(t) {
+            var l = ruinLeader(k, t);
+            return { name: t, leader: l ? l.name : "", members: ruinMembers(k, t).sort(function(a, b) { return (b === l) - (a === l); }).map(function(p) { return person(p, k, p === l); }) };
+          }),
+          standby: ruinMembers(k, "standby").map(function(p) { return person(p, k); })
+        };
+      }),
+      text: buildRuinsText()
+    };
+  }
+
+  // ---------- 保存 ----------
+  function save(publish, force) {
+    if (readOnly) { setMsg($("saveMsg"), "完了したイベントは保存・公開できません", false); return Promise.resolve(); }
+    var btns = ["saveBtn", "publishBtn", "unpublishBtn", "sbSave", "sbPublish", "sbUnpublish"];
+    btns.forEach(function(id) { $(id).disabled = true; });
+    setMsg($("saveMsg"), "保存中…", true);
+    var payload = { action: "teamSave", eventId: eventId, draft: draft, baseUpdatedAt: record ? record.updatedAt : "", publish: publish, force: !!force };
+    if (publish === "publish") payload.view = buildView();
+    return gasCall(payload).then(function(res) {
+      if (res.conflict) {
+        var other = res.record || {};
+        if (confirm("ほかの人が " + formatTime(other.updatedAt) + " に保存しています。\n\nOK：自分の内容で上書きする\nキャンセル：保存をやめる（「🔄 最新を読み込む」でほかの人の内容を見られます）")) {
+          record = other;
+          return save(publish, true);
+        }
+        setMsg($("saveMsg"), "保存をやめました", false);
+        return;
+      }
+      if (!res.ok) throw new Error(res.error || "保存できませんでした");
+      record = res.record;
+      data.teams = (data.teams || []).filter(function(t) { return t.eventId !== eventId; }).concat([record]);
+      clearLocal();
+      setMsg($("saveMsg"), publish === "publish" ? "保存して公開しました" : publish === "unpublish" ? "非公開に戻しました" : "下書きを保存しました", true);
+      renderAll();
+    }).catch(function(e) {
+      setMsg($("saveMsg"), "保存できませんでした: " + e.message, false);
+    }).then(function() {
+      btns.forEach(function(id) { $(id).disabled = false; });
+    });
+  }
+
+  // ---------- イベント ----------
+  on("eventSel", "change", function() { openEvent($("eventSel").value); });
+  on("modeSel", "change", function() {
+    var mode = $("modeSel").value;
+    if (!confirm("分け方を変えると、今のチームと割り当てはすべて作り直しになります。よろしいですか？")) { $("modeSel").value = draft.mode; return; }
+    var s0 = draft.settings;
+    draft = newDraft(mode);
+    draft.settings.start = s0.start;
+    draft.settings.end = s0.end;
+    changed();
+  });
+  on("reloadBtn", "click", function() { loadData(true); });
+  Array.prototype.forEach.call(document.querySelectorAll("#tabs button"), function(b) {
+    b.addEventListener("click", function() { tab = b.dataset.tab; selectedUid = ""; renderAll(); });
+  });
+  on("moveCancel", "click", function() { selectedUid = ""; renderAll(); });
+  on("pinBtn", "click", function() {
+    var pins = draft.mode === "ruins" ? ruinState(curSlot()).pins : draft.mode === "seiken" ? skP(draft.sk.cur).pins : draft.pins;
+    if (pins[selectedUid]) delete pins[selectedUid];
+    else pins[selectedUid] = true;
+    changed();
+  });
+  on("copyTextBtn", "click", function() {
+    navigator.clipboard.writeText($("outText").value).then(function() { setMsg($("copyMsg"), "コピーしました", true); },
+      function() { $("outText").select(); setMsg($("copyMsg"), "コピーできませんでした。選択して手でコピーしてください", false); });
+  });
+  function doUnpublish() {
+    if (!record || !record.published) { setMsg($("saveMsg"), "まだ公開していません", false); return; }
+    if (confirm("公開をやめます（閲覧ページ・参加登録ページに出なくなります）。下書きは残ります。よろしいですか？")) save("unpublish");
+  }
+  on("saveBtn", "click", function() { save("keep"); });
+  on("publishBtn", "click", function() { save("publish"); });
+  on("unpublishBtn", "click", doUnpublish);
+  on("sbSave", "click", function() { save("keep"); });
+  on("sbPublish", "click", function() { save("publish"); });
+  on("sbUnpublish", "click", doUnpublish);
+  // 下の「保存と公開」のメッセージ（保存しました・エラーなど）を、固定バーにも写す
+  new MutationObserver(function() {
+    var m = $("saveMsg"), s = $("sbMsg");
+    s.textContent = m.textContent; s.title = m.textContent; s.style.color = m.className.indexOf("err") >= 0 ? "#ff9a9a" : "";
+  }).observe($("saveMsg"), { childList: true, characterData: true, subtree: true, attributes: true });
+  new MutationObserver(adjustSaveBar).observe($("moveBar"), { attributes: true, attributeFilter: ["style"] });
+  window.addEventListener("resize", adjustSaveBar);
+  on("copyUrlBtn", "click", function() {
+    var url = new URL("../teams/", location.href).href;
+    navigator.clipboard.writeText(url).then(function() { setMsg($("saveMsg"), "コピーしました: " + url, true); },
+      function() { setMsg($("saveMsg"), url, true); });
+  });
+  window.addEventListener("beforeunload", function(e) {
+    var local = readOnly ? null : readLocal();
+    if (local && draft && JSON.stringify(local.draft) !== JSON.stringify(record ? record.draft : null)) { e.preventDefault(); e.returnValue = ""; }
+  });
+
+  // ---------- ログイン ----------
+  function showApp() {
+    $("loginView").style.display = "none";
+    $("appView").style.display = "block";
+    renderAdminSidebar();
+    loadData(false);
+  }
+  function tryLogin() {
+    var pw = $("pwInput").value;
+    if (!pw) return;
+    $("loginBtn").disabled = true;
+    $("loginMsg").textContent = "確認中…";
+    fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "get", password: pw }) })
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (res.ok) {
+          try { sessionStorage.setItem(PW_KEY, pw); if (document.getElementById("pwRemember").checked) localStorage.setItem(PW_SAVED_KEY, pw); else localStorage.removeItem(PW_SAVED_KEY); } catch (e) {}
+          $("loginMsg").textContent = "";
+          showApp();
+        } else if (res.status === 401) {
+          $("loginMsg").textContent = "パスワードが違います";
+          $("pwInput").select();
+        } else {
+          $("loginMsg").textContent = "確認できませんでした（" + (res.error || res.status) + "）";
+        }
+      })
+      .catch(function() {
+        $("loginMsg").textContent = "接続できませんでした。時間をおいてもう一度試してください";
+      })
+      .then(function() { $("loginBtn").disabled = false; });
+  }
+  on("loginBtn", "click", tryLogin);
+  on("pwInput", "keydown", function(e) { if (e.key === "Enter") tryLogin(); });
+
+  if (isAuthed()) showApp();
+  else $("pwInput").focus();
+})();
+</script>
+</body>
+</html>

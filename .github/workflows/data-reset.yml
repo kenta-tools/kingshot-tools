@@ -1,0 +1,34 @@
+# ユーザー・イベントにひもづくデータを全部消す。手動実行だけ。事故防止のため、816ユーザー取り込み（user-import-816.yml）とは別のワークフローにしてある
+# （取り込みの実行で誤って消えないように。確認用の文字列「全部消す」を入れたときだけ動く）。中身は .github/scripts/data_reset.py。
+# 消す前に中継役（GAS）がドライブへバックアップを作る。ログ・Job Summaryには件数とバックアップ名だけを出す。
+name: データの全リセット（ユーザー・イベント）
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "対象の中継役（GAS）"
+        type: choice
+        options: [test, prod]
+        default: test
+      confirm:
+        description: "確認用：「全部消す」と入力したときだけ実行されます"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  reset:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: バックアップを作ってから全部消す
+        env:
+          TARGET: ${{ inputs.target }}
+          CONFIRM: ${{ inputs.confirm }}
+          RELAY_PASSWORD: ${{ secrets.RELAY_PASSWORD }}
+          RELAY_PASSWORD_TEST: ${{ secrets.RELAY_PASSWORD_TEST }}
+        run: python3 .github/scripts/data_reset.py

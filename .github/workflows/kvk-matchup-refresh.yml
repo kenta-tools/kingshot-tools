@@ -1,0 +1,38 @@
+# KvK相手突合せ（kvk-matchup/）の自動更新。
+# .github/data/kvk-matchup/*.json（kvk_matchup.py --event-id で作られる名簿スナップショット）ごとに、
+# 紐づけたKVKイベントが「完了」になるまで、名簿を固定したまま毎日9時に数値だけ再取得して上書きする。
+# 中身は .github/scripts/kvk_matchup_refresh.py
+name: KvK相手突合せ 自動更新
+
+on:
+  schedule:
+    - cron: "0 0 * * *" # 毎日 00:00 UTC ＝ 日本時間 9:00（混雑で数十分遅れることがある）
+  workflow_dispatch: {} # Actions の画面から手動でも実行できる
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: データを更新
+        env:
+          MIGHTPULSE_API_KEY: ${{ secrets.MIGHTPULSE_API_KEY }}
+        run: python3 .github/scripts/kvk_matchup_refresh.py
+      - name: 変更をコミット・プッシュ
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add kvk-matchup
+          if git diff --cached --quiet; then
+            echo "変更なし"
+          else
+            git commit -m "KvK相手突合せ: 自動更新 ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
+            git push
+          fi

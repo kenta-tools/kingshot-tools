@@ -1,0 +1,25 @@
+# Discord の招待リンクを毎朝作り直して、個人登録ページ（全体鯖）・EGG新規加入者マニュアル（816用）のボタンに出す（中身は .github/scripts/discord_invite.py）
+# Discord は Google（GAS）のサーバーからの通信を断るので、GAS ではなくここで作る
+name: Discord招待リンクの更新
+
+on:
+  schedule:
+    - cron: "0 20 * * *" # 毎日 20:00 UTC ＝ 日本時間 5:00（混雑で数十分遅れることがある）
+  workflow_dispatch: {} # Actions の画面から手動でも実行できる
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: 招待リンクを作り直す
+        env:
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_CHANNEL_ID: ${{ secrets.DISCORD_CHANNEL_ID }}
+          DISCORD_CHANNEL_ID_816: ${{ secrets.DISCORD_CHANNEL_ID_816 }}
+          RELAY_PASSWORD: ${{ secrets.RELAY_PASSWORD }}
+        run: python3 .github/scripts/discord_invite.py

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>黄金計算機（詳細版）の使い方</title>
+<style>
+:root{--bg:#fbf8f1;--card:#fff;--ink:#2b2418;--mut:#7a6f5c;--line:#e6dcc6;--acc:#b8860b;--hd:#f3ead2;--ng:#c0392b}
+@media(prefers-color-scheme:dark){:root{--bg:#1b1812;--card:#26221a;--ink:#f1e9d6;--mut:#b3a88f;--line:#3d3626;--acc:#e0b040;--hd:#322c1e;--ng:#ff7b6b}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.8 system-ui,"Yu Gothic UI",sans-serif}
+.w{max-width:720px;margin:0 auto;padding:16px 16px 48px}
+h1{font-size:1.45rem;margin:.3em 0 .2em}h2{font-size:1.15rem;color:var(--acc);margin:1.4em 0 .4em;border-bottom:2px solid var(--line);padding-bottom:4px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 16px;margin:10px 0}
+.step{display:flex;gap:12px;align-items:flex-start}.num{flex:0 0 auto;width:2.1em;height:2.1em;border-radius:50%;background:var(--acc);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:3px}
+.step p{margin:.2em 0}
+.hl{font-weight:700;color:var(--acc)}
+.warn{border:2px solid var(--ng);border-radius:12px;padding:6px 16px;margin-top:20px}.warn h2{color:var(--ng);border:0;margin-top:.4em}.warn ul{margin:0;padding-left:1.2em;font-size:.92rem}
+a{color:var(--acc);font-weight:700}ul{padding-left:1.3em}
+</style></head><body><div class="w">
+<h1>黄金計算機（詳細版）の使い方</h1>
+<p>上級研究と、黄金（建物）に、<b>あといくつ足りないか</b>を出します。</p>
+
+<h2>使い方（3ステップ）</h2>
+<div class="card step"><div class="num">1</div><p><b>持っている数</b>を入れる（黄金・精製黄金・黄金微粒子。0個なら、そのまま）</p></div>
+<div class="card step"><div class="num">2</div><p>「計算の対象」を選んで、<b>目標</b>を選ぶ<br>・上級研究：「現在の位置」と「目標」<br>・黄金：「現在の黄金レベル」と「目標の黄金レベル」</p></div>
+<div class="card step"><div class="num">3</div><p>「結果」を見る。いちばん上の<b>黄金換算</b>が、全部まとめた不足です</p></div>
+
+<h2>結果の見方</h2>
+<ul>
+<li><span class="hl">黄金換算</span>：精製黄金や黄金微粒子も、黄金に直して、まとめた不足</li>
+<li><span class="hl">不足個数</span>：足りない数。足りていれば「なし」</li>
+<li><span class="hl">毎週月曜に○回＋火曜以降毎日1回</span>：精製黄金を作る精錬の回数（週合計は括弧の数）</li>
+<li>詳しい内訳が見たいときは、「詳細表示」を押す</li>
+<li>加速（分）やバフを入れると、<span class="hl">不足の時間</span>も出ます（入れなくてもOK）</li>
+</ul>
+
+<h2>実施日の選び方</h2>
+<p>迷ったら、<b>一番上のまま</b>でOKです。（KVKは、解放回と温存回が交互にきます）</p>
+
+<div class="warn"><h2>注意</h2><ul>
+<li>データは非公式の情報です。必ずしも正確とは限りません。</li>
+<li>精製黄金は期待値なので、表の回数で達成できるとは限りません。</li>
+<li>実施日は、KVK開始週の月曜日です。基本は解放日にあわせてアップグレードしてください。</li>
+</ul></div>
+</div></body></html>

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EGG 同盟内TOP</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+    background: #f4f5f7;
+    color: #222;
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 0 20px;
+  }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  .sub { color: #666; font-size: 13px; margin-bottom: 28px; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+  }
+  .tool-card {
+    position: relative;
+    display: block;
+    background: #fff;
+    border-radius: 12px;
+    padding: 22px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    text-decoration: none;
+    color: inherit;
+    transition: box-shadow 0.15s, transform 0.15s;
+  }
+  .tool-card:hover {
+    box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+    transform: translateY(-2px);
+  }
+  .tool-card .icon { font-size: 32px; margin-bottom: 10px; }
+  .tool-card .title { font-size: 16px; font-weight: bold; margin-bottom: 6px; }
+  .tool-card .desc { font-size: 12px; color: #777; line-height: 1.5; }
+  .badge { position: absolute; top: 12px; right: 12px; background: #f0ad4e; color: #fff; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 999px; }
+
+  .top-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+  .login-box { font-size: 12px; }
+  .login-box a, .login-box button {
+    font: inherit; font-size: 12px; padding: 7px 14px; border-radius: 999px; border: 1px solid #ccc;
+    background: #fff; color: #555; cursor: pointer; text-decoration: none; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .login-box .logged-in { color: #1e7d3a; font-weight: bold; border-color: #cfe8d8; }
+  #loginPromptBox, #copyProdBox {
+    position: fixed; inset: 0; z-index: 100001; background: rgba(0,0,0,0.3);
+    display: none; align-items: center; justify-content: center;
+  }
+  #loginPromptBox.show, #copyProdBox.show { display: flex; }
+  #loginPromptBox .box, #copyProdBox .box { background: #fff; border-radius: 12px; padding: 22px; width: 300px; max-width: 90vw; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+  #loginPromptBox input[type="password"], #copyProdBox input[type="password"] { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; margin-bottom: 10px; box-sizing: border-box; }
+  #loginPromptBox .row, #copyProdBox .row { display: flex; gap: 8px; }
+  #loginPromptBox .ok-btn, #copyProdBox .ok-btn { flex: 1; padding: 9px; background: #4a6cf7; color: #fff; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; }
+  #loginPromptBox .cancel-btn, #copyProdBox .cancel-btn { padding: 9px 14px; background: #fff; color: #555; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; cursor: pointer; }
+  #loginMsg, #copyProdMsg { font-size: 12px; margin-top: 8px; min-height: 1em; }
+</style>
+</head>
+<body>
+<div style="background:#fff3cd; border:1px solid #e2c56b; border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:13px; color:#6b5400; line-height:1.6;">
+  🧪 <b>これはテスト用のミラーです（test/配下）。</b>見た目・操作感の確認専用です。テスト用の中継役（GAS）・データを使っているので、保存系の操作（登録・管理画面の保存・チーム分けの保存など）をしても<b>本番データには一切影響しません。</b>
+</div>
+<div class="top-row">
+  <div>
+    <div style="margin-bottom:10px;font-size:13px;"><a href="../index.html" style="color:#4a6cf7;text-decoration:none;">🌐 ← 816ページへ</a></div>
+    <h1>🥚 EGG 同盟内TOP（テスト）</h1>
+    <div class="sub">同盟内のイベント（遺跡争奪・聖剣・三盟）の登録とチーム分けはここから。KVK・炎龍・聖剣リーグなど816全体の分は「816ページへ」。</div>
+  </div>
+</div>
+
+<div class="grid">
+  <a class="tool-card" href="https://kenta-tools.github.io/kingshot-tools/manual/">
+    <div class="icon">📗</div>
+    <div class="title">EGGマニュアル</div>
+    <div class="desc">同盟内（EGG）向けのマニュアル</div>
+  </a>
+  <a class="tool-card" href="entry/">
+    <div class="icon">📝</div>
+    <div class="title">イベント登録（参加登録）</div>
+    <div class="desc">遺跡争奪・聖剣・三盟に、自分の参加情報を登録・変更・取消</div>
+  </a>
+  <a class="tool-card" href="teams/">
+    <div class="icon">🧩</div>
+    <div class="title">チーム分け</div>
+    <div class="desc">遺跡争奪・聖剣・三盟のチーム分けを見る。自分の名前で探せます</div>
+  </a>
+  <a class="tool-card" href="../inquiry/">
+    <div class="icon">📮</div>
+    <div class="title">問い合わせ・質問</div>
+    <div class="desc">サイトやゲームについての質問・意見を送る</div>
+  </a>
+  <a class="tool-card" href="../admin/events.html">
+    <div class="icon">🔐</div>
+    <div class="title">管理画面（管理者）</div>
+    <div class="desc">イベントの作成・参加者の管理・チーム分け（要パスワード）</div>
+  </a>
+  <a class="tool-card" href="../spec/">
+    <div class="icon">📘</div>
+    <div class="title">仕様まとめ（AIに質問用）</div>
+    <div class="desc">このサイトの使い方まとめ。AIに読み込ませて使い方を質問できます</div>
+  </a>
+  <a class="tool-card" href="../tools/useful.html">
+    <div class="icon">🧰</div>
+    <div class="title">便利ツール</div>
+    <div class="desc">黄金計算機など、普段使いの計算ツール</div>
+  </a>
+</div>
+
+</body>
+</html>
